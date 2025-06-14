@@ -1,94 +1,51 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-} from '@mui/material';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useTheme } from '@mui/material/styles';
+import React, { useState } from 'react';
+import { Box, Button } from '@mui/material';
+import AuthContainer from '@/components/AuthContainer';
+import BaseTextField from '@/components/ui/BaseTextField';
+import AuthLink from '@/components/AuthLink';
 
 export default function ResetPasswordForm() {
-  const theme = useTheme();
   const [email, setEmail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Enviar correo de recuperación a:', email);
+
+    await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
   };
 
   return (
-    <Box
-      sx={{
-        backgroundColor: theme.palette.background.paper,
-        borderRadius: 1,
-        p: 4,
-        boxShadow: 4,
-        maxWidth: 400,
-        width: '100%',
-      }}
-    >
-      <Box textAlign="center" mb={4}>
-        <Image
-          src="/logo.svg"
-          alt="Logo GEMA"
-          width={120}
-          height={120}
-        />
-        <Typography
-          variant="h5"
-          fontWeight="bold"
-          color={theme.palette.text.primary}
-        >
-          Restablecer contraseña
-        </Typography>
-      </Box>
-
+    <AuthContainer title="Restablecer contraseña">
       <Box component="form" onSubmit={handleSubmit} autoComplete="off">
-        <Box
-          sx={{
-            marginBottom: 4
-          }}
-        >
-          <TextField
-            variant="filled"
+        <Box display="flex" flexDirection="column" gap={3} mb={4}>
+          <BaseTextField
             label="Correo electrónico"
             type="email"
             value={email}
+            name="reset_email"
             onChange={(e) => setEmail(e.target.value)}
-            fullWidth
-            margin="normal"
+            slotProps={{
+              input: {
+                autoComplete: 'off',
+                name: 'reset_email',
+              },
+            }}
           />
         </Box>
-        <Button
-          variant="contained"
-          fullWidth
-          type="submit"
-        >
+
+        <Button variant="contained" fullWidth type="submit">
           Restablecer contraseña
         </Button>
 
-        <Box mt={2} textAlign="center">
-          <Typography
-            component={Link}
-            href="/auth/login"
-            variant="body2"
-            textAlign="center"
-            mt={2}
-            sx={{
-              color: theme.palette.primary.dark,
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              fontWeight: theme.typography.fontWeightMedium,
-            }}
-          >
-            Volver al inicio de sesión
-          </Typography>
+        <Box textAlign="center" mt={2}>
+          <AuthLink href="/auth/login">Volver al inicio de sesión</AuthLink>
         </Box>
       </Box>
-    </Box>
+    </AuthContainer>
   );
 }

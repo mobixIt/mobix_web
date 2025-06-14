@@ -1,19 +1,14 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Button,
-  TextField,
-  Typography,
-  Alert
-} from '@mui/material';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useTheme } from '@mui/material/styles';
+'use client';
 
-const LoginForm = () => {
+import React, { useState } from 'react';
+import { Box, Button, Alert } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import AuthContainer from '@/components/AuthContainer';
+import BaseTextField from '@/components/ui/BaseTextField';
+import AuthLink from '@/components/AuthLink';
+
+export default function LoginForm() {
   const router = useRouter();
-  const theme = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -24,7 +19,7 @@ const LoginForm = () => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password }),
     });
 
     if (res.ok) {
@@ -37,67 +32,31 @@ const LoginForm = () => {
   };
 
   return (
-    <Box
-      sx={{
-        backgroundColor: theme.palette.background.paper,
-        borderRadius: 1,
-        p: 4,
-        boxShadow: 4,
-        maxWidth: 400,
-        width: '100%',
-      }}
-    >
-      <Box textAlign="center" mb={4}>
-        <Image
-          src="/logo.svg"
-          alt="Logo GEMA"
-          width={120}
-          height={120}
-        />
-        <Typography
-          variant="h5"
-          fontWeight="bold"
-          color={theme.palette.text.primary}
-        >
-          Iniciar sesión
-        </Typography>
-      </Box>
-
+    <AuthContainer title="Iniciar sesión">
       <Box component="form" noValidate onSubmit={handleSubmit} autoComplete="off">
-        <input type="text" name="fakeusernameremembered" style={{ display: 'none' }} />
-        <input type="password" name="fakepasswordremembered" style={{ display: 'none' }} />
-        <Box
-          sx={{
-            marginBottom: 4
-          }}
-        >
-          <TextField
-            variant="filled"
-            key={Date.now()}
+        <input type="text" name="fakeuser" style={{ display: 'none' }} />
+        <input type="password" name="fakepass" style={{ display: 'none' }} />
+
+        <Box display="flex" flexDirection="column" gap={3} mb={4}>
+          <BaseTextField
             label="ID ó Correo electrónico"
             type="email"
-            name="login_email"
             value={email}
+            name="login_email"
             onChange={(e) => setEmail(e.target.value)}
-            autoComplete="off"
             slotProps={{
               input: {
                 autoComplete: 'off',
                 name: 'login_email',
-              }
+              },
             }}
-            fullWidth
-            margin="normal"
           />
-
-          <TextField
-            variant="filled"
+          <BaseTextField
             label="Contraseña"
             type="password"
             value={password}
+            name="login_pass"
             onChange={(e) => setPassword(e.target.value)}
-            fullWidth
-            margin="normal"
             slotProps={{
               input: {
                 autoComplete: 'new-password',
@@ -107,40 +66,16 @@ const LoginForm = () => {
           />
         </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        )}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-        <Button
-          variant="contained"
-          fullWidth
-          type="submit"
-        >
+        <Button variant="contained" fullWidth type="submit">
           Iniciar sesión
         </Button>
 
         <Box textAlign="center" mt={2}>
-          <Typography
-            component={Link}
-            href="/auth/reset-password"
-            variant="body2"
-            textAlign="center"
-            mt={2}
-            sx={{
-              color: theme.palette.primary.dark,
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              fontWeight: theme.typography.fontWeightMedium,
-            }}
-          >
-            ¿Olvidó su contraseña?
-          </Typography>
+          <AuthLink href="/auth/reset-password">¿Olvidó su contraseña?</AuthLink>
         </Box>
       </Box>
-    </Box>
+    </AuthContainer>
   );
-};
-
-export default LoginForm;
+}

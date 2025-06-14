@@ -57,10 +57,7 @@ const theme = createTheme({
     MuiFormControl: {
       styleOverrides: {
         root: {
-          margin: '0 0 24px 0',
-          '&:last-child': {
-            marginBottom: 0,
-          },
+          margin: '0',
         }
       }
     },
