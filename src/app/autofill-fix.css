@@ -1,0 +1,7 @@
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  box-shadow: 0 0 0 1000px #1f2937 inset !important; /* fondo dark */
+  -webkit-text-fill-color: white !important;
+  border-radius: 8px !important;
+}
