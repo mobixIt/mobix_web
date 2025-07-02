@@ -1,5 +1,6 @@
 import './globals.css';
 import ThemeRegistry from '../components/ThemeRegistry';
+import { AuthProvider } from '@/contexts/AuthContext';
 import type { Metadata } from 'next';
 
 import { Inter, Poppins, Montserrat } from 'next/font/google';
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${inter.className} ${poppins.className} ${montserrat.className}`}>
       <body>
         <ThemeRegistry>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </ThemeRegistry>
       </body>
     </html>
