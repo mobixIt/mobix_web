@@ -56,3 +56,30 @@ export async function refreshClientToken(refreshToken: string): Promise<Pick<Tok
 
   return response.data;
 }
+
+/**
+ * Verifies whether the provided client token is still valid and the application is authorized to operate.
+ *
+ * This function makes a request to the backend `/oauth/validate-client` endpoint using the given access token.
+ * If the token is valid and the client is enabled, the request resolves successfully.
+ * If the token is expired, revoked, or the client is disabled, it throws an error with status information.
+ *
+ * @param token - The access token to be validated against the backend.
+ * @returns A Promise that resolves if the token is valid; otherwise, it throws an error.
+ *
+ * @throws {Error} If the token is invalid, expired, or the client is disabled. The error includes a `status` code.
+ */
+export async function verifyClientToken(token: string): Promise<void> {
+  const response = await fetch(`${apiBaseUrl}/oauth/validate-client`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.json();
+    const error = new Error(body.message || 'Unauthorized');
+    (error as any).status = response.status;
+    throw error;
+  }
+}
