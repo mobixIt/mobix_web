@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import AuthContainer from '@/components/AuthContainer';
 import BaseTextField from '@/components/ui/BaseTextField';
 import AuthLink from '@/components/AuthLink';
+import { loginUser } from '@/services/userAuthService';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -15,19 +16,39 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const data = await loginUser(email, password);
+      localStorage.setItem('userToken', data.token);
 
-    if (res.ok) {
-      const data = await res.json();
-      localStorage.setItem('token', data.token);
+      const now = Math.floor(Date.now() / 1000);
+      const expiresAt = now + data.expires_in;
+      localStorage.setItem('userTokenExpiresAt', expiresAt.toString());
+
       router.push('/dashboard');
-    } else {
-      setError('Correo o contraseña inválidos');
+    } catch (err: any) {
+      console.error('Login error:', err);
+
+      const code = err?.response?.data?.errors?.[0]?.code;
+
+      switch (code) {
+        case 'INVALID_CREDENTIALS':
+          setError('Credenciales inválidas. Verifica tu ID o correo y tu contraseña.');
+          break;
+        case 'ACCOUNT_INACTIVE':
+          setError('Tu cuenta está inactiva. Comunícate con tu administrador.');
+          break;
+        case 'NO_ROLE_ACCESS':
+          setError('No tienes roles asignados en ninguna empresa. Comunícate con tu administrador.');
+          break;
+        case 'NO_TENANT_ACCESS':
+          setError('No tienes acceso a ninguna empresa. Contacta al administrador.');
+          break;
+        default:
+          setError('Ocurrió un error al intentar iniciar sesión. Inténtalo más tarde.');
+          break;
+      }
     }
   };
 
