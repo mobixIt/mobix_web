@@ -70,16 +70,23 @@ export async function refreshClientToken(refreshToken: string): Promise<Pick<Tok
  * @throws {Error} If the token is invalid, expired, or the client is disabled. The error includes a `status` code.
  */
 export async function verifyClientToken(token: string): Promise<void> {
-  const response = await fetch(`${apiBaseUrl}/oauth/validate-client`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  try {
+    await axios.post(
+      `${apiBaseUrl}/oauth/validate-client`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+  } catch (error: any) {
+    const status = error.response?.status || 500;
+    const message =
+      error.response?.data?.message || 'Unauthorized';
 
-  if (!response.ok) {
-    const body = await response.json();
-    const error = new Error(body.message || 'Unauthorized');
-    (error as any).status = response.status;
-    throw error;
+    const err = new Error(message);
+    (err as any).status = status;
+    throw err;
   }
 }

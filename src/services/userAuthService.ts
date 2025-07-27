@@ -17,12 +17,16 @@ export async function fetchUserInfo(userToken: string) {
   return response.data;
 }
 
-export async function refreshUserToken(userToken: string) {
-  const response = await apiClient.post('/session/refresh', {}, {
-    headers: {
-      'X-User-Authorization': `Bearer ${userToken}`,
-    },
-  });
+export async function refreshUserToken(refreshToken: string) {
+  const userToken = localStorage.getItem('userToken');
+  const response = await apiClient.post('/session/refresh',
+    { refreshToken },
+    {
+      headers: {
+        'X-User-Authorization': `Bearer ${userToken}`,
+      },
+    }
+  );
   return response.data;
 }
 

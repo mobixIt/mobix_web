@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Box, Button, Typography } from '@mui/material';
+import { clearSessionStorage } from '@/utils/session/clearSessionStorage';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -10,16 +11,20 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('userToken');
-    if (!token) {
-      router.push('/auth');
+    const expiresAt = localStorage.getItem('userTokenExpiresAt');
+
+    const now = Date.now();
+
+    if (!token || !expiresAt || now > parseInt(expiresAt, 10) * 1000) {
+      router.push('/login');
     } else {
       setLoading(false);
     }
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem('userToken');
-    router.push('/auth');
+    clearSessionStorage();
+    router.push('/');
   };
 
   if (loading) {

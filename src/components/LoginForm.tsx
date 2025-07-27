@@ -7,6 +7,7 @@ import AuthContainer from '@/components/AuthContainer';
 import BaseTextField from '@/components/ui/BaseTextField';
 import AuthLink from '@/components/AuthLink';
 import { loginUser } from '@/services/userAuthService';
+import { initSessionStorageFromSessionResponse } from '@/utils/session/initSessionStorageFromSessionResponse';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -22,9 +23,7 @@ export default function LoginForm() {
       const data = await loginUser(email, password);
       localStorage.setItem('userToken', data.token);
 
-      const now = Math.floor(Date.now() / 1000);
-      const expiresAt = now + data.expires_in;
-      localStorage.setItem('userTokenExpiresAt', expiresAt.toString());
+      initSessionStorageFromSessionResponse(data);
 
       router.push('/dashboard');
     } catch (err: any) {
@@ -94,7 +93,7 @@ export default function LoginForm() {
         </Button>
 
         <Box textAlign="center" mt={2}>
-          <AuthLink href="/auth/reset-password">¿Olvidó su contraseña?</AuthLink>
+          <AuthLink href="/reset-password">¿Olvidó su contraseña?</AuthLink>
         </Box>
       </Box>
     </AuthContainer>

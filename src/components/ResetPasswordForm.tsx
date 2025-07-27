@@ -43,7 +43,7 @@ export default function ResetPasswordForm() {
         </Button>
 
         <Box textAlign="center" mt={2}>
-          <AuthLink href="/auth/login">Volver al inicio de sesión</AuthLink>
+          <AuthLink href="/login">Volver al inicio de sesión</AuthLink>
         </Box>
       </Box>
     </AuthContainer>
