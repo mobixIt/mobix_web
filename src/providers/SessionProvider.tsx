@@ -1,6 +1,6 @@
 'use client';
 
-import {
+import React, {
   createContext,
   useContext,
   useEffect,
@@ -39,6 +39,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const hasUserInteracted = useRef(false);
   const idleTimeoutMsRef = useRef<number>(0);
   const lastBackendNotify = useRef<number>(0);
+  // const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('userToken');
@@ -95,11 +96,32 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     events.forEach((event) => window.addEventListener(event, handleActivity));
 
+    // const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}?token=${token}`);
+    // wsRef.current = ws;
+
+    // ws.onmessage = (event) => {
+    //   const data = JSON.parse(event.data);
+    //   if (data.type === 'map_update') {
+    //     console.log('[WebSocket] Recibido update del mapa');
+    //     handleActivity();
+    //     // notifyBackendOfActivity();
+    //   }
+    // };
+
+    // ws.onerror = (err) => {
+    //   console.warn('[WebSocket] Error', err);
+    // };
+
+    // ws.onclose = () => {
+    //   console.warn('[WebSocket] Conexión cerrada');
+    // };
+
     return () => {
       clearInterval(interval);
       clearInterval(backendNotifyInterval);
       events.forEach((event) => window.removeEventListener(event, handleActivity));
       clearTimeout(idleTimer.current as NodeJS.Timeout);
+      // ws.close();
     };
   }, []);
 
@@ -109,10 +131,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }
 
   function startIdleTimer(timeoutMs: number) {
-    if (idleTimer.current) {
-      clearTimeout(idleTimer.current);
-      console.log('[IdleTimer] Anterior timer limpiado');
-    }
+    if (idleTimer.current) clearTimeout(idleTimer.current);
 
     idleTimer.current = setTimeout(() => {
       const minutesIdle = getSecondsIdle() / 60;
@@ -136,7 +155,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   function checkTokenValidity() {
     const token = localStorage.getItem('userToken');
     const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
-
     if (!token || !expiresAtStr) {
       logout('Token ausente o vencido');
       return;
@@ -147,7 +165,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const timeLeft = expiresAt - now;
 
     setSecondsUntilTokenExpires(Math.max(0, timeLeft));
-
     if (timeLeft <= 0) {
       logout('Token expirado');
     } else if (
@@ -157,8 +174,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       !isRefreshing
     ) {
       refreshTokenSilently();
-    } else if (timeLeft <= TOKEN_REFRESH_THRESHOLD_SECONDS && !hasUserInteracted.current) {
-      console.log('[Session] No se refresca token: sin actividad del usuario desde login');
     }
   }
 
