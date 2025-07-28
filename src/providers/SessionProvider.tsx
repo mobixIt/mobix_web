@@ -11,10 +11,11 @@ import {
 import { useRouter } from 'next/navigation';
 import SessionTimeoutModal from '@/components/SessionTimeoutModal';
 import { clearSessionStorage } from '@/utils/session/clearSessionStorage';
-import { refreshUserToken } from '@/services/userAuthService';
+import { refreshUserToken, notifyBackendOfActivity } from '@/services/userAuthService';
 import { initSessionStorageFromSessionResponse } from '@/utils/session/initSessionStorageFromSessionResponse';
 
 const TOKEN_REFRESH_THRESHOLD_SECONDS = 300;
+const BACKEND_NOTIFY_INTERVAL_MS = 60_000;
 
 type SessionContextType = {
   isSessionActive: boolean;
@@ -37,6 +38,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const lastActivity = useRef<number | null>(null);
   const hasUserInteracted = useRef(false);
   const idleTimeoutMsRef = useRef<number>(0);
+  const lastBackendNotify = useRef<number>(0);
 
   useEffect(() => {
     const token = localStorage.getItem('userToken');
@@ -70,9 +72,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       checkTokenValidity();
     }, 1000);
 
+    const backendNotifyInterval = setInterval(() => {
+      const now = Date.now();
+      const secondsSinceLastActivity = getSecondsIdle();
+
+      if (
+        hasUserInteracted.current &&
+        secondsSinceLastActivity < idleTimeoutMsRef.current / 1000 &&
+        now - lastBackendNotify.current > BACKEND_NOTIFY_INTERVAL_MS
+      ) {
+        notifyBackendOfActivity();
+        lastBackendNotify.current = now;
+      }
+    }, 5_000);
+
     const events = ['mousemove', 'keydown', 'click', 'scroll'];
     const handleActivity = () => {
-      console.log('[Session] Activity detected');
       hasUserInteracted.current = true;
       lastActivity.current = Date.now();
       resetIdleTimer(idleTimeoutMsRef.current);
@@ -82,6 +97,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     return () => {
       clearInterval(interval);
+      clearInterval(backendNotifyInterval);
       events.forEach((event) => window.removeEventListener(event, handleActivity));
       clearTimeout(idleTimer.current as NodeJS.Timeout);
     };
@@ -99,19 +115,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     idleTimer.current = setTimeout(() => {
-      console.log('[IdleTimer] Ejecutando logout por inactividad');
       const minutesIdle = getSecondsIdle() / 60;
       const idleTimeout = parseFloat(localStorage.getItem('userIdleTimeout') || '0.3');
       if (minutesIdle >= idleTimeout) {
         logout('Inactividad detectada');
       }
     }, timeoutMs);
-
-    console.log('[IdleTimer] Nuevo timer configurado:', timeoutMs, 'ms');
   }
 
   function resetIdleTimer(timeoutMs: number) {
-    console.log('[IdleTimer] Reiniciando timer por actividad');
     startIdleTimer(timeoutMs);
   }
 
@@ -160,8 +172,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       const res = await refreshUserToken(storedRefreshToken);
       initSessionStorageFromSessionResponse(res);
-
-      console.log('[Session] Token refreshed por actividad reciente');
     } catch (err) {
       console.error('[Session] Error refreshing token:', err);
       logout('Error al refrescar token');
