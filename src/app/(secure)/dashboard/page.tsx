@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Box, Button, Typography } from '@mui/material';
-import { clearSessionStorage } from '@/utils/session/clearSessionStorage';
+import { logoutUser } from '@/services/userAuthService';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -22,8 +22,8 @@ export default function Dashboard() {
     }
   }, [router]);
 
-  const handleLogout = () => {
-    clearSessionStorage();
+  const handleLogout = async () => {
+    await logoutUser();
     router.push('/');
   };
 

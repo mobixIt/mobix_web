@@ -10,11 +10,10 @@ import React, {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import SessionTimeoutModal from '@/components/SessionTimeoutModal';
-import { clearSessionStorage } from '@/utils/session/clearSessionStorage';
 import { refreshUserToken, notifyBackendOfActivity } from '@/services/userAuthService';
-import { initSessionStorageFromSessionResponse } from '@/utils/session/initSessionStorageFromSessionResponse';
+import { initSessionStorageFromSessionResponse } from '@/utils/sessionAuthStorage';
 
-const TOKEN_REFRESH_THRESHOLD_SECONDS = 300;
+const TOKEN_REFRESH_THRESHOLD_SECONDS = 300; // 5 min
 const BACKEND_NOTIFY_INTERVAL_MS = 60_000;
 
 type SessionContextType = {
@@ -39,33 +38,37 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const hasUserInteracted = useRef(false);
   const idleTimeoutMsRef = useRef<number>(0);
   const lastBackendNotify = useRef<number>(0);
-  // const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('userToken');
+    // ahora solo miramos lo que guardó initSessionStorageFromSessionResponse
     const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
     const idleTimeoutStr = localStorage.getItem('userIdleTimeout');
 
-    if (!token || !expiresAtStr) {
+    if (!expiresAtStr) {
       logout('Sesión no encontrada');
       return;
     }
 
-    const now = Math.floor(Date.now() / 1000);
-    const expiresAt = parseInt(expiresAtStr, 10);
+    const expiresAtMs = parseInt(expiresAtStr, 10);
+    const nowMs = Date.now();
 
-    if (now >= expiresAt) {
+    if (nowMs >= expiresAtMs) {
       logout('Sesión expirada');
       return;
     }
 
+    // idle timeout en minutos → a ms
     const idleTimeoutMinutes = parseFloat(idleTimeoutStr ?? '0.3');
     const idleTimeoutMs = idleTimeoutMinutes * 60 * 1000;
     idleTimeoutMsRef.current = idleTimeoutMs;
 
     setIsSessionActive(true);
-    setSecondsUntilTokenExpires(expiresAt - now);
+
+    // segundos hasta que expire el token
+    const secondsLeft = Math.floor((expiresAtMs - nowMs) / 1000);
+    setSecondsUntilTokenExpires(secondsLeft);
     setSecondsUntilIdleLogout(idleTimeoutMinutes * 60);
+
     startIdleTimer(idleTimeoutMs);
 
     const interval = setInterval(() => {
@@ -96,32 +99,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     events.forEach((event) => window.addEventListener(event, handleActivity));
 
-    // const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}?token=${token}`);
-    // wsRef.current = ws;
-
-    // ws.onmessage = (event) => {
-    //   const data = JSON.parse(event.data);
-    //   if (data.type === 'map_update') {
-    //     console.log('[WebSocket] Recibido update del mapa');
-    //     handleActivity();
-    //     // notifyBackendOfActivity();
-    //   }
-    // };
-
-    // ws.onerror = (err) => {
-    //   console.warn('[WebSocket] Error', err);
-    // };
-
-    // ws.onclose = () => {
-    //   console.warn('[WebSocket] Conexión cerrada');
-    // };
-
     return () => {
       clearInterval(interval);
       clearInterval(backendNotifyInterval);
       events.forEach((event) => window.removeEventListener(event, handleActivity));
-      clearTimeout(idleTimer.current as NodeJS.Timeout);
-      // ws.close();
+      if (idleTimer.current) clearTimeout(idleTimer.current);
     };
   }, []);
 
@@ -153,22 +135,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }
 
   function checkTokenValidity() {
-    const token = localStorage.getItem('userToken');
     const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
-    if (!token || !expiresAtStr) {
-      logout('Token ausente o vencido');
+    if (!expiresAtStr) {
+      logout('Expiración ausente');
       return;
     }
 
-    const expiresAt = parseInt(expiresAtStr, 10);
-    const now = Math.floor(Date.now() / 1000);
-    const timeLeft = expiresAt - now;
+    const expiresAtMs = parseInt(expiresAtStr, 10);
+    const nowMs = Date.now();
+    const timeLeftSeconds = Math.floor((expiresAtMs - nowMs) / 1000);
 
-    setSecondsUntilTokenExpires(Math.max(0, timeLeft));
-    if (timeLeft <= 0) {
-      logout('Token expirado');
+    setSecondsUntilTokenExpires(Math.max(0, timeLeftSeconds));
+
+    if (timeLeftSeconds <= 0) {
+      logout('Sesión expirada');
     } else if (
-      timeLeft <= TOKEN_REFRESH_THRESHOLD_SECONDS &&
+      timeLeftSeconds <= TOKEN_REFRESH_THRESHOLD_SECONDS &&
       hasUserInteracted.current &&
       getSecondsIdle() < 60 &&
       !isRefreshing
@@ -182,14 +164,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setIsRefreshing(true);
 
     try {
-      const storedRefreshToken = localStorage.getItem('refreshToken');
-      if (!storedRefreshToken) throw new Error('No refresh token');
-
-      const res = await refreshUserToken(storedRefreshToken);
+      // ahora no mandamos refreshToken, solo golpeamos /auth/refresh
+      const res = await refreshUserToken();
+      // res debe venir como el login: { expires_at, idle_timeout_minutes }
       initSessionStorageFromSessionResponse(res);
     } catch (err) {
       console.error('[Session] Error refreshing token:', err);
-      logout('Error al refrescar token');
+      logout('Error al refrescar sesión');
     } finally {
       setIsRefreshing(false);
     }
@@ -198,7 +179,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   function logout(reason: string) {
     console.log('[SessionProvider] Logout:', reason);
     setIsSessionActive(false);
-    clearSessionStorage();
+    // opcional: limpiar localStorage de esas claves
+    localStorage.removeItem('userTokenExpiresAt');
+    localStorage.removeItem('userIdleTimeout');
     router.push('/login');
   }
 

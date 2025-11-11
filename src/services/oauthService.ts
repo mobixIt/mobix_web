@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-
 interface TokenResponse {
   token_type: string;
   access_token: string;
@@ -18,6 +16,7 @@ interface TokenResponse {
  * @throws Will throw an error if the request fails.
  */
 export async function getClientToken(clientId: string, clientSecret: string): Promise<TokenResponse> {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
   const basicAuth = btoa(`${clientId}:${clientSecret}`);
 
   const response = await axios.post(
@@ -42,6 +41,7 @@ export async function getClientToken(clientId: string, clientSecret: string): Pr
  * @throws Will throw an error if the request fails or the refresh token is invalid/expired.
  */
 export async function refreshClientToken(refreshToken: string): Promise<Pick<TokenResponse, 'token_type' | 'access_token' | 'expires_in'>> {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
   const response = await axios.post(
     `${apiBaseUrl}/oauth/refresh`,
     {
@@ -70,6 +70,7 @@ export async function refreshClientToken(refreshToken: string): Promise<Pick<Tok
  * @throws {Error} If the token is invalid, expired, or the client is disabled. The error includes a `status` code.
  */
 export async function verifyClientToken(token: string): Promise<void> {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
   try {
     await axios.post(
       `${apiBaseUrl}/oauth/validate-client`,

@@ -7,7 +7,10 @@ import AuthContainer from '@/components/AuthContainer';
 import BaseTextField from '@/components/ui/BaseTextField';
 import AuthLink from '@/components/AuthLink';
 import { loginUser } from '@/services/userAuthService';
-import { initSessionStorageFromSessionResponse } from '@/utils/session/initSessionStorageFromSessionResponse';
+import { initSessionStorageFromSessionResponse } from '@/utils/sessionAuthStorage';
+import { getLoginErrorMessage } from '@/errors/getLoginErrorMessage';
+import type { AxiosError } from 'axios';
+import type { ApiErrorResponse } from '@/types/api';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -20,35 +23,16 @@ export default function LoginForm() {
     setError('');
 
     try {
-      const data = await loginUser(email, password);
-      localStorage.setItem('userToken', data.token);
-
-      initSessionStorageFromSessionResponse(data);
+      const result = await loginUser(email, password);
+      initSessionStorageFromSessionResponse(result.data);
 
       router.push('/dashboard');
-    } catch (err: any) {
-      console.error('Login error:', err);
-
+    } catch (error) {
+      const err = error as AxiosError<ApiErrorResponse>;
+      console.log(err)
       const code = err?.response?.data?.errors?.[0]?.code;
-
-      switch (code) {
-        case 'INVALID_CREDENTIALS':
-          setError('Credenciales inválidas. Verifica tu ID o correo y tu contraseña.');
-          break;
-        case 'ACCOUNT_INACTIVE':
-          setError('Tu cuenta está inactiva. Comunícate con tu administrador.');
-          break;
-        case 'NO_ROLE_ACCESS':
-          setError('No tienes roles asignados en ninguna empresa. Comunícate con tu administrador.');
-          break;
-        case 'NO_TENANT_ACCESS':
-          setError('No tienes acceso a ninguna empresa. Contacta al administrador.');
-          break;
-        default:
-          setError('Ocurrió un error al intentar iniciar sesión. Inténtalo más tarde.');
-          break;
-      }
-    }
+      setError(getLoginErrorMessage(code));
+    };
   };
 
   return (

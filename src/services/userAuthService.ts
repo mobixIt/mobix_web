@@ -1,4 +1,5 @@
 import apiClient from './apiClientService';
+import type { ApiSuccessResponse } from '@/types/api';
 
 /**
  * Authenticates a user using email or ID and password.
@@ -7,10 +8,12 @@ import apiClient from './apiClientService';
  * @param password - The user's password.
  * @returns A promise resolving to the session data (tokens, user info, etc.).
  */
-export async function loginUser(emailOrId: string, password: string) {
-  const response = await apiClient.post('/session/create', {
-    emailOrId,
-    password,
+export async function loginUser(
+  emailOrId: string,
+  password: string
+): Promise<ApiSuccessResponse<{ expires_at: string; idle_timeout_minutes?: number }>> {
+  const response = await apiClient.post('/auth/login', {
+    person: { login: emailOrId, password },
   });
   return response.data;
 }
@@ -22,7 +25,7 @@ export async function loginUser(emailOrId: string, password: string) {
  * @returns A promise resolving to the user's session information.
  */
 export async function fetchUserInfo(userToken: string) {
-  const response = await apiClient.get('/session/me', {
+  const response = await apiClient.get('/me', {
     headers: {
       'X-User-Authorization': `Bearer ${userToken}`,
     },
@@ -36,17 +39,9 @@ export async function fetchUserInfo(userToken: string) {
  * @param refreshToken - The refresh token obtained during login.
  * @returns A promise resolving to the new session data (e.g., new access token).
  */
-export async function refreshUserToken(refreshToken: string) {
-  const userToken = localStorage.getItem('userToken');
-  const response = await apiClient.post('/session/refresh',
-    { refreshToken },
-    {
-      headers: {
-        'X-User-Authorization': `Bearer ${userToken}`,
-      },
-    }
-  );
-  return response.data;
+export async function refreshUserToken() {
+  const res = await apiClient.post('/auth/refresh');
+  return res.data;
 }
 
 /**
@@ -55,8 +50,9 @@ export async function refreshUserToken(refreshToken: string) {
  * @param userToken - The user's access token to authorize the logout.
  * @returns A promise that resolves when the logout is completed.
  */
-export async function logoutUser(userToken: string) {
-  await apiClient.post('/session/logout', {}, {
+export async function logoutUser() {
+  const userToken = localStorage.getItem('userToken');
+  await apiClient.post('/auth/logout', {}, {
     headers: {
       'X-User-Authorization': `Bearer ${userToken}`,
     },
