@@ -20,6 +20,32 @@ test.describe('Login flow', () => {
       });
     });
 
+    await page.route('**/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            id: 1,
+            first_name: 'Test',
+            last_name: 'User',
+            email: 'user@example.com',
+            phone: null,
+            memberships: [
+              {
+                id: 10,
+                active: true,
+                tenant: {
+                  id: 99,
+                  slug: 'coolitoral',
+                },
+              },
+            ],
+          },
+        }),
+      });
+    });
+
     await page.goto('/');
 
     await page.getByLabel('ID ó Correo electrónico', { exact: true }).fill('user@example.com');

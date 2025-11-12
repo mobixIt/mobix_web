@@ -1,5 +1,6 @@
 import apiClient from './apiClientService';
 import type { ApiSuccessResponse } from '@/types/api';
+import type { MeResponse } from '@/types/auth';
 
 /**
  * Authenticates a user using email or ID and password.
@@ -24,7 +25,7 @@ export async function loginUser(
  *
  * @returns A promise resolving to the user's session information.
  */
-export async function fetchUserInfo() {
+export async function fetchUserInfo(): Promise<ApiSuccessResponse<MeResponse>> {
   const response = await apiClient.get('/me');
   return response.data;
 }
@@ -61,3 +62,4 @@ export async function notifyBackendOfActivity() {
     console.error('[Session] Failed to notify backend of activity:', err);
   }
 }
+

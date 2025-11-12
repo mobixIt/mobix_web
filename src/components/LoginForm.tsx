@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import AuthContainer from '@/components/AuthContainer';
 import BaseTextField from '@/components/ui/BaseTextField';
 import AuthLink from '@/components/AuthLink';
-import { loginUser } from '@/services/userAuthService';
+import { loginUser, fetchUserInfo } from '@/services/userAuthService';
 import { initSessionStorageFromSessionResponse } from '@/utils/sessionAuthStorage';
 import { getLoginErrorMessage } from '@/errors/getLoginErrorMessage';
 import type { AxiosError } from 'axios';
@@ -25,6 +25,9 @@ export default function LoginForm() {
     try {
       const { data: { expires_at, idle_timeout_minutes } } = await loginUser(email, password);
       initSessionStorageFromSessionResponse({ expires_at, idle_timeout_minutes });
+
+      // const { data: me } = 
+      await fetchUserInfo();
 
       router.push('/dashboard');
     } catch (error) {
