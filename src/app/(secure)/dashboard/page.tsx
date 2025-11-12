@@ -10,21 +10,32 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('userToken');
-    const expiresAt = localStorage.getItem('userTokenExpiresAt');
+    const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
 
-    const now = Date.now();
-
-    if (!token || !expiresAt || now > parseInt(expiresAt, 10) * 1000) {
+    if (!expiresAtStr) {
       router.push('/login');
-    } else {
-      setLoading(false);
+      return;
     }
+
+    const expiresAtMs = parseInt(expiresAtStr, 10);
+    const nowMs = Date.now();
+
+    if (Number.isNaN(expiresAtMs) || nowMs >= expiresAtMs) {
+      router.push('/login');
+      return;
+    }
+
+    setLoading(false);
   }, [router]);
 
   const handleLogout = async () => {
-    await logoutUser();
-    router.push('/');
+    try {
+      await logoutUser();
+    } finally {
+      localStorage.removeItem('userTokenExpiresAt');
+      localStorage.removeItem('userIdleTimeout');
+      router.push('/login');
+    }
   };
 
   if (loading) {
@@ -41,11 +52,7 @@ export default function Dashboard() {
         Has iniciado sesión correctamente.
       </Typography>
 
-      <Button
-        variant="outlined"
-        color="secondary"
-        onClick={handleLogout}
-      >
+      <Button variant="outlined" color="secondary" onClick={handleLogout}>
         Cerrar sesión
       </Button>
     </Box>

@@ -7,14 +7,19 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('userToken');
     const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
-    const now = Math.floor(Date.now() / 1000);
+    const nowMs = Date.now();
 
-    if (token) {
-      router.push('/dashboard');
-    } else {
-      router.push('/login');
+    if (expiresAtStr) {
+      const expiresAtMs = parseInt(expiresAtStr, 10);
+      if (!Number.isNaN(expiresAtMs) && nowMs < expiresAtMs) {
+        router.push('/dashboard');
+        return;
+      }
     }
+
+    router.push('/login');
   }, [router]);
+
+  return null;
 }

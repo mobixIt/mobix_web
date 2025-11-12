@@ -6,7 +6,7 @@ import type { ApiSuccessResponse } from '@/types/api';
  *
  * @param emailOrId - The user's email or identification number.
  * @param password - The user's password.
- * @returns A promise resolving to the session data (tokens, user info, etc.).
+ * @returns A promise resolving to the session data (tokens, expiration, etc.).
  */
 export async function loginUser(
   emailOrId: string,
@@ -19,65 +19,44 @@ export async function loginUser(
 }
 
 /**
- * Retrieves the current session's user information from the backend.
+ * Retrieves information about the current authenticated user.
+ * Requires a valid session cookie (httpOnly).
  *
- * @param userToken - The user's access token to authorize the request.
  * @returns A promise resolving to the user's session information.
  */
-export async function fetchUserInfo(userToken: string) {
-  const response = await apiClient.get('/me', {
-    headers: {
-      'X-User-Authorization': `Bearer ${userToken}`,
-    },
-  });
+export async function fetchUserInfo() {
+  const response = await apiClient.get('/me');
   return response.data;
 }
 
 /**
- * Requests a new access token using a refresh token.
+ * Requests a new session token from the backend.
+ * This uses the httpOnly refresh cookie automatically.
  *
- * @param refreshToken - The refresh token obtained during login.
- * @returns A promise resolving to the new session data (e.g., new access token).
+ * @returns A promise resolving to the new session data.
  */
-export async function refreshUserToken() {
-  const res = await apiClient.post('/auth/refresh');
-  return res.data;
+export async function refreshUserToken(): Promise<ApiSuccessResponse<{ expires_at: string; idle_timeout_minutes?: number }>> {
+  const response = await apiClient.post('/auth/refresh');
+  return response.data;
 }
 
 /**
  * Logs out the user from the current session.
- *
- * @param userToken - The user's access token to authorize the logout.
- * @returns A promise that resolves when the logout is completed.
+ * The backend will clear the httpOnly authentication cookie.
  */
 export async function logoutUser() {
-  const userToken = localStorage.getItem('userToken');
-  await apiClient.post('/auth/logout', {}, {
-    headers: {
-      'X-User-Authorization': `Bearer ${userToken}`,
-    },
-  });
+  await apiClient.post('/auth/logout');
+  localStorage.removeItem('userTokenExpiresAt');
+  localStorage.removeItem('userIdleTimeout');
 }
 
 /**
  * Notifies the backend that the user is still active.
- * Used to prevent session expiration due to inactivity.
- *
- * This function retrieves the token from localStorage.
- * If the token is missing, it silently exits.
- *
- * @returns A promise that resolves once the backend is notified.
+ * Used to extend or maintain session activity.
  */
 export async function notifyBackendOfActivity() {
-  const userToken = localStorage.getItem('userToken');
-  if (!userToken) return;
-
   try {
-    await apiClient.post('/session/activity', {}, {
-      headers: {
-        'X-User-Authorization': `Bearer ${userToken}`,
-      },
-    });
+    await apiClient.post('/session/activity');
   } catch (err) {
     console.error('[Session] Failed to notify backend of activity:', err);
   }

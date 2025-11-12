@@ -13,8 +13,9 @@ import SessionTimeoutModal from '@/components/SessionTimeoutModal';
 import { refreshUserToken, notifyBackendOfActivity } from '@/services/userAuthService';
 import { initSessionStorageFromSessionResponse } from '@/utils/sessionAuthStorage';
 
-const TOKEN_REFRESH_THRESHOLD_SECONDS = 300; // 5 min
 const BACKEND_NOTIFY_INTERVAL_MS = 60_000;
+const IDLE_WARNING_THRESHOLD_SECONDS = 30;
+const REFRESH_WINDOW_SECONDS = 15;
 
 type SessionContextType = {
   isSessionActive: boolean;
@@ -40,7 +41,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const lastBackendNotify = useRef<number>(0);
 
   useEffect(() => {
-    // ahora solo miramos lo que guardó initSessionStorageFromSessionResponse
     const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
     const idleTimeoutStr = localStorage.getItem('userIdleTimeout');
 
@@ -57,14 +57,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // idle timeout en minutos → a ms
     const idleTimeoutMinutes = parseFloat(idleTimeoutStr ?? '0.3');
     const idleTimeoutMs = idleTimeoutMinutes * 60 * 1000;
     idleTimeoutMsRef.current = idleTimeoutMs;
 
+    lastActivity.current = Date.now();
+    hasUserInteracted.current = true;
+
     setIsSessionActive(true);
 
-    // segundos hasta que expire el token
     const secondsLeft = Math.floor((expiresAtMs - nowMs) / 1000);
     setSecondsUntilTokenExpires(secondsLeft);
     setSecondsUntilIdleLogout(idleTimeoutMinutes * 60);
@@ -128,6 +129,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     startIdleTimer(timeoutMs);
   }
 
+  const handleStayActive = () => {
+    hasUserInteracted.current = true;
+    lastActivity.current = Date.now();
+
+    const idleTimeoutStr = localStorage.getItem('userIdleTimeout') ?? '0.3';
+    const idleTimeoutMinutes = parseFloat(idleTimeoutStr);
+    const idleTimeoutMs = idleTimeoutMinutes * 60 * 1000;
+
+    idleTimeoutMsRef.current = idleTimeoutMs;
+
+    resetIdleTimer(idleTimeoutMs);
+
+    const fullSeconds = Math.ceil(idleTimeoutMs / 1000);
+    setSecondsUntilIdleLogout(fullSeconds);
+  };
+
   function updateIdleCountdown(timeoutSeconds: number) {
     const secondsIdle = getSecondsIdle();
     const secondsLeft = Math.max(0, timeoutSeconds - secondsIdle);
@@ -141,20 +158,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const expiresAtMs = parseInt(expiresAtStr, 10);
-    const nowMs = Date.now();
-    const timeLeftSeconds = Math.floor((expiresAtMs - nowMs) / 1000);
+    const expiresAtMs = Number.isNaN(Number(expiresAtStr))
+      ? new Date(expiresAtStr).getTime()
+      : parseInt(expiresAtStr, 10);
+
+    const currentMilisecondsTime = Date.now();
+    const timeLeftSeconds = Math.floor((expiresAtMs - currentMilisecondsTime) / 1000);
 
     setSecondsUntilTokenExpires(Math.max(0, timeLeftSeconds));
 
     if (timeLeftSeconds <= 0) {
       logout('Sesión expirada');
-    } else if (
-      timeLeftSeconds <= TOKEN_REFRESH_THRESHOLD_SECONDS &&
-      hasUserInteracted.current &&
-      getSecondsIdle() < 60 &&
-      !isRefreshing
-    ) {
+      return;
+    }
+
+    const userActive = hasUserInteracted.current && getSecondsIdle() < 60;
+    const inFinalWindow = timeLeftSeconds <= REFRESH_WINDOW_SECONDS;
+
+    if (inFinalWindow && userActive && !isRefreshing) {
       refreshTokenSilently();
     }
   }
@@ -164,10 +185,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setIsRefreshing(true);
 
     try {
-      // ahora no mandamos refreshToken, solo golpeamos /auth/refresh
-      const res = await refreshUserToken();
-      // res debe venir como el login: { expires_at, idle_timeout_minutes }
-      initSessionStorageFromSessionResponse(res);
+      const { data: { expires_at, idle_timeout_minutes } } = await refreshUserToken();
+
+      initSessionStorageFromSessionResponse({ expires_at, idle_timeout_minutes });
+
+      if (typeof idle_timeout_minutes === 'number') {
+        idleTimeoutMsRef.current = idle_timeout_minutes * 60 * 1000;
+      }
+      lastActivity.current = Date.now();
+      resetIdleTimer(idleTimeoutMsRef.current);
+
+      if (expires_at) {
+        const nextExpiresMs = Number.isNaN(Number(expires_at))
+          ? new Date(expires_at).getTime()
+          : parseInt(expires_at, 10);
+
+        setSecondsUntilTokenExpires(
+          Math.max(0, Math.floor((nextExpiresMs - Date.now()) / 1000))
+        );
+      }
+      setSecondsUntilIdleLogout(Math.ceil(idleTimeoutMsRef.current / 1000));
     } catch (err) {
       console.error('[Session] Error refreshing token:', err);
       logout('Error al refrescar sesión');
@@ -179,7 +216,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   function logout(reason: string) {
     console.log('[SessionProvider] Logout:', reason);
     setIsSessionActive(false);
-    // opcional: limpiar localStorage de esas claves
     localStorage.removeItem('userTokenExpiresAt');
     localStorage.removeItem('userIdleTimeout');
     router.push('/login');
@@ -195,12 +231,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         forceLogout: () => logout('Logout manual'),
       }}
     >
-      {secondsUntilIdleLogout <= 30 && secondsUntilIdleLogout > 0 && (
+      {secondsUntilIdleLogout < IDLE_WARNING_THRESHOLD_SECONDS && secondsUntilIdleLogout > 0 && (
         <SessionTimeoutModal
           secondsLeft={secondsUntilIdleLogout}
-          onStayActive={() => {
-            resetIdleTimer(idleTimeoutMsRef.current);
-          }}
+          onStayActive={handleStayActive}
         />
       )}
       {children}

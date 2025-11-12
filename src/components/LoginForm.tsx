@@ -23,13 +23,12 @@ export default function LoginForm() {
     setError('');
 
     try {
-      const result = await loginUser(email, password);
-      initSessionStorageFromSessionResponse(result.data);
+      const { data: { expires_at, idle_timeout_minutes } } = await loginUser(email, password);
+      initSessionStorageFromSessionResponse({ expires_at, idle_timeout_minutes });
 
       router.push('/dashboard');
     } catch (error) {
       const err = error as AxiosError<ApiErrorResponse>;
-      console.log(err)
       const code = err?.response?.data?.errors?.[0]?.code;
       setError(getLoginErrorMessage(code));
     };
