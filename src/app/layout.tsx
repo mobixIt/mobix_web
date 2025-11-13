@@ -1,6 +1,7 @@
 import './globals.css';
 import ThemeRegistry from '../components/ThemeRegistry';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ReduxProvider } from '@/store/ReduxProvider';
 import type { Metadata } from 'next';
 
 import { Inter, Poppins, Montserrat } from 'next/font/google';
@@ -19,9 +20,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${inter.className} ${poppins.className} ${montserrat.className}`}>
       <body>
         <ThemeRegistry>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          <ReduxProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </ReduxProvider>
         </ThemeRegistry>
       </body>
     </html>

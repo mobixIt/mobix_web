@@ -6,14 +6,19 @@ import { useRouter } from 'next/navigation';
 import AuthContainer from '@/components/AuthContainer';
 import BaseTextField from '@/components/ui/BaseTextField';
 import AuthLink from '@/components/AuthLink';
-import { loginUser, fetchUserInfo } from '@/services/userAuthService';
+import { loginUser } from '@/services/userAuthService';
 import { initSessionStorageFromSessionResponse } from '@/utils/sessionAuthStorage';
 import { getLoginErrorMessage } from '@/errors/getLoginErrorMessage';
 import type { AxiosError } from 'axios';
 import type { ApiErrorResponse } from '@/types/api';
 
+import { useAppDispatch } from '@/store/hooks';
+import { fetchMe } from '@/store/slices/authSlice';
+
 export default function LoginForm() {
   const router = useRouter();
+  const dispatch = useAppDispatch(); 
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -26,8 +31,7 @@ export default function LoginForm() {
       const { data: { expires_at, idle_timeout_minutes } } = await loginUser(email, password);
       initSessionStorageFromSessionResponse({ expires_at, idle_timeout_minutes });
 
-      // const { data: me } = 
-      await fetchUserInfo();
+      await dispatch(fetchMe()).unwrap();
 
       router.push('/dashboard');
     } catch (error) {

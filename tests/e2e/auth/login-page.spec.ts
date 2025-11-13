@@ -1,18 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Root page when unauthenticated', () => {
-  test.beforeEach(async ({ context, page }) => {
+  test.beforeEach(async ({ context }) => {
     await context.clearCookies();
-
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-    });
   });
 
   test('displays the login form', async ({ page }) => {
     await page.goto('/');
+
+    await page.waitForURL('**/login', { timeout: 5_000 });
 
     await expect(
       page.getByRole('heading', { name: 'Iniciar sesión', exact: true })

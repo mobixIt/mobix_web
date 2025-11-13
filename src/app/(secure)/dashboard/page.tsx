@@ -1,6 +1,8 @@
 'use client';
 
+import { useAppSelector } from '@/store/hooks';
 import { useRouter } from 'next/navigation';
+import { selectCurrentPerson } from '@/store/slices/authSlice';
 import { useEffect, useState } from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import { logoutUser } from '@/services/userAuthService';
@@ -8,6 +10,7 @@ import { logoutUser } from '@/services/userAuthService';
 export default function Dashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const person = useAppSelector(selectCurrentPerson);
 
   useEffect(() => {
     const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
@@ -45,7 +48,9 @@ export default function Dashboard() {
   return (
     <Box sx={{ p: 4 }}>
       <Typography variant="h4" mb={2}>
-        Bienvenido al Dashboard
+        {person
+          ? `Bienvenido, ${person.first_name} ${person.last_name}`
+          : 'Bienvenido al Dashboard'}
       </Typography>
 
       <Typography variant="body1" mb={4}>
