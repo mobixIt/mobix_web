@@ -11,6 +11,7 @@ import { initSessionStorageFromSessionResponse } from '@/utils/sessionAuthStorag
 import { getLoginErrorMessage } from '@/errors/getLoginErrorMessage';
 import type { AxiosError } from 'axios';
 import type { ApiErrorResponse } from '@/types/api';
+import { buildTenantUrl } from '@/utils/tenantUrl';
 
 import { useAppDispatch } from '@/store/hooks';
 import { fetchMe } from '@/store/slices/authSlice';
@@ -31,7 +32,16 @@ export default function LoginForm() {
       const { data: { expires_at, idle_timeout_minutes } } = await loginUser(email, password);
       initSessionStorageFromSessionResponse({ expires_at, idle_timeout_minutes });
 
-      await dispatch(fetchMe()).unwrap();
+      const { memberships } = await dispatch(fetchMe()).unwrap();
+      
+      if (memberships.length === 1) {
+        const tenantSlug = memberships[0].tenant.slug;
+        const url = buildTenantUrl(tenantSlug);
+        const dashboardUrl = `${url}/dashboard`;
+        console.log('[DEBUG] Redirecting to tenant:', dashboardUrl);
+        window.location.href = dashboardUrl;
+        return;
+      }
 
       router.push('/dashboard');
     } catch (error) {

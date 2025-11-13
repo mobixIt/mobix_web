@@ -110,4 +110,32 @@ test.describe('Login error handling', () => {
       .filter({ hasText: /tienes una sesión activa/i });
     await expect(errorAlert).toBeVisible();
   });
+
+  test('shows error when user has no authorized memberships (no roles/permissions)', async ({ page }) => {
+    await page.route(LOGIN_URL, async (route) => {
+      await route.fulfill({
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          errors: [
+            {
+              code: 'NO_AUTHORIZED_MEMBERSHIPS',
+              title: 'No authorized memberships',
+              detail: 'User does not belong to any authorized membership',
+            },
+          ],
+        }),
+      });
+    });
+
+    await fillLoginForm(page);
+
+    const errorAlert = page
+      .getByRole('alert')
+      .filter({
+        hasText: /roles o permisos activos/i,
+      });
+
+    await expect(errorAlert).toBeVisible();
+  });
 });

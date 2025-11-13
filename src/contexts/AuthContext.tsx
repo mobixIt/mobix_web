@@ -1,24 +1,24 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { getClientToken, refreshClientToken, verifyClientToken } from '@/services/oauthService';
-import {
-  initClientTokenStorageFromResponse,
-  updateClientAccessTokenFromRefresh,
-  clearClientTokenStorage,
-} from '@/utils/appAuthStorage';
+import React, { createContext, useContext, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+// import { getClientToken, refreshClientToken, verifyClientToken } from '@/services/oauthService';
+// import {
+//   initClientTokenStorageFromResponse,
+//   updateClientAccessTokenFromRefresh,
+//   clearClientTokenStorage,
+// } from '@/utils/appAuthStorage';
 
 /**
  * Interface representing the structure of expected OAuth errors
  */
-interface OAuthError {
-  status?: number;
-  message?: string;
-  response?: {
-    status?: number;
-  };
-}
+// interface OAuthError {
+//   status?: number;
+//   message?: string;
+//   response?: {
+//     status?: number;
+//   };
+// }
 
 /**
  * Interface for authentication context values

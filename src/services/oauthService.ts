@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { type AxiosError } from 'axios';
+import type { ApiErrorResponse } from '@/types/api';
 
 interface TokenResponse {
   token_type: string;
@@ -81,13 +82,19 @@ export async function verifyClientToken(token: string): Promise<void> {
         },
       }
     );
-  } catch (error: any) {
-    const status = error.response?.status || 500;
-    const message =
-      error.response?.data?.message || 'Unauthorized';
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
 
-    const err = new Error(message);
-    (err as any).status = status;
+    const status = axiosError.response?.status ?? 500;
+    const apiMessage =
+      axiosError.response?.data?.errors?.[0]?.detail ??
+      axiosError.response?.data?.errors?.[0]?.title ??
+      'Unauthorized';
+
+
+    const err = new Error(apiMessage);
+    (err as Error & { status: number }).status = status;
+
     throw err;
   }
 }

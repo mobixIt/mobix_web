@@ -1,7 +1,7 @@
 export const loginErrorMessages: Record<string, string> = {
   INVALID_CREDENTIALS: 'Credenciales inválidas. Verifica tu ID o correo y tu contraseña.',
   ACCOUNT_INACTIVE: 'Tu cuenta está inactiva. Comunícate con tu administrador.',
-  NO_ROLE_ACCESS: 'No tienes roles asignados en ninguna empresa. Comunícate con tu administrador.',
+  NO_AUTHORIZED_MEMBERSHIPS: 'No tienes roles o permisos activos en ninguna empresa. Comunícate con tu administrador.',
   NO_TENANT_ACCESS: 'No tienes acceso a ninguna empresa. Contacta al administrador.',
   TOO_MANY_ATTEMPTS: 'Has excedido el número máximo de intentos. Intenta nuevamente más tarde.',
   LOGIN_FAILED: 'No se pudo iniciar sesión. Verifica tus datos e intenta nuevamente.',

@@ -3,7 +3,6 @@
 import React from 'react';
 import Image from 'next/image';
 import { Box, Typography, Button, Container, Stack } from '@mui/material';
-import Link from 'next/link';
 
 export default function AppDisabledPage() {
   return (
