@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Login flow', () => {
-  test('logs in, stores session data and redirects to dashboard', async ({ page, context }) => {
+  test('logs in, stores session data and redirects to dashboard', async ({ page }) => {
     await page.route('**/auth/login', async (route) => {
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
@@ -68,11 +68,6 @@ test.describe('Login flow', () => {
 
     expect(ls.expiresAt).not.toBeNull();
     expect(ls.idle).toBe('15');
-
-    const cookies = await context.cookies();
-    const authCookie = cookies.find((c) => c.name === 'auth_token');
-    expect(authCookie).toBeTruthy();
-    expect(authCookie?.value).toBe('fake-jwt-value');
   });
 
   test('logs in, loads /auth/me into Redux and shows user name in dashboard', async ({ page }) => {

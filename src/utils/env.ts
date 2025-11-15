@@ -2,7 +2,16 @@ export function getBaseDomain() {
   const env = process.env.NEXT_PUBLIC_ENVIRONMENT;
 
   switch (env) {
-    case 'development':
+    case 'development': {
+      const useNgrok = process.env.NEXT_PUBLIC_USE_NGROK === 'true';
+
+      if (useNgrok) {
+        return 'local.mobix.fyi';
+      }
+
+      return 'localhost:4567';
+    }
+
     case 'test':
       return 'local.mobix.fyi';
 
@@ -13,6 +22,6 @@ export function getBaseDomain() {
       return 'mobix.lat';
 
     default:
-      return 'local.mobix.fyi';
+      return 'localhost:4567';
   }
 }

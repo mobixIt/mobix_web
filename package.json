@@ -8,8 +8,9 @@
   },
   "scripts": {
     "dev:next": "next dev -p 4567 --turbopack",
-    "dev:ngrok": "ngrok http 4567 --domain=local.mobix.fyi",
+    "dev:ngrok": "ngrok start mobix_web --config=ngrok.yml",
     "dev": "concurrently -k -n next,ngrok -c blue,magenta \"yarn dev:next\" \"yarn dev:ngrok\"",
+    "dev:test": "NEXT_PUBLIC_ENVIRONMENT=test NEXT_PUBLIC_USE_NGROK=false next dev -p 4567 --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

@@ -1,0 +1,7 @@
+version: "3"
+
+tunnels:
+  mobix_web:
+    proto: http
+    addr: 4567
+    hostname: "*.local.mobix.fyi"
