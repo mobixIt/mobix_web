@@ -4,7 +4,7 @@ export function getBaseDomain() {
   switch (env) {
     case 'development':
     case 'test':
-      return 'mobix.dev';
+      return 'local.mobix.fyi';
 
     case 'staging':
       return 'mobix.fyi';
@@ -13,6 +13,6 @@ export function getBaseDomain() {
       return 'mobix.lat';
 
     default:
-      return 'mobix.dev';
+      return 'local.mobix.fyi';
   }
 }

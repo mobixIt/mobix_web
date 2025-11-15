@@ -139,7 +139,7 @@ test.describe('Login flow', () => {
   });
 
   test('redirects to tenant dashboard when user has a single membership', async ({ page }) => {
-    await page.route('**://coolitoral.mobix.dev/dashboard', async (route) => {
+    await page.route('**://coolitoral.local.mobix.fyi/dashboard', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'text/html',
@@ -201,7 +201,7 @@ test.describe('Login flow', () => {
     await page.getByLabel('Contraseña').fill('Password1!');
     await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
-    await expect(page).toHaveURL(/http:\/\/coolitoral\.mobix\.dev\/dashboard$/);
+    await expect(page).toHaveURL('http://coolitoral.local.mobix.fyi/dashboard');
   });
 
   test('stays on /dashboard and shows tenant switcher when user has multiple memberships', async ({ page }) => {
@@ -260,7 +260,7 @@ test.describe('Login flow', () => {
   });
 
   test('selecting a tenant from the switcher redirects to the selected tenant subdomain', async ({ page }) => {
-    await page.route('**://sobusa.mobix.dev/dashboard', async (route) => {
+    await page.route('**://sobusa.local.mobix.fyi/dashboard', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'text/html',
@@ -324,6 +324,6 @@ test.describe('Login flow', () => {
 
     await page.getByRole('option', { name: /sobusa/i }).click();
 
-    await expect(page).toHaveURL(/http:\/\/sobusa\.mobix\.dev\/dashboard$/);
+    await expect(page).toHaveURL('http://sobusa.local.mobix.fyi/dashboard');
   });
 });
