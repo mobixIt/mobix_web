@@ -1,6 +1,6 @@
 import apiClient from './apiClientService';
 import type { ApiSuccessResponse } from '@/types/api';
-import type { MeResponse } from '@/types/auth';
+import type { MeResponse, MembershipResponse } from '@/types/auth';
 
 /**
  * Authenticates a user using email or ID and password.
@@ -26,7 +26,7 @@ export async function loginUser(
  * @returns A promise resolving to the user's session information.
  */
 export async function fetchUserInfo(): Promise<ApiSuccessResponse<MeResponse>> {
-  const response = await apiClient.get('/me');
+  const response = await apiClient.get('/auth/me');
   return response.data;
 }
 
@@ -61,5 +61,21 @@ export async function notifyBackendOfActivity() {
   } catch (err) {
     console.error('[Session] Failed to notify backend of activity:', err);
   }
+}
+
+/**
+ * Retrieves membership + roles info for the current person in a given tenant.
+ * Requires a valid session cookie (httpOnly).
+ */
+export async function fetchUserMembership(
+  tenantSlug: string
+): Promise<ApiSuccessResponse<MembershipResponse>> {
+  const response = await apiClient.get('/auth/membership', {
+    headers: {
+      'X-Tenant': tenantSlug,
+    },
+  });
+
+  return response.data;
 }
 

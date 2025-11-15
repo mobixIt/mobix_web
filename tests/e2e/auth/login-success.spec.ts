@@ -20,7 +20,7 @@ test.describe('Login flow', () => {
       });
     });
 
-    await page.route('**/me', async (route) => {
+    await page.route('**/auth/me', async (route) => {
       await route.fulfill({
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -75,7 +75,7 @@ test.describe('Login flow', () => {
     expect(authCookie?.value).toBe('fake-jwt-value');
   });
 
-  test('logs in, loads /me into Redux and shows user name in dashboard', async ({ page }) => {
+  test('logs in, loads /auth/me into Redux and shows user name in dashboard', async ({ page }) => {
     await page.route('**/auth/login', async (route) => {
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
@@ -94,7 +94,7 @@ test.describe('Login flow', () => {
       });
     });
 
-    await page.route('**/me', async (route) => {
+    await page.route('**/auth/me', async (route) => {
       await route.fulfill({
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -169,7 +169,7 @@ test.describe('Login flow', () => {
       });
     });
 
-    await page.route('**/me', async (route) => {
+    await page.route('**/auth/me', async (route) => {
       const json = {
         data: {
           id: 'user-1',
@@ -218,7 +218,7 @@ test.describe('Login flow', () => {
       });
     });
 
-    await page.route('**/me', async (route) => {
+    await page.route('**/auth/me', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -288,7 +288,7 @@ test.describe('Login flow', () => {
       });
     });
 
-    await page.route('**/me', async (route) => {
+    await page.route('**/auth/me', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
