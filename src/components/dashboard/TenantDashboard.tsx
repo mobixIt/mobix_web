@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { AxiosError } from 'axios';
 
-import { fetchUserMembership } from '@/services/userAuthService';
+import { fetchUserMembership, logoutUser } from '@/services/userAuthService';
 import type { ApiErrorResponse } from '@/types/api';
 import type { MembershipResponse } from '@/types/auth';
+
+import { Button } from '@mui/material';
 
 type TenantDashboardProps = {
   tenantSlug: string;
@@ -21,6 +24,8 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
   const [person, setPerson] = useState<MembershipResponse | null>(null);
   const [error, setError] = useState<MembershipError | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +63,14 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
       cancelled = true;
     };
   }, [tenantSlug]);
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } finally {
+      router.push('/login');
+    }
+  };
 
   if (loading) {
     return (
@@ -122,6 +135,10 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
           <p>No membership found for this tenant.</p>
         </div>
       )}
+
+      <Button variant="outlined" color="secondary" onClick={handleLogout}>
+        Cerrar sesión
+      </Button>
     </section>
   );
 }

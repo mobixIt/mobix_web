@@ -40,8 +40,6 @@ export function PersonDashboard() {
     try {
       await logoutUser();
     } finally {
-      localStorage.removeItem('userTokenExpiresAt');
-      localStorage.removeItem('userIdleTimeout');
       router.push('/login');
     }
   };

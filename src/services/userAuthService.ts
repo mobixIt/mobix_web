@@ -46,9 +46,14 @@ export async function refreshUserToken(): Promise<ApiSuccessResponse<{ expires_a
  * The backend will clear the httpOnly authentication cookie.
  */
 export async function logoutUser() {
-  await apiClient.post('/auth/logout');
-  localStorage.removeItem('userTokenExpiresAt');
-  localStorage.removeItem('userIdleTimeout');
+  try {
+    await apiClient.delete('/auth/logout');
+  } catch (error) {
+    console.error('Error calling /auth/logout', error);
+  } finally {
+    localStorage.removeItem('userTokenExpiresAt');
+    localStorage.removeItem('userIdleTimeout');
+  }
 }
 
 /**
