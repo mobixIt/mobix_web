@@ -1,4 +1,19 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+async function setActiveIdleCookie(page: Page) {
+  await page.addInitScript(() => {
+    const meta = {
+      last_activity_at: Date.now(),
+      idle_timeout_minutes: 10,
+      expires_at: Date.now() + 60 * 60 * 1000,
+    };
+
+    document.cookie =
+      'mobix_idle_meta=' +
+      encodeURIComponent(JSON.stringify(meta)) +
+      '; path=/; SameSite=Lax';
+  });
+}
 
 test('renders PersonDashboard when there is no tenant subdomain', async ({ page }) => {
   await page.route('**/auth/login', async (route) => {
@@ -50,16 +65,15 @@ test('renders PersonDashboard when there is no tenant subdomain', async ({ page 
   await page.getByLabel('Contraseña').fill('Password1!');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
-  // Multi-tenant user ⇒ debería quedarse en /dashboard
   await expect(page).toHaveURL(/\/dashboard$/);
 
-  // Debe estar renderizado el PersonDashboard
   await expect(page.getByTestId('person-dashboard')).toBeVisible();
-  // Y NO el TenantDashboard (porque estamos en localhost, sin subdominio)
   await expect(page.getByTestId('tenant-dashboard')).toHaveCount(0);
 });
 
 test('renders TenantDashboard when tenant subdomain is present and membership is valid', async ({ page }) => {
+  await setActiveIdleCookie(page);
+
   await page.route('**/auth/membership', async (route) => {
     await route.fulfill({
       status: 200,
@@ -107,6 +121,8 @@ test('renders TenantDashboard when tenant subdomain is present and membership is
 });
 
 test('shows error state in TenantDashboard when membership API fails', async ({ page }) => {
+  await setActiveIdleCookie(page);
+
   await page.route('**/auth/membership', async (route) => {
     await route.fulfill({
       status: 401,
@@ -130,6 +146,8 @@ test('shows error state in TenantDashboard when membership API fails', async ({ 
 });
 
 test('shows "no membership" message when response has no membership for current tenant', async ({ page }) => {
+  await setActiveIdleCookie(page);
+
   await page.route('**/auth/membership', async (route) => {
     await route.fulfill({
       status: 200,

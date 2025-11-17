@@ -1,6 +1,21 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Login flow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/auth/refresh', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
+            idle_timeout_minutes: 15
+          }
+        }),
+      });
+    });
+  });
+
   test('logs in, stores session data and redirects to dashboard', async ({ page }) => {
     await page.route('**/auth/login', async (route) => {
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -59,15 +74,20 @@ test.describe('Login flow', () => {
     await page.waitForURL('**/dashboard', { timeout: 5_000 });
     await expect(page).toHaveURL(/\/dashboard$/);
 
-    const ls = await page.evaluate(() => {
-      return {
-        expiresAt: localStorage.getItem('userTokenExpiresAt'),
-        idle: localStorage.getItem('userIdleTimeout'),
-      };
-    });
+    const cookies = await page.context().cookies();
+    const idleCookie = cookies.find((c) => c.name === 'mobix_idle_meta');
 
-    expect(ls.expiresAt).not.toBeNull();
-    expect(ls.idle).toBe('15');
+    expect(idleCookie).toBeDefined();
+
+    const meta = JSON.parse(decodeURIComponent(idleCookie!.value));
+
+    expect(meta.idle_timeout_minutes).toBe(15);
+    const expiresMs =
+      typeof meta.expires_at === 'number'
+        ? meta.expires_at
+        : new Date(meta.expires_at).getTime();
+
+    expect(expiresMs).toBeGreaterThan(Date.now());
   });
 
   test('logs in, loads /auth/me into Redux and shows user name in dashboard', async ({ page }) => {
@@ -128,13 +148,15 @@ test.describe('Login flow', () => {
     await page.waitForURL('**/dashboard', { timeout: 5_000 });
     await expect(page).toHaveURL(/\/dashboard$/);
 
+    await expect(page.getByTestId('person-dashboard')).toBeVisible();
+
     await expect(
-      page.getByRole('heading', { name: 'Bienvenido, Harold Rangel' })
+      page.getByRole('heading', { name: /Bienvenido,\s*Harold Rangel/i })
     ).toBeVisible();
   });
 
   test('redirects to tenant dashboard when user has a single membership', async ({ page }) => {
-    await page.route('**://coolitoral.local.mobix.fyi/dashboard', async (route) => {
+    await page.route('**://coolitoral.localhost:4567/dashboard', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'text/html',
@@ -190,13 +212,15 @@ test.describe('Login flow', () => {
       });
     });
 
-    await page.goto('/');
+    await page.goto('http://www.localhost:4567/');
+
+    await page.waitForURL('**/login');
 
     await page.getByLabel('ID ó Correo electrónico').fill('single@tenant.test');
     await page.getByLabel('Contraseña').fill('Password1!');
     await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
-    await expect(page).toHaveURL('http://coolitoral.local.mobix.fyi/dashboard');
+    await expect(page).toHaveURL('http://coolitoral.localhost:4567/dashboard');
   });
 
   test('stays on /dashboard and shows tenant switcher when user has multiple memberships', async ({ page }) => {
@@ -255,7 +279,7 @@ test.describe('Login flow', () => {
   });
 
   test('selecting a tenant from the switcher redirects to the selected tenant subdomain', async ({ page }) => {
-    await page.route('**://sobusa.local.mobix.fyi/dashboard', async (route) => {
+    await page.route('**://sobusa.localhost:4567/dashboard', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'text/html',
@@ -307,7 +331,7 @@ test.describe('Login flow', () => {
       });
     });
 
-    await page.goto('http://localhost:4567/');
+    await page.goto('http://www.localhost:4567/');
 
     await page.getByLabel('ID ó Correo electrónico').fill('multi@tenant.test');
     await page.getByLabel('Contraseña').fill('Password1!');
@@ -319,6 +343,6 @@ test.describe('Login flow', () => {
 
     await page.getByRole('option', { name: /sobusa/i }).click();
 
-    await expect(page).toHaveURL('http://sobusa.local.mobix.fyi/dashboard');
+    await expect(page).toHaveURL('http://sobusa.localhost:4567/dashboard');
   });
 });

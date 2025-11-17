@@ -1,6 +1,7 @@
 import apiClient from './apiClientService';
 import type { ApiSuccessResponse } from '@/types/api';
 import type { MeResponse, MembershipResponse } from '@/types/auth';
+import { clearSessionIdleCookie } from '@/utils/sessionIdleCookie';
 
 /**
  * Authenticates a user using email or ID and password.
@@ -36,9 +37,30 @@ export async function fetchUserInfo(): Promise<ApiSuccessResponse<MeResponse>> {
  *
  * @returns A promise resolving to the new session data.
  */
-export async function refreshUserToken(): Promise<ApiSuccessResponse<{ expires_at: string; idle_timeout_minutes?: number }>> {
-  const response = await apiClient.post('/auth/refresh');
-  return response.data;
+type RefreshPayload = {
+  expires_at: string;
+  idle_timeout_minutes?: number;
+};
+
+let inFlightRefresh: Promise<ApiSuccessResponse<RefreshPayload>> | null = null;
+export async function refreshUserToken(): Promise<ApiSuccessResponse<RefreshPayload>> {
+  if (inFlightRefresh) {
+    return inFlightRefresh;
+  }
+
+  inFlightRefresh = (async () => {
+    try {
+      const response = await apiClient.post<ApiSuccessResponse<RefreshPayload>>(
+        '/auth/refresh'
+      );
+
+      return response.data;
+    } finally {
+      inFlightRefresh = null;
+    }
+  })();
+
+  return inFlightRefresh;
 }
 
 /**
@@ -51,8 +73,7 @@ export async function logoutUser() {
   } catch (error) {
     console.error('Error calling /auth/logout', error);
   } finally {
-    localStorage.removeItem('userTokenExpiresAt');
-    localStorage.removeItem('userIdleTimeout');
+    clearSessionIdleCookie();
   }
 }
 

@@ -7,7 +7,7 @@ import AuthContainer from '@/components/AuthContainer';
 import BaseTextField from '@/components/ui/BaseTextField';
 import AuthLink from '@/components/AuthLink';
 import { loginUser } from '@/services/userAuthService';
-import { initSessionStorageFromSessionResponse } from '@/utils/sessionAuthStorage';
+import { writeSessionIdleCookie } from '@/utils/sessionIdleCookie';
 import { getLoginErrorMessage } from '@/errors/getLoginErrorMessage';
 import type { AxiosError } from 'axios';
 import type { ApiErrorResponse } from '@/types/api';
@@ -30,7 +30,19 @@ export default function LoginForm() {
 
     try {
       const { data: { expires_at, idle_timeout_minutes } } = await loginUser(email, password);
-      initSessionStorageFromSessionResponse({ expires_at, idle_timeout_minutes });
+      
+      const idleMinutes =
+        typeof idle_timeout_minutes === 'number' && idle_timeout_minutes > 0
+          ? idle_timeout_minutes
+          : 30;
+
+      const now = Date.now();
+
+      writeSessionIdleCookie({
+        last_activity_at: now,
+        idle_timeout_minutes: idleMinutes,
+        expires_at,
+      });
 
       const { memberships } = await dispatch(fetchMe()).unwrap();
       
@@ -38,7 +50,6 @@ export default function LoginForm() {
         const tenantSlug = memberships[0].tenant.slug;
         const url = buildTenantUrl(tenantSlug);
         const dashboardUrl = `${url}/dashboard`;
-        console.log('[DEBUG] Redirecting to tenant:', dashboardUrl);
         window.location.href = dashboardUrl;
         return;
       }

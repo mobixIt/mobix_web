@@ -80,7 +80,10 @@ test.describe('Logout flow', () => {
     await page.getByRole('button', { name: /cerrar sesión/i }).click();
 
     await page.waitForURL('**/login');
-    await expect(page).toHaveURL(/\/login$/);
+
+    const finalUrl = new URL(page.url());
+    expect(finalUrl.hostname).toBe('localhost');
+    expect(finalUrl.pathname).toBe('/login');
 
     expect(logoutCalled).toBe(true);
 
@@ -96,12 +99,22 @@ test.describe('Logout flow', () => {
   test('logs out from tenant dashboard, clears session and redirects to /login', async ({ page }) => {
     let logoutCalled = false;
 
-    await page.addInitScript(() => {
-      localStorage.setItem(
-        'userTokenExpiresAt',
-        String(Date.now() + 60 * 60 * 1000),
-      );
-      localStorage.setItem('userIdleTimeout', '15');
+    await page.route('**/auth/login', async (route) => {
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'Set-Cookie': 'auth_token=fake-jwt-value; Path=/; HttpOnly',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            expires_at: expiresAt,
+            idle_timeout_minutes: 15,
+          },
+        }),
+      });
     });
 
     await page.route('**/auth/me**', async (route) => {
@@ -169,23 +182,27 @@ test.describe('Logout flow', () => {
       });
     });
 
-    await page.goto('http://lacarolina.local.mobix.fyi/dashboard');
+    await page.goto('http://lacarolina.localhost:4567/');
+
+    await page.waitForURL('**/login');
+
+    await page.getByLabel('ID ó Correo electrónico').fill('user@example.com');
+    await page.getByLabel('Contraseña').fill('Password1!');
+    await page.getByRole('button', { name: /iniciar sesión/i }).click();
+
+    await page.waitForURL('**/dashboard');
+    const currentUrl = new URL(page.url());
+    expect(currentUrl.hostname).toContain('lacarolina');
 
     await expect(page.getByTestId('tenant-dashboard')).toBeVisible();
 
     await page.getByRole('button', { name: /cerrar sesión/i }).click();
 
-    await page.waitForURL('**/login');
-    await expect(page).toHaveURL(/\/login$/);
-
     expect(logoutCalled).toBe(true);
 
-    const lsAfter = await page.evaluate(() => ({
-      expiresAt: localStorage.getItem('userTokenExpiresAt'),
-      idle: localStorage.getItem('userIdleTimeout'),
-    }));
-
-    expect(lsAfter.expiresAt).toBeNull();
-    expect(lsAfter.idle).toBeNull();
+    await page.waitForURL(/\/login/);
+    const finalUrl = new URL(page.url());
+    expect(finalUrl.hostname).toBe('localhost');
+    expect(finalUrl.pathname).toBe('/login');
   });
 });

@@ -8,17 +8,24 @@ import React, {
   useState,
   ReactNode,
 } from 'react';
-import { useRouter } from 'next/navigation';
+
 import SessionTimeoutModal from '@/components/SessionTimeoutModal';
 import { refreshUserToken, notifyBackendOfActivity } from '@/services/userAuthService';
-import { initSessionStorageFromSessionResponse } from '@/utils/sessionAuthStorage';
+import {
+  readSessionIdleCookie,
+  writeSessionIdleCookie,
+  updateLastActivityInCookie,
+  clearSessionIdleCookie,
+} from '@/utils/sessionIdleCookie';
 
 const BACKEND_NOTIFY_INTERVAL_MS = 60_000;
 const IDLE_WARNING_THRESHOLD_SECONDS = 30;
 const REFRESH_WINDOW_SECONDS = 15;
 
+type SessionStatus = 'loading' | 'active' | 'invalid';
+
 type SessionContextType = {
-  isSessionActive: boolean;
+  status: SessionStatus;
   secondsUntilIdleLogout: number;
   secondsUntilTokenExpires: number;
   isRefreshing: boolean;
@@ -28,83 +35,126 @@ type SessionContextType = {
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
-  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [status, setStatus] = useState<SessionStatus>('loading');
   const [secondsUntilIdleLogout, setSecondsUntilIdleLogout] = useState(0);
   const [secondsUntilTokenExpires, setSecondsUntilTokenExpires] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const idleTimer = useRef<NodeJS.Timeout | null>(null);
   const lastActivity = useRef<number | null>(null);
-  const hasUserInteracted = useRef(false);
   const idleTimeoutMsRef = useRef<number>(0);
+  const hasUserInteracted = useRef(false);
   const lastBackendNotify = useRef<number>(0);
 
+  function handleLogicalLogout() {
+    clearSessionIdleCookie();
+    setStatus('invalid');
+  }
+
   useEffect(() => {
-    const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
-    const idleTimeoutStr = localStorage.getItem('userIdleTimeout');
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
 
-    if (!expiresAtStr) {
-      logout('Sesión no encontrada');
-      return;
-    }
+    function initSessionFromCookie() {
+      setStatus('loading');
 
-    const expiresAtMs = parseInt(expiresAtStr, 10);
-    const nowMs = Date.now();
+      const meta = readSessionIdleCookie();
 
-    if (nowMs >= expiresAtMs) {
-      logout('Sesión expirada');
-      return;
-    }
-
-    const idleTimeoutMinutes = parseFloat(idleTimeoutStr ?? '0.3');
-    const idleTimeoutMs = idleTimeoutMinutes * 60 * 1000;
-    idleTimeoutMsRef.current = idleTimeoutMs;
-
-    lastActivity.current = Date.now();
-    hasUserInteracted.current = true;
-
-    setIsSessionActive(true);
-
-    const secondsLeft = Math.floor((expiresAtMs - nowMs) / 1000);
-    setSecondsUntilTokenExpires(secondsLeft);
-    setSecondsUntilIdleLogout(idleTimeoutMinutes * 60);
-
-    startIdleTimer(idleTimeoutMs);
-
-    const interval = setInterval(() => {
-      updateIdleCountdown(idleTimeoutMinutes * 60);
-      checkTokenValidity();
-    }, 1000);
-
-    const backendNotifyInterval = setInterval(() => {
-      const now = Date.now();
-      const secondsSinceLastActivity = getSecondsIdle();
-
-      if (
-        hasUserInteracted.current &&
-        secondsSinceLastActivity < idleTimeoutMsRef.current / 1000 &&
-        now - lastBackendNotify.current > BACKEND_NOTIFY_INTERVAL_MS
-      ) {
-        notifyBackendOfActivity();
-        lastBackendNotify.current = now;
+      if (!meta) {
+        if (!cancelled) handleLogicalLogout();
+        return;
       }
-    }, 5_000);
 
-    const events = ['mousemove', 'keydown', 'click', 'scroll'];
-    const handleActivity = () => {
+      const { last_activity_at, idle_timeout_minutes, expires_at } = meta;
+
+      const expiresAtMs =
+        typeof expires_at === 'number'
+          ? expires_at
+          : new Date(expires_at).getTime();
+
+      if (!Number.isFinite(expiresAtMs) || Date.now() >= expiresAtMs) {
+        if (!cancelled) handleLogicalLogout();
+        return;
+      }
+
+      const idleTimeoutMs = idle_timeout_minutes * 60 * 1000;
+      if (!Number.isFinite(idleTimeoutMs) || idleTimeoutMs <= 0) {
+        if (!cancelled) handleLogicalLogout();
+        return;
+      }
+
+      const now = Date.now();
+      const secondsIdle = (now - last_activity_at) / 1000;
+      const timeoutSeconds = idle_timeout_minutes * 60;
+
+      if (secondsIdle >= timeoutSeconds) {
+        if (!cancelled) handleLogicalLogout();
+        return;
+      }
+
+      idleTimeoutMsRef.current = idleTimeoutMs;
+      lastActivity.current = last_activity_at;
+      lastBackendNotify.current = now;
       hasUserInteracted.current = true;
-      lastActivity.current = Date.now();
-      resetIdleTimer(idleTimeoutMsRef.current);
-    };
 
-    events.forEach((event) => window.addEventListener(event, handleActivity));
+      setSecondsUntilIdleLogout(Math.floor(timeoutSeconds - secondsIdle));
+      setSecondsUntilTokenExpires(
+        Math.max(0, Math.floor((expiresAtMs - now) / 1000)),
+      );
+      setStatus('active');
+
+      startIdleTimer(idleTimeoutMs);
+
+      const interval = setInterval(() => {
+        updateIdleCountdown(timeoutSeconds);
+        checkTokenValidity();
+      }, 1000);
+
+      const backendNotifyInterval = setInterval(() => {
+        const nowTs = Date.now();
+        const secondsSinceLastActivity = getSecondsIdle();
+        if (
+          hasUserInteracted.current &&
+          secondsSinceLastActivity < idleTimeoutMsRef.current / 1000 &&
+          nowTs - lastBackendNotify.current > BACKEND_NOTIFY_INTERVAL_MS
+        ) {
+          notifyBackendOfActivity();
+          lastBackendNotify.current = nowTs;
+        }
+      }, 5_000);
+
+      const events: Array<keyof WindowEventMap> = [
+        'mousemove',
+        'keydown',
+        'click',
+        'scroll',
+      ];
+
+      const handleActivity = () => {
+        hasUserInteracted.current = true;
+        const nowActivity = Date.now();
+        lastActivity.current = nowActivity;
+        updateLastActivityInCookie(nowActivity);
+        resetIdleTimer(idleTimeoutMsRef.current);
+      };
+
+      events.forEach((ev) => window.addEventListener(ev, handleActivity));
+
+      cleanup = () => {
+        clearInterval(interval);
+        clearInterval(backendNotifyInterval);
+        events.forEach((ev) =>
+          window.removeEventListener(ev, handleActivity),
+        );
+        if (idleTimer.current) clearTimeout(idleTimer.current);
+      };
+    }
+
+    initSessionFromCookie();
 
     return () => {
-      clearInterval(interval);
-      clearInterval(backendNotifyInterval);
-      events.forEach((event) => window.removeEventListener(event, handleActivity));
-      if (idleTimer.current) clearTimeout(idleTimer.current);
+      cancelled = true;
+      if (cleanup) cleanup();
     };
   }, []);
 
@@ -117,10 +167,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (idleTimer.current) clearTimeout(idleTimer.current);
 
     idleTimer.current = setTimeout(() => {
-      const minutesIdle = getSecondsIdle() / 60;
-      const idleTimeout = parseFloat(localStorage.getItem('userIdleTimeout') || '0.3');
-      if (minutesIdle >= idleTimeout) {
-        logout('Inactividad detectada');
+      const meta = readSessionIdleCookie();
+      if (!meta) {
+        handleLogicalLogout();
+        return;
+      }
+
+      const { last_activity_at, idle_timeout_minutes } = meta;
+      const now = Date.now();
+      const secondsIdle = (now - last_activity_at) / 1000;
+      const timeoutSeconds = idle_timeout_minutes * 60;
+
+      if (secondsIdle >= timeoutSeconds) {
+        handleLogicalLogout();
       }
     }, timeoutMs);
   }
@@ -129,22 +188,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     startIdleTimer(timeoutMs);
   }
 
-  const handleStayActive = () => {
-    hasUserInteracted.current = true;
-    lastActivity.current = Date.now();
-
-    const idleTimeoutStr = localStorage.getItem('userIdleTimeout') ?? '0.3';
-    const idleTimeoutMinutes = parseFloat(idleTimeoutStr);
-    const idleTimeoutMs = idleTimeoutMinutes * 60 * 1000;
-
-    idleTimeoutMsRef.current = idleTimeoutMs;
-
-    resetIdleTimer(idleTimeoutMs);
-
-    const fullSeconds = Math.ceil(idleTimeoutMs / 1000);
-    setSecondsUntilIdleLogout(fullSeconds);
-  };
-
   function updateIdleCountdown(timeoutSeconds: number) {
     const secondsIdle = getSecondsIdle();
     const secondsLeft = Math.max(0, timeoutSeconds - secondsIdle);
@@ -152,28 +195,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }
 
   function checkTokenValidity() {
-    const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
-    if (!expiresAtStr) {
-      logout('Expiración ausente');
+    const meta = readSessionIdleCookie();
+    if (!meta) {
+      handleLogicalLogout();
       return;
     }
 
-    const expiresAtMs = Number.isNaN(Number(expiresAtStr))
-      ? new Date(expiresAtStr).getTime()
-      : parseInt(expiresAtStr, 10);
+    const { expires_at } = meta;
+    const expiresAtMs =
+      typeof expires_at === 'number'
+        ? expires_at
+        : new Date(expires_at).getTime();
 
-    const currentMilisecondsTime = Date.now();
-    const timeLeftSeconds = Math.floor((expiresAtMs - currentMilisecondsTime) / 1000);
+    const now = Date.now();
+    const timeLeft = Math.floor((expiresAtMs - now) / 1000);
 
-    setSecondsUntilTokenExpires(Math.max(0, timeLeftSeconds));
+    setSecondsUntilTokenExpires(Math.max(0, timeLeft));
 
-    if (timeLeftSeconds <= 0) {
-      logout('Sesión expirada');
+    if (timeLeft <= 0 || Number.isNaN(expiresAtMs)) {
+      handleLogicalLogout();
       return;
     }
 
     const userActive = hasUserInteracted.current && getSecondsIdle() < 60;
-    const inFinalWindow = timeLeftSeconds <= REFRESH_WINDOW_SECONDS;
+    const inFinalWindow = timeLeft <= REFRESH_WINDOW_SECONDS;
 
     if (inFinalWindow && userActive && !isRefreshing) {
       refreshTokenSilently();
@@ -185,58 +230,79 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setIsRefreshing(true);
 
     try {
-      const { data: { expires_at, idle_timeout_minutes } } = await refreshUserToken();
+      const { data } = await refreshUserToken();
+      const { expires_at, idle_timeout_minutes } = data;
 
-      initSessionStorageFromSessionResponse({ expires_at, idle_timeout_minutes });
+      const now = Date.now();
 
-      if (typeof idle_timeout_minutes === 'number') {
-        idleTimeoutMsRef.current = idle_timeout_minutes * 60 * 1000;
-      }
-      lastActivity.current = Date.now();
+      const safeIdleMinutes = typeof idle_timeout_minutes === "number"
+        ? idle_timeout_minutes
+        : 28;
+
+      writeSessionIdleCookie({
+        last_activity_at: now,
+        idle_timeout_minutes: safeIdleMinutes,
+        expires_at,
+      });
+
+      idleTimeoutMsRef.current = safeIdleMinutes * 60 * 1000;
+      lastActivity.current = now;
       resetIdleTimer(idleTimeoutMsRef.current);
 
-      if (expires_at) {
-        const nextExpiresMs = Number.isNaN(Number(expires_at))
-          ? new Date(expires_at).getTime()
-          : parseInt(expires_at, 10);
+      const expiresAtMs =
+        typeof expires_at === 'number'
+          ? expires_at
+          : new Date(expires_at).getTime();
 
-        setSecondsUntilTokenExpires(
-          Math.max(0, Math.floor((nextExpiresMs - Date.now()) / 1000))
-        );
-      }
-      setSecondsUntilIdleLogout(Math.ceil(idleTimeoutMsRef.current / 1000));
-    } catch (err) {
-      console.error('[Session] Error refreshing token:', err);
-      logout('Error al refrescar sesión');
+      setSecondsUntilTokenExpires(
+        Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000)),
+      );
+      setSecondsUntilIdleLogout(
+        Math.ceil(idleTimeoutMsRef.current / 1000),
+      );
+    } catch {
+      handleLogicalLogout();
     } finally {
       setIsRefreshing(false);
     }
   }
 
-  function logout(reason: string) {
-    console.log('[SessionProvider] Logout:', reason);
-    setIsSessionActive(false);
-    localStorage.removeItem('userTokenExpiresAt');
-    localStorage.removeItem('userIdleTimeout');
-    router.push('/login');
+  function forceLogout() {
+    handleLogicalLogout();
   }
 
   return (
     <SessionContext.Provider
       value={{
-        isSessionActive,
+        status,
         secondsUntilIdleLogout,
         secondsUntilTokenExpires,
         isRefreshing,
-        forceLogout: () => logout('Logout manual'),
+        forceLogout,
       }}
     >
-      {secondsUntilIdleLogout < IDLE_WARNING_THRESHOLD_SECONDS && secondsUntilIdleLogout > 0 && (
-        <SessionTimeoutModal
-          secondsLeft={secondsUntilIdleLogout}
-          onStayActive={handleStayActive}
-        />
-      )}
+      {secondsUntilIdleLogout < IDLE_WARNING_THRESHOLD_SECONDS &&
+        secondsUntilIdleLogout > 0 &&
+        status === 'active' && (
+          <SessionTimeoutModal
+            secondsLeft={secondsUntilIdleLogout}
+            onStayActive={() => {
+              const nowActivity = Date.now();
+              hasUserInteracted.current = true;
+              lastActivity.current = nowActivity;
+              updateLastActivityInCookie(nowActivity);
+
+              const meta = readSessionIdleCookie();
+              const idleMinutes = meta?.idle_timeout_minutes ?? 0.3;
+              const idleMs = idleMinutes * 60 * 1000;
+
+              idleTimeoutMsRef.current = idleMs;
+              resetIdleTimer(idleMs);
+              setSecondsUntilIdleLogout(Math.ceil(idleMs / 1000));
+            }}
+          />
+        )}
+
       {children}
     </SessionContext.Provider>
   );

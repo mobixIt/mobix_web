@@ -13,7 +13,7 @@ export function getBaseDomain() {
     }
 
     case 'test':
-      return 'local.mobix.fyi';
+      return 'localhost:4567';
 
     case 'staging':
       return 'mobix.fyi';

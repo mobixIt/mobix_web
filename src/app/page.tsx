@@ -1,25 +1,13 @@
-'use client';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+export default async function HomePage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth_token');
 
-export default function HomePage() {
-  const router = useRouter();
+  if (token?.value) {
+    redirect('/dashboard');
+  }
 
-  useEffect(() => {
-    const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
-    const nowMs = Date.now();
-
-    if (expiresAtStr) {
-      const expiresAtMs = parseInt(expiresAtStr, 10);
-      if (!Number.isNaN(expiresAtMs) && nowMs < expiresAtMs) {
-        router.push('/dashboard');
-        return;
-      }
-    }
-
-    router.push('/login');
-  }, [router]);
-
-  return null;
+  redirect('/login');
 }

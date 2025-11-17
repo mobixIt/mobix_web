@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import type { AxiosError } from 'axios';
 
 import { fetchUserMembership, logoutUser } from '@/services/userAuthService';
+import { redirectToBaseLogin } from '@/utils/redirectToLogin';
 import type { ApiErrorResponse } from '@/types/api';
 import type { MembershipResponse } from '@/types/auth';
 
@@ -25,8 +25,6 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
   const [error, setError] = useState<MembershipError | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const router = useRouter();
-
   useEffect(() => {
     let cancelled = false;
 
@@ -34,12 +32,13 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
       try {
         setLoading(true);
         const result = await fetchUserMembership(tenantSlug);
+
         if (!cancelled) {
           setPerson(result.data);
           setError(null);
         }
-      } catch (e) {
-        const err = e as AxiosError<ApiErrorResponse>;
+      } catch (error) {
+        const err = error as AxiosError<ApiErrorResponse>;
         const apiError = err?.response?.data?.errors?.[0];
 
         if (!cancelled) {
@@ -68,7 +67,7 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
     try {
       await logoutUser();
     } finally {
-      router.push('/login');
+      redirectToBaseLogin();
     }
   };
 

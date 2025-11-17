@@ -1,3 +1,5 @@
+import { writeSessionIdleCookie } from "./sessionIdleCookie";
+
 /**
  * Stores session expiration and idle timeout information in `localStorage`
  * based on the backend login response.
@@ -16,14 +18,27 @@
  *   idle_timeout_minutes: 15,
  * });
  */
-export function initSessionStorageFromSessionResponse(data: {
+export function initSessionStorageFromSessionResponse({
+  expires_at,
+  idle_timeout_minutes,
+}: {
   expires_at: string;
   idle_timeout_minutes?: number;
-}) {
-  const expiresAtMs = Date.parse(data.expires_at);
-  localStorage.setItem('userTokenExpiresAt', expiresAtMs.toString());
+}): void {
+  const idleMinutes =
+    typeof idle_timeout_minutes === "number" ? idle_timeout_minutes : 0.3;
 
-  if (data.idle_timeout_minutes != null) {
-    localStorage.setItem('userIdleTimeout', String(data.idle_timeout_minutes));
+  // Opcional: mantener localStorage por compatibilidad
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem("userTokenExpiresAt", expires_at);
+    localStorage.setItem("userIdleTimeout", idleMinutes.toString());
   }
+
+  const now = Date.now();
+
+  writeSessionIdleCookie({
+    expires_at,
+    idle_timeout_minutes: idleMinutes,
+    last_activity_at: now,
+  });
 }

@@ -1,46 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Box, Button, Typography, FormControl, Select, MenuItem } from '@mui/material';
 
 import { useAppSelector } from '@/store/hooks';
 import { selectCurrentPerson } from '@/store/slices/authSlice';
 import { logoutUser } from '@/services/userAuthService';
 import { buildTenantUrl } from '@/utils/tenantUrl';
+import { redirectToBaseLogin } from '@/utils/redirectToLogin';
 import type { Membership } from '@/types/auth';
 
 export function PersonDashboard() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const person = useAppSelector(selectCurrentPerson);
   const memberships = (person?.memberships ?? []) as Array<Membership>;
 
-  useEffect(() => {
-    const expiresAtStr = localStorage.getItem('userTokenExpiresAt');
-
-    if (!expiresAtStr) {
-      router.push('/login');
-      return;
-    }
-
-    const expiresAtMs = parseInt(expiresAtStr, 10);
-    const nowMs = Date.now();
-
-    if (Number.isNaN(expiresAtMs) || nowMs >= expiresAtMs) {
-      router.push('/login');
-      return;
-    }
-
-    setLoading(false);
-  }, [router]);
-
   const handleLogout = async () => {
     try {
+      setIsLoggingOut(true);
       await logoutUser();
+    } catch {
     } finally {
-      router.push('/login');
+      redirectToBaseLogin();
     }
   };
 
@@ -50,10 +32,6 @@ export function PersonDashboard() {
     const dashboardUrl = `${url}/dashboard`;
     window.location.href = dashboardUrl;
   };
-
-  if (loading) {
-    return <Typography sx={{ p: 4 }}>Cargando...</Typography>;
-  }
 
   return (
     <Box sx={{ p: 4 }} data-testid="person-dashboard">
@@ -92,7 +70,12 @@ export function PersonDashboard() {
         </Box>
       )}
 
-      <Button variant="outlined" color="secondary" onClick={handleLogout}>
+      <Button
+        variant="outlined"
+        color="secondary"
+        onClick={handleLogout}
+        disabled={isLoggingOut}
+      >
         Cerrar sesión
       </Button>
     </Box>

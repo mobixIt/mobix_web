@@ -1,10 +1,7 @@
 import './globals.css';
-import ThemeRegistry from '../components/ThemeRegistry';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ReduxProvider } from '@/store/ReduxProvider';
 import type { Metadata } from 'next';
-
 import { Inter, Poppins, Montserrat } from 'next/font/google';
+import { ClientProviders } from '@/providers/ClientProviders';
 
 export const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '700'] });
 export const poppins = Poppins({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
@@ -17,15 +14,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${inter.className} ${poppins.className} ${montserrat.className}`}>
+    <html
+      lang="es"
+      className={`${inter.className} ${poppins.className} ${montserrat.className}`}
+    >
       <body>
-        <ThemeRegistry>
-          <ReduxProvider>
-            <AuthProvider>
-              {children}
-            </AuthProvider>
-          </ReduxProvider>
-        </ThemeRegistry>
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );
