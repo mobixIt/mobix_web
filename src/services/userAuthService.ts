@@ -83,7 +83,7 @@ export async function logoutUser() {
  */
 export async function notifyBackendOfActivity() {
   try {
-    await apiClient.post('/session/activity');
+    await apiClient.post('/auth/activity');
   } catch (err) {
     console.error('[Session] Failed to notify backend of activity:', err);
   }
