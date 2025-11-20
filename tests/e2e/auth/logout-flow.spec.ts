@@ -163,8 +163,53 @@ test.describe('Logout flow', () => {
                   name: 'La Carolina',
                 },
                 roles: [
-                  { id: 'r-1', name: 'Admin', key: 'admin' },
-                  { id: 'r-2', name: 'Operador', key: 'operator' },
+                  {
+                    id: 'r-1',
+                    name: 'Admin',
+                    key: 'admin',
+                    permissions: [
+                      {
+                        id: 'perm-1',
+                        action: 'read',
+                        subject_class: 'Vehicle',
+                        app_module: {
+                          id: 10,
+                          name: 'Vehicles',
+                          description: 'Vehicles management',
+                          active: true,
+                        },
+                      },
+                      {
+                        id: 'perm-2',
+                        action: 'update',
+                        subject_class: 'Vehicle',
+                        app_module: {
+                          id: 10,
+                          name: 'Vehicles',
+                          description: 'Vehicles management',
+                          active: true,
+                        },
+                      },
+                    ],
+                  },
+                  {
+                    id: 'r-2',
+                    name: 'Operador',
+                    key: 'operator',
+                    permissions: [
+                      {
+                        id: 'perm-3',
+                        action: 'read',
+                        subject_class: 'Route',
+                        app_module: {
+                          id: 20,
+                          name: 'Routes',
+                          description: 'Routes management',
+                          active: true,
+                        },
+                      },
+                    ],
+                  },
                 ],
               },
             ],

@@ -1,4 +1,6 @@
 'use client';
+
+import * as React from 'react';
 import { Avatar, Box, IconButton, Typography } from '@mui/material';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 
