@@ -6,7 +6,7 @@ import type { AxiosError } from 'axios';
 import { fetchUserMembership, logoutUser } from '@/services/userAuthService';
 import { redirectToBaseLogin } from '@/utils/redirectToLogin';
 import type { ApiErrorResponse } from '@/types/api';
-import type { MembershipResponse } from '@/types/auth';
+import type { MembershipResponse } from '@/types/access-control';
 
 import { Button } from '@mui/material';
 

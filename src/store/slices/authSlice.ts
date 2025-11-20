@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { fetchUserInfo } from '@/services/userAuthService';
-import type { MeResponse } from '@/types/auth';
+import type { MeResponse } from '@/types/access-control';
 import type { RootState } from '@/store/store';
 
 export interface AuthState {

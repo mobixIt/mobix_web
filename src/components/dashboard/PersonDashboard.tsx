@@ -8,7 +8,7 @@ import { selectCurrentPerson } from '@/store/slices/authSlice';
 import { logoutUser } from '@/services/userAuthService';
 import { buildTenantUrl } from '@/utils/tenantUrl';
 import { redirectToBaseLogin } from '@/utils/redirectToLogin';
-import type { Membership } from '@/types/auth';
+import type { Membership } from '@/types/access-control';
 
 export function PersonDashboard() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);

@@ -1,6 +1,6 @@
 import apiClient from './apiClientService';
 import type { ApiSuccessResponse } from '@/types/api';
-import type { MeResponse, MembershipResponse } from '@/types/auth';
+import type { MeResponse, MembershipResponse } from '@/types/access-control';
 import { clearSessionIdleCookie } from '@/utils/sessionIdleCookie';
 
 /**

@@ -1,5 +1,5 @@
 export function getBaseHost(hostname: string): { host: string; usePort: boolean } {
-  // LOCAL multi-tenant: cualquier <tenant>.local.mobix.fyi → www.local.mobix.fyi
+  // LOCAL multi-tenant: <tenant>.local.mobix.fyi → www.local.mobix.fyi
   if (hostname.endsWith('.local.mobix.fyi')) {
     return { host: 'www.local.mobix.fyi', usePort: false };
   }
