@@ -13,6 +13,8 @@ import {
   selectPermissionsError,
   selectMembershipRaw,
 } from '@/store/slices/permissionsSlice';
+
+import { fetchMe, selectCurrentPerson } from '@/store/slices/authSlice';
 import type { AppDispatch } from '@/store/store';
 
 type TenantDashboardProps = {
@@ -25,9 +27,15 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
   const loading = useSelector(selectPermissionsLoading);
   const error = useSelector(selectPermissionsError);
   const membershipResponse = useSelector(selectMembershipRaw);
+  const person = useSelector(selectCurrentPerson);
 
   useEffect(() => {
-    dispatch(loadTenantPermissions(tenantSlug));
+    const loadAll = async () => {
+      await dispatch(fetchMe());
+      await dispatch(loadTenantPermissions(tenantSlug));
+    };
+
+    loadAll();
   }, [tenantSlug, dispatch]);
 
   const handleLogout = async () => {
@@ -63,7 +71,7 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
     return (
       <section data-testid="tenant-dashboard-error" className="p-4">
         <h2>Tenant Dashboard: {tenantSlug}</h2>
-        <p>Could not load membership data.</p>
+        <p>No se pudo obtener las membresías.</p>
       </section>
     );
   }
@@ -78,9 +86,9 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
         <header>
           <h2>Tenant Dashboard: {tenantSlug}</h2>
           <p data-testid="current-person-name">
-            {membershipResponse.first_name} {membershipResponse.last_name}
+            {person?.first_name} {person?.last_name}
           </p>
-          <p data-testid="current-person-email">{membershipResponse.email}</p>
+          <p data-testid="current-person-email">{person?.email}</p>
         </header>
 
         <div data-testid="current-membership-none">
@@ -94,17 +102,15 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
     );
   }
 
-  const person = membershipResponse;
-
   return (
     <section data-testid="tenant-dashboard" className="p-4">
       <header>
         <h2>Tenant Dashboard: {tenantSlug}</h2>
 
         <p data-testid="current-person-name">
-          {person.first_name} {person.last_name}
+          {person?.first_name} {person?.last_name}
         </p>
-        <p data-testid="current-person-email">{person.email}</p>
+        <p data-testid="current-person-email">{person?.email}</p>
       </header>
 
       <div data-testid="current-membership">

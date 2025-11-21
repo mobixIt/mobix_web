@@ -274,8 +274,8 @@ test.describe('Login flow', () => {
 
     await switcher.click();
 
-    await expect(page.getByRole('option', { name: /coolitoral/i })).toBeVisible();
-    await expect(page.getByRole('option', { name: /sobusa/i })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /coolitoral/i })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /sobusa/i })).toBeVisible();
   });
 
   test('selecting a tenant from the switcher redirects to the selected tenant subdomain', async ({ page }) => {
@@ -341,7 +341,7 @@ test.describe('Login flow', () => {
 
     await switcher.click();
 
-    await page.getByRole('option', { name: /sobusa/i }).click();
+    await page.getByRole('menuitem', { name: /sobusa/i }).click();
 
     await expect(page).toHaveURL('http://sobusa.localhost:4567/dashboard');
   });

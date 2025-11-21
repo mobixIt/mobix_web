@@ -106,6 +106,22 @@ test('renders TenantDashboard when tenant subdomain is present and membership is
     });
   });
 
+  await page.route('**/auth/me', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id: 'user-1',
+          first_name: 'Single',
+          last_name: 'Tenant',
+          email: 'single@tenant.test',
+          phone: null,
+        },
+      }),
+    });
+  });
+
   await page.goto('http://coolitoral.localhost:4567/dashboard');
 
   await expect(page.getByTestId('tenant-dashboard')).toBeVisible();
