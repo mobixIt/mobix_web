@@ -7,17 +7,15 @@ import { useSelector } from 'react-redux';
 
 import { SIDEBAR_WIDTH, NAV_ITEMS } from './constants';
 import type { NavItem, NavChild } from './types';
-import BrandMark from './BrandMark';
 import SidebarItem from './SidebarItem';
 import Flyout from './Flyout';
 import UserCard from './UserCard';
 
-import {
-  selectEffectiveModules,
-} from '@/store/slices/permissionsSlice';
-import type { EffectiveModule } from '@/types/access-control';
-
+import { selectEffectiveModules } from '@/store/slices/permissionsSlice';
+import type { EffectiveModule, Membership } from '@/types/access-control';
 import { selectCurrentPerson } from '@/store/slices/authSlice';
+import { TenantSwitcher, TenantOption } from '@/components/header/TenantSwitcher';
+import { buildTenantUrl } from '@/utils/tenantUrl';
 
 export function hasModuleAccess(
   modules: EffectiveModule[],
@@ -95,7 +93,9 @@ export function buildNavItemsForUser(
 export default function Sidebar() {
   const pathname = usePathname();
 
-  const effectiveModules = useSelector(selectEffectiveModules) as EffectiveModule[];
+  const effectiveModules = useSelector(
+    selectEffectiveModules,
+  ) as EffectiveModule[];
 
   const person = useSelector(selectCurrentPerson);
 
@@ -108,6 +108,57 @@ export default function Sidebar() {
     () => buildNavItemsForUser(NAV_ITEMS, effectiveModules),
     [effectiveModules],
   );
+
+  const memberships = React.useMemo(
+    () => ((person?.memberships ?? []) as Membership[]),
+    [person],
+  );
+
+  const tenantOptions: TenantOption[] = React.useMemo(
+    () =>
+      memberships.map((membership) => ({
+        id: String(membership.tenant.id),
+        name: membership.tenant.slug ?? membership.tenant.slug,
+        slug: membership.tenant.slug,
+      })),
+    [memberships],
+  );
+
+  const [currentTenant, setCurrentTenant] =
+    React.useState<TenantOption | null>(null);
+
+  React.useEffect(() => {
+    if (!tenantOptions.length) {
+      setCurrentTenant((prev) => (prev !== null ? null : prev));
+      return;
+    }
+
+    const host =
+      typeof window !== 'undefined' ? window.location.hostname : '';
+
+    let fromHost: TenantOption | undefined;
+
+    if (host && host.length > 0) {
+      fromHost = tenantOptions.find((tenant) =>
+        host.startsWith(`${tenant.slug}.`),
+      );
+    }
+
+    const nextTenant = fromHost ?? tenantOptions[0];
+
+    setCurrentTenant((prev) => {
+      if (prev?.slug === nextTenant.slug) return prev;
+      return nextTenant;
+    });
+  }, [tenantOptions]);
+
+  const handleTenantChange = (tenant: TenantOption) => {
+    if (!tenant || tenant.slug === currentTenant?.slug) return;
+
+    const url = buildTenantUrl(tenant.slug);
+    const dashboardUrl = `${url}/dashboard`;
+    window.location.href = dashboardUrl;
+  };
 
   React.useEffect(() => {
     const found = navItems.find((item) =>
@@ -155,7 +206,15 @@ export default function Sidebar() {
           },
         }}
       >
-        <BrandMark />
+        {tenantOptions.length > 0 && currentTenant && (
+          <Box sx={{ px: 2, pt: 1, pb: 1.5 }}>
+            <TenantSwitcher
+              currentTenant={currentTenant}
+              tenants={tenantOptions}
+              onChange={handleTenantChange}
+            />
+          </Box>
+        )}
 
         <List sx={{ flex: 1 }}>
           {navItems.map((item) => (
