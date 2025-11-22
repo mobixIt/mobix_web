@@ -25,7 +25,7 @@ export default function SessionTimeoutModal({ secondsLeft, onStayActive }: Props
         textAlign: 'center',
       }}>
         <h2>¿Sigues ahí?</h2>
-        <p>Tu sesión se cerrará automáticamente en {secondsLeft} segundos por inactividad.</p>
+        <p>Tu sesión se cerrará automáticamente en <br />{secondsLeft} segundos por inactividad.</p>
         <button
           onClick={onStayActive}
           style={{

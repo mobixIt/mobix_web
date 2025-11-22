@@ -1,4 +1,3 @@
-// src/components/header/Header.tsx
 'use client';
 
 import * as React from 'react';
@@ -25,13 +24,20 @@ import { buildTenantUrl } from '@/utils/tenantUrl';
 
 export default function Header() {
   const person = useAppSelector(selectCurrentPerson);
-  const memberships = (person?.memberships ?? []) as Membership[];
+  const memberships = React.useMemo(
+    () => ((person?.memberships ?? []) as Membership[]),
+    [person],
+  );
 
-  const tenantOptions: TenantOption[] = memberships.map((membership) => ({
-    id: String(membership.tenant.id),
-    name: membership.tenant.slug ?? membership.tenant.slug,
-    slug: membership.tenant.slug,
-  }));
+  const tenantOptions: TenantOption[] = React.useMemo(
+    () =>
+      memberships.map((membership) => ({
+        id: String(membership.tenant.id),
+        name: membership.tenant.slug ?? membership.tenant.slug,
+        slug: membership.tenant.slug,
+      })),
+    [memberships],
+  );
 
   const [currentTenant, setCurrentTenant] = React.useState<TenantOption | null>(
     null,
@@ -39,22 +45,27 @@ export default function Header() {
 
   React.useEffect(() => {
     if (!tenantOptions.length) {
-      setCurrentTenant(null);
+      setCurrentTenant((prev) => (prev !== null ? null : prev));
       return;
     }
 
     const host =
       typeof window !== 'undefined' ? window.location.hostname : '';
 
-    let fromHost: TenantOption | undefined = undefined;
+    let fromHost: TenantOption | undefined;
 
     if (host && host.length > 0) {
       fromHost = tenantOptions.find((tenant) =>
-        host.startsWith(`${tenant.slug}.`)
+        host.startsWith(`${tenant.slug}.`),
       );
     }
 
-    setCurrentTenant(fromHost ?? tenantOptions[0]);
+    const nextTenant = fromHost ?? tenantOptions[0];
+
+    setCurrentTenant((prev) => {
+      if (prev?.slug === nextTenant.slug) return prev;
+      return nextTenant;
+    });
   }, [tenantOptions]);
 
   const handleTenantChange = (tenant: TenantOption) => {

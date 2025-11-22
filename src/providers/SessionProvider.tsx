@@ -10,7 +10,11 @@ import React, {
 } from 'react';
 
 import SessionTimeoutModal from '@/components/SessionTimeoutModal';
-import { refreshUserToken, notifyBackendOfActivity } from '@/services/userAuthService';
+import {
+  refreshUserToken,
+  notifyBackendOfActivity,
+  logoutUser,
+} from '@/services/userAuthService';
 import {
   readSessionIdleCookie,
   writeSessionIdleCookie,
@@ -45,10 +49,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const idleTimeoutMsRef = useRef<number>(0);
   const hasUserInteracted = useRef(false);
   const lastBackendNotify = useRef<number>(0);
+  const logoutScheduledRef = useRef(false);
 
   function handleLogicalLogout() {
     clearSessionIdleCookie();
     setStatus('invalid');
+    if (idleTimer.current) clearTimeout(idleTimer.current);
   }
 
   useEffect(() => {
@@ -96,6 +102,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       lastActivity.current = last_activity_at;
       lastBackendNotify.current = now;
       hasUserInteracted.current = true;
+      logoutScheduledRef.current = false;
 
       setSecondsUntilIdleLogout(Math.floor(timeoutSeconds - secondsIdle));
       setSecondsUntilTokenExpires(
@@ -158,6 +165,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (status !== 'active') return;
+    if (logoutScheduledRef.current) return;
+
+    const idleExpired = secondsUntilIdleLogout <= 0;
+    const tokenExpired = secondsUntilTokenExpires <= 0;
+
+    if (idleExpired || tokenExpired) {
+      logoutScheduledRef.current = true;
+
+      handleLogicalLogout();
+
+      logoutUser().catch((err) => {
+        console.error('[Session] Error calling /auth/logout after idle timeout', err);
+      });
+    }
+  }, [status, secondsUntilIdleLogout, secondsUntilTokenExpires]);
+
   function getSecondsIdle(): number {
     if (!lastActivity.current) return Infinity;
     return (Date.now() - lastActivity.current) / 1000;
@@ -167,20 +192,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (idleTimer.current) clearTimeout(idleTimer.current);
 
     idleTimer.current = setTimeout(() => {
-      const meta = readSessionIdleCookie();
-      if (!meta) {
-        handleLogicalLogout();
-        return;
-      }
-
-      const { last_activity_at, idle_timeout_minutes } = meta;
-      const now = Date.now();
-      const secondsIdle = (now - last_activity_at) / 1000;
-      const timeoutSeconds = idle_timeout_minutes * 60;
-
-      if (secondsIdle >= timeoutSeconds) {
-        handleLogicalLogout();
-      }
+      setSecondsUntilIdleLogout(0);
     }, timeoutMs);
   }
 
@@ -188,10 +200,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     startIdleTimer(timeoutMs);
   }
 
-  function updateIdleCountdown(timeoutSeconds: number) {
+  function updateIdleCountdown(timeoutSeconds: number): number {
     const secondsIdle = getSecondsIdle();
     const secondsLeft = Math.max(0, timeoutSeconds - secondsIdle);
     setSecondsUntilIdleLogout(Math.floor(secondsLeft));
+    return secondsLeft;
   }
 
   function checkTokenValidity() {
@@ -213,7 +226,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setSecondsUntilTokenExpires(Math.max(0, timeLeft));
 
     if (timeLeft <= 0 || Number.isNaN(expiresAtMs)) {
-      handleLogicalLogout();
       return;
     }
 
@@ -235,9 +247,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       const now = Date.now();
 
-      const safeIdleMinutes = typeof idle_timeout_minutes === "number"
-        ? idle_timeout_minutes
-        : 28;
+      const safeIdleMinutes =
+        typeof idle_timeout_minutes === 'number' ? idle_timeout_minutes : 28;
 
       writeSessionIdleCookie({
         last_activity_at: now,
@@ -257,9 +268,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setSecondsUntilTokenExpires(
         Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000)),
       );
-      setSecondsUntilIdleLogout(
-        Math.ceil(idleTimeoutMsRef.current / 1000),
-      );
+      setSecondsUntilIdleLogout(Math.ceil(idleTimeoutMsRef.current / 1000));
     } catch {
       handleLogicalLogout();
     } finally {
@@ -267,8 +276,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function forceLogout() {
+  async function forceLogout() {
+    logoutScheduledRef.current = true;
     handleLogicalLogout();
+    logoutUser().catch((err) => {
+      console.error('[Session] Error calling /auth/logout from forceLogout', err);
+    });
   }
 
   return (

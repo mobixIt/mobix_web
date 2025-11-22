@@ -18,6 +18,7 @@ import {
 vi.mock('@/services/userAuthService', () => ({
   refreshUserToken: vi.fn(),
   notifyBackendOfActivity: vi.fn(),
+  logoutUser: vi.fn(),
 }));
 
 vi.mock('@/utils/sessionIdleCookie', () => ({
@@ -54,6 +55,7 @@ import { SessionProvider, useSession } from '@/providers/SessionProvider';
 import {
   refreshUserToken,
   notifyBackendOfActivity,
+  logoutUser,
 } from '@/services/userAuthService';
 
 import {
@@ -66,6 +68,7 @@ import {
 const refreshUserTokenMock = refreshUserToken as unknown as Mock;
 const notifyBackendOfActivityMock =
   notifyBackendOfActivity as unknown as Mock;
+const logoutUserMock = logoutUser as unknown as Mock;
 
 const readSessionIdleCookieMock = readSessionIdleCookie as unknown as Mock;
 const writeSessionIdleCookieMock =
@@ -119,13 +122,14 @@ describe('SessionProvider', () => {
     });
 
     expect(clearSessionIdleCookieMock).toHaveBeenCalledTimes(1);
+    expect(logoutUserMock).not.toHaveBeenCalled();
   });
 
   it('activates session when cookie meta is valid and not expired', async () => {
     const now = Date.now();
-    const lastActivity = now - 10_000;
+    const lastActivity = now - 10_000; // 10s ago
     const idleTimeoutMinutes = 5;
-    const expiresAt = now + 60_000;
+    const expiresAt = now + 60_000; // 60s from now
 
     readSessionIdleCookieMock.mockReturnValue({
       last_activity_at: lastActivity,
@@ -159,10 +163,10 @@ describe('SessionProvider', () => {
     expect(tokenSeconds).toBeLessThanOrEqual(60);
   });
 
-  it('shows timeout modal when idle countdown is below warning threshold', async () => {
+  it('shows timeout modal when idle countdown is below warning threshold and allows staying active', async () => {
     const now = Date.now();
-    const lastActivity = now - 40_000;
-    const idleTimeoutMinutes = 1;
+    const lastActivity = now - 40_000; // 40s ago
+    const idleTimeoutMinutes = 1; // 60s
     const expiresAt = now + 60_000;
 
     readSessionIdleCookieMock.mockReturnValue({
@@ -206,7 +210,7 @@ describe('SessionProvider', () => {
     const now = Date.now();
     const lastActivity = now;
     const idleTimeoutMinutes = 5;
-    const expiresAtSoon = now + 10_000;
+    const expiresAtSoon = now + 10_000; // 10s
 
     readSessionIdleCookieMock.mockReturnValue({
       last_activity_at: lastActivity,
@@ -246,40 +250,41 @@ describe('SessionProvider', () => {
     );
   });
 
-  it('calls notifyBackendOfActivity periodically while user is active and below idle timeout', async () => {
-    vi.useFakeTimers();
+  it(
+    'calls notifyBackendOfActivity periodically while user is active and below idle timeout',
+    async () => {
+      vi.useFakeTimers();
 
-    const now = Date.now();
-    const idleTimeoutMinutes = 5;
-    const expiresAt = now + 10 * 60_000;
+      const now = Date.now();
+      const idleTimeoutMinutes = 5;
+      const expiresAt = now + 10 * 60_000;
 
-    readSessionIdleCookieMock.mockReturnValue({
-      last_activity_at: now,
-      idle_timeout_minutes: idleTimeoutMinutes,
-      expires_at: expiresAt,
-    });
+      readSessionIdleCookieMock.mockReturnValue({
+        last_activity_at: now,
+        idle_timeout_minutes: idleTimeoutMinutes,
+        expires_at: expiresAt,
+      });
 
-    render(
-      <SessionProvider>
-        <TestConsumer />
-      </SessionProvider>,
-    );
+      render(
+        <SessionProvider>
+          <TestConsumer />
+        </SessionProvider>,
+      );
 
-    expect(screen.getByTestId('session-status').textContent).toBe('active');
+      expect(screen.getByTestId('session-status').textContent).toBe('active');
 
-    await act(async () => {
-      vi.setSystemTime(now + 61_000);
-      await vi.advanceTimersByTimeAsync(61_000);
-    });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(65_000);
+      });
 
-    expect(notifyBackendOfActivityMock).toHaveBeenCalledTimes(1);
+      expect(notifyBackendOfActivityMock).toHaveBeenCalledTimes(1);
 
-    vi.useRealTimers();
-  },
+      vi.useRealTimers();
+    },
     10_000,
   );
 
-  it('logs out logically when token is expired in checkTokenValidity', async () => {
+  it('logs out logically when token is expired (invalid session meta)', async () => {
     const now = Date.now();
     const lastActivity = now - 1_000;
     const idleTimeoutMinutes = 5;
@@ -307,6 +312,7 @@ describe('SessionProvider', () => {
     );
 
     expect(clearSessionIdleCookieMock).toHaveBeenCalled();
+    expect(logoutUserMock).not.toHaveBeenCalled();
   });
 
   it('throws when useSession is used outside SessionProvider', () => {
