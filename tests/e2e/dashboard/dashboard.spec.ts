@@ -15,62 +15,6 @@ async function setActiveIdleCookie(page: Page) {
   });
 }
 
-test('renders PersonDashboard when there is no tenant subdomain', async ({ page }) => {
-  await page.route('**/auth/login', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: {
-          expires_at: new Date(Date.now() + 3600_000).toISOString(),
-          idle_timeout_minutes: 10,
-        },
-      }),
-    });
-  });
-
-  await page.route('**/auth/me', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: {
-          id: 'user-1',
-          first_name: 'Harold',
-          last_name: 'Rangel',
-          email: 'harold@example.com',
-          phone: null,
-          memberships: [
-            {
-              id: 'm-1',
-              active: true,
-              tenant: { id: 't1', slug: 'coolitoral' },
-              roles: [],
-            },
-            {
-              id: 'm-2',
-              active: true,
-              tenant: { id: 't2', slug: 'sobusa' },
-              roles: [],
-            },
-          ],
-        },
-      }),
-    });
-  });
-
-  await page.goto('http://localhost:4567/');
-
-  await page.getByLabel('ID ó Correo electrónico').fill('harold@example.com');
-  await page.getByLabel('Contraseña').fill('Password1!');
-  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-
-  await expect(page).toHaveURL(/\/dashboard$/);
-
-  await expect(page.getByTestId('person-dashboard')).toBeVisible();
-  await expect(page.getByTestId('tenant-dashboard')).toHaveCount(0);
-});
-
 test('renders TenantDashboard when tenant subdomain is present and membership is valid', async ({ page }) => {
   await setActiveIdleCookie(page);
 

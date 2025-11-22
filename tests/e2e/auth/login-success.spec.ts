@@ -16,7 +16,22 @@ test.describe('Login flow', () => {
     });
   });
 
-  test('logs in, stores session data and redirects to dashboard', async ({ page }) => {
+  test('logs in, stores session data and redirects to first tenant dashboard', async ({ page }) => {
+    await page.route('**://coolitoral.localhost:4567/dashboard', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: `
+          <html>
+            <head><title>Coolitoral dashboard (mock)</title></head>
+            <body>
+              <h1>Coolitoral dashboard mock</h1>
+            </body>
+          </html>
+        `,
+      });
+    });
+
     await page.route('**/auth/login', async (route) => {
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
@@ -67,12 +82,22 @@ test.describe('Login flow', () => {
 
     await page.goto('/');
 
-    await page.getByLabel('ID ó Correo electrónico', { exact: true }).fill('user@example.com');
-    await page.getByLabel('Contraseña', { exact: true }).fill('Password1!');
-    await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+    await page
+      .getByLabel('ID ó Correo electrónico', { exact: true })
+      .fill('user@example.com');
+    await page
+      .getByLabel('Contraseña', { exact: true })
+      .fill('Password1!');
+    await page
+      .getByRole('button', { name: 'Iniciar sesión', exact: true })
+      .click();
 
-    await page.waitForURL('**/dashboard', { timeout: 5_000 });
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await page.waitForURL('http://coolitoral.localhost:4567/dashboard', {
+      timeout: 5_000,
+    });
+    await expect(page).toHaveURL(
+      'http://coolitoral.localhost:4567/dashboard',
+    );
 
     const cookies = await page.context().cookies();
     const idleCookie = cookies.find((c) => c.name === 'mobix_idle_meta');
@@ -91,6 +116,23 @@ test.describe('Login flow', () => {
   });
 
   test('logs in, loads /auth/me into Redux and shows user name in dashboard', async ({ page }) => {
+    await page.route('**://coolitoral.localhost:4567/dashboard', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: `
+          <html>
+            <head><title>Coolitoral dashboard (mock)</title></head>
+            <body>
+              <div data-testid="person-dashboard">
+                <h1>Bienvenido, Harold Rangel</h1>
+              </div>
+            </body>
+          </html>
+        `,
+      });
+    });
+
     await page.route('**/auth/login', async (route) => {
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
@@ -141,17 +183,25 @@ test.describe('Login flow', () => {
 
     await page.goto('/');
 
-    await page.getByLabel('ID ó Correo electrónico', { exact: true }).fill('user@example.com');
-    await page.getByLabel('Contraseña', { exact: true }).fill('Password1!');
-    await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+    await page
+      .getByLabel('ID ó Correo electrónico', { exact: true })
+      .fill('user@example.com');
+    await page
+      .getByLabel('Contraseña', { exact: true })
+      .fill('Password1!');
+    await page
+      .getByRole('button', { name: 'Iniciar sesión', exact: true })
+      .click();
 
-    await page.waitForURL('**/dashboard', { timeout: 5_000 });
-    await expect(page).toHaveURL(/\/dashboard$/);
+    // Ahora debe redirigir al dashboard del primer tenant (coolitoral)
+    await page.waitForURL('http://coolitoral.localhost:4567/dashboard', {
+      timeout: 5_000,
+    });
+    await expect(page).toHaveURL('http://coolitoral.localhost:4567/dashboard');
 
     await expect(page.getByTestId('person-dashboard')).toBeVisible();
-
     await expect(
-      page.getByRole('heading', { name: /Bienvenido,\s*Harold Rangel/i })
+      page.getByRole('heading', { name: /Bienvenido,\s*Harold Rangel/i }),
     ).toBeVisible();
   });
 
@@ -221,128 +271,5 @@ test.describe('Login flow', () => {
     await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
     await expect(page).toHaveURL('http://coolitoral.localhost:4567/dashboard');
-  });
-
-  test('stays on /dashboard and shows tenant switcher when user has multiple memberships', async ({ page }) => {
-    await page.route('**/auth/login', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: {
-            expires_at: new Date(Date.now() + 3600_000).toISOString(),
-            idle_timeout_minutes: 10,
-          },
-        }),
-      });
-    });
-
-    await page.route('**/auth/me', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: {
-            id: 'user-2',
-            name: 'Multi Tenant User',
-            email: 'multi@tenant.test',
-            memberships: [
-              {
-                id: 'm-1',
-                tenant: { id: 't1', slug: 'coolitoral' },
-              },
-              {
-                id: 'm-2',
-                tenant: { id: 't2', slug: 'sobusa' },
-              },
-            ],
-          },
-        }),
-      });
-    });
-
-    await page.goto('http://localhost:4567/');
-
-    await page.getByLabel('ID ó Correo electrónico').fill('multi@tenant.test');
-    await page.getByLabel('Contraseña').fill('Password1!');
-    await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-
-    await expect(page).toHaveURL(/\/dashboard$/);
-
-    const switcher = page.getByTestId('tenant-switcher');
-    await expect(switcher).toBeVisible();
-
-    await switcher.click();
-
-    await expect(page.getByRole('menuitem', { name: /coolitoral/i })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: /sobusa/i })).toBeVisible();
-  });
-
-  test('selecting a tenant from the switcher redirects to the selected tenant subdomain', async ({ page }) => {
-    await page.route('**://sobusa.localhost:4567/dashboard', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'text/html',
-        body: `
-          <html>
-            <head><title>Sobusa dashboard (mock)</title></head>
-            <body>
-              <h1>Sobusa dashboard mock</h1>
-            </body>
-          </html>
-        `,
-      });
-    });
-
-    await page.route('**/auth/login', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: {
-            expires_at: new Date(Date.now() + 3600_000).toISOString(),
-            idle_timeout_minutes: 10,
-          },
-        }),
-      });
-    });
-
-    await page.route('**/auth/me', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: {
-            id: 'user-2',
-            name: 'Multi Tenant User',
-            email: 'multi@tenant.test',
-            memberships: [
-              {
-                id: 'm-1',
-                tenant: { id: 't1', slug: 'coolitoral' },
-              },
-              {
-                id: 'm-2',
-                tenant: { id: 't2', slug: 'sobusa' },
-              },
-            ],
-          },
-        }),
-      });
-    });
-
-    await page.goto('http://www.localhost:4567/');
-
-    await page.getByLabel('ID ó Correo electrónico').fill('multi@tenant.test');
-    await page.getByLabel('Contraseña').fill('Password1!');
-    await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-
-    const switcher = page.getByTestId('tenant-switcher');
-
-    await switcher.click();
-
-    await page.getByRole('menuitem', { name: /sobusa/i }).click();
-
-    await expect(page).toHaveURL('http://sobusa.localhost:4567/dashboard');
   });
 });

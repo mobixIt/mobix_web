@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Box, Button, Alert } from '@mui/material';
-import { useRouter } from 'next/navigation';
 import AuthContainer from '@/components/AuthContainer';
 import BaseTextField from '@/components/ui/BaseTextField';
 import AuthLink from '@/components/AuthLink';
@@ -17,7 +16,6 @@ import { useAppDispatch } from '@/store/hooks';
 import { fetchMe } from '@/store/slices/authSlice';
 
 export default function LoginForm() {
-  const router = useRouter();
   const dispatch = useAppDispatch(); 
 
   const [email, setEmail] = useState('');
@@ -46,15 +44,10 @@ export default function LoginForm() {
 
       const { memberships } = await dispatch(fetchMe()).unwrap();
       
-      if (memberships.length === 1) {
-        const tenantSlug = memberships[0].tenant.slug;
-        const url = buildTenantUrl(tenantSlug);
-        const dashboardUrl = `${url}/dashboard`;
-        window.location.href = dashboardUrl;
-        return;
-      }
-
-      router.push('/dashboard');
+      const tenantSlug = memberships[0].tenant.slug;
+      const url = buildTenantUrl(tenantSlug);
+      const dashboardUrl = `${url}/dashboard`;
+      window.location.href = dashboardUrl;
     } catch (error) {
       const err = error as AxiosError<ApiErrorResponse>;
       const code = err?.response?.data?.errors?.[0]?.code;
