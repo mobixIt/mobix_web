@@ -211,11 +211,28 @@ export default function Sidebar() {
     setFlyoutOpen(Boolean(found?.children?.length));
   }, [pathname, navItems]);
 
-  const handleItemClick = (key: NavItem['key']) => {
-    const item = navItems.find((i) => i.key === key);
-    setActiveItem(item);
-    setFlyoutOpen(Boolean(item?.children?.length));
-  };
+  const handleItemClick = React.useCallback(
+    (key: NavItem['key']) => {
+      const item = navItems.find((i) => i.key === key);
+      if (!item) return;
+
+      const hasChildren = Boolean(item.children?.length);
+      const isSameItem = activeItem?.key === item.key;
+
+      if (hasChildren) {
+        if (isSameItem && flyoutOpen) {
+          return;
+        }
+
+        setActiveItem(item);
+        setFlyoutOpen(true);
+      } else {
+        setActiveItem(item);
+        setFlyoutOpen(false);
+      }
+    },
+    [navItems, activeItem, flyoutOpen],
+  );
 
   const displayName = person
     ? `${person.first_name} ${person.last_name}`.trim()

@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
+import Link, { LinkProps } from 'next/link';
 import {
   ListItemButton,
+  ListItemButtonProps,
   ListItemIcon,
   ListItemText,
   IconButton,
@@ -19,16 +20,40 @@ interface SidebarItemProps {
   onClick: (key: NavItem['key']) => void;
 }
 
+type ButtonOrLinkProps =
+  | (ListItemButtonProps & { component: 'button'; href?: never })
+  | (ListItemButtonProps & { component: typeof Link; href: LinkProps['href'] });
+
 export default function SidebarItem({ item, active, onClick }: SidebarItemProps) {
   const Icon = item.icon;
+  const hasChildren = Boolean(item.children?.length);
 
+  const componentProps: ButtonOrLinkProps =
+    hasChildren || !item.href
+      ? { component: 'button' }
+      : { component: Link, href: item.href };
+
+  const handleClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
+    if (hasChildren) {
+      e.preventDefault();
+      e.stopPropagation();
+      onClick(item.key);
+    } else {
+      onClick(item.key);
+    }
+  };
+
+  const handleMouseEnter = () => {
+    if (hasChildren) {
+      onClick(item.key);
+    }
+  };
   return (
     <ListItemButton
       key={item.key}
-      onClick={() => onClick(item.key)}
-      onMouseEnter={() => onClick(item.key)}
-      component={item.href ? Link : 'button'}
-      href={item.href || undefined}
+      {...componentProps}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
       sx={{
         borderRadius: 2,
         mx: 1.5,
@@ -45,7 +70,9 @@ export default function SidebarItem({ item, active, onClick }: SidebarItemProps)
 
       <ListItemText
         primary={item.label}
-        primaryTypographyProps={{ fontWeight: 600 }}
+        slotProps={{
+          primary: { sx: { fontWeight: 600 } },
+        }}
       />
 
       {item.action && (
@@ -54,7 +81,8 @@ export default function SidebarItem({ item, active, onClick }: SidebarItemProps)
             size="small"
             sx={{ mr: 1 }}
             onClick={(e) => {
-              e.preventDefault(); // evitar que navegue
+              e.preventDefault();
+              e.stopPropagation();
               item.action?.onClick();
             }}
           >
