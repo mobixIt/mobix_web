@@ -31,39 +31,22 @@ vi.mock('@/components/sidebar/constants', () => ({
       href: '/overview',
     },
     {
-      key: 'markets',
-      label: 'Markets',
+      key: 'configuration',
+      label: 'Configuration',
       icon: () => null,
-      requiredModuleName: 'Markets',
+      requiredModuleName: ['Markets', 'Reports'],
       children: [
         {
           label: 'Spot',
           href: '/markets/spot',
           requiredModuleName: 'Markets',
           requiredSubject: 'Market',
-          requiredAction: 'read',
         },
         {
-          label: 'Futures',
-          href: '/markets/futures',
-          requiredModuleName: 'Markets',
-          requiredSubject: 'Market',
-          requiredAction: 'read',
-        },
-      ],
-    },
-    {
-      key: 'reports',
-      label: 'Reports',
-      icon: () => null,
-      requiredModuleName: 'Reports',
-      children: [
-        {
-          label: 'Brands',
+          label: 'Brand reports',
           href: '/reports/brands',
           requiredModuleName: 'Reports',
           requiredSubject: 'BrandReport',
-          requiredAction: 'read',
         },
       ],
     },
@@ -146,8 +129,7 @@ describe('Sidebar integration', () => {
     expect(screen.getByText('Overview')).toBeVisible();
     expect(screen.getByText('Help')).toBeVisible();
 
-    expect(screen.getByText('Markets')).toBeVisible();
-    expect(screen.getByText('Reports')).toBeVisible();
+    expect(screen.getByText('Configuration')).toBeVisible();
 
     expect(screen.queryByText('Settings')).not.toBeInTheDocument();
   });
@@ -163,8 +145,7 @@ describe('Sidebar integration', () => {
     expect(screen.getByText('Overview')).toBeVisible();
     expect(screen.getByText('Help')).toBeVisible();
 
-    expect(screen.queryByText('Markets')).not.toBeInTheDocument();
-    expect(screen.queryByText('Reports')).not.toBeInTheDocument();
+    expect(screen.queryByText('Configuration')).not.toBeInTheDocument();
     expect(screen.queryByText('Settings')).not.toBeInTheDocument();
   });
 

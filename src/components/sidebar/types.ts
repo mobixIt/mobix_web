@@ -2,27 +2,35 @@ import * as React from 'react';
 
 export type NavChild = {
   label: string;
-  href: string;
+  href?: string;
   badge?: number;
 
   /**
-   * Optional: name of the backend app_module required
-   * for this child to be visible.
-   * Should match EffectiveModule.appModuleName.
+   * Name(s) of the backend app_module required for this item to be visible.
+   *
+   * - string: the user must have that module.
+   * - string[]: the user must have at least one of those modules.
+   *
+   * Must match EffectiveModule.appModuleName (case-insensitive).
    */
-  requiredModuleName?: string;
+  requiredModuleName?: string | string[];
 
   /**
-   * Optional: subject used in permissions (e.g. "Vehicle", "Route").
+   * Optional: permission subject (e.g. "Vehicle", "Route").
    */
   requiredSubject?: string;
 
   /**
-   * Optional: specific action required on the subject
-   * (e.g. "read", "update"). If omitted, any action on the subject
-   * is enough.
+   * Optional: action required on the subject (e.g. "read", "update").
+   * If omitted, having any action on the subject is enough.
    */
   requiredAction?: string;
+
+  /**
+   * Optional nested items (grandchildren or deeper levels).
+   * These are filtered with the same module + permission rules.
+   */
+  children?: NavChild[];
 };
 
 export type NavItem = {
@@ -38,13 +46,15 @@ export type NavItem = {
   };
 
   /**
-   * Optional: name of the backend app_module required
-   * for this item to be visible.
+   * Name(s) of the backend app_module required for this item to be visible.
+   *
+   * - string: the user must have that module.
+   * - string[]: the user must have at least one of those modules.
    */
-  requiredModuleName?: string;
+  requiredModuleName?: string | string[];
 
   /**
-   * Optional: subject used in permissions (e.g. "Vehicle", "Route").
+   * Optional: permission subject.
    */
   requiredSubject?: string;
 

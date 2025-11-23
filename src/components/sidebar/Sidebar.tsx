@@ -14,17 +14,26 @@ import UserCard from './UserCard';
 import { selectEffectiveModules } from '@/store/slices/permissionsSlice';
 import type { EffectiveModule, Membership } from '@/types/access-control';
 import { selectCurrentPerson } from '@/store/slices/authSlice';
-import { TenantSwitcher, TenantOption } from '@/components/header/TenantSwitcher';
+import {
+  TenantSwitcher,
+  TenantOption,
+} from '@/components/header/TenantSwitcher';
 import { buildTenantUrl } from '@/utils/tenantUrl';
 
 export function hasModuleAccess(
   modules: EffectiveModule[],
-  requiredModuleName?: string,
+  requiredModuleName?: string | string[],
 ): boolean {
   if (!requiredModuleName) return true;
 
-  const target = requiredModuleName.toLowerCase();
-  return modules.some((m) => m.appModuleName.toLowerCase() === target);
+  const requiredList = Array.isArray(requiredModuleName)
+    ? requiredModuleName.map((m) => m.toLowerCase())
+    : [requiredModuleName.toLowerCase()];
+
+  // Visible si el usuario tiene al menos uno de los módulos requeridos
+  return modules.some((m) =>
+    requiredList.includes(m.appModuleName.toLowerCase()),
+  );
 }
 
 export function hasSubjectActionAccess(
@@ -45,49 +54,85 @@ export function hasSubjectActionAccess(
   return allowedActions.includes(requiredAction);
 }
 
+function filterNavChildRecursively(
+  child: NavChild,
+  modules: EffectiveModule[],
+): NavChild | null {
+  const moduleOk = hasModuleAccess(modules, child.requiredModuleName);
+  const subjectOk = hasSubjectActionAccess(
+    modules,
+    child.requiredSubject,
+    child.requiredAction,
+  );
+
+  if (!moduleOk || !subjectOk) {
+    return null;
+  }
+
+  let children = child.children;
+
+  if (children?.length) {
+    children = children
+      .map((nested) => filterNavChildRecursively(nested, modules))
+      .filter((n): n is NavChild => n !== null);
+  }
+
+  if (!child.href && (!children || children.length === 0)) {
+    return null;
+  }
+
+  return { ...child, children };
+}
+
+function filterNavItemRecursively(
+  item: NavItem,
+  modules: EffectiveModule[],
+): NavItem | null {
+  const moduleOk = hasModuleAccess(modules, item.requiredModuleName);
+  const subjectOk = hasSubjectActionAccess(
+    modules,
+    item.requiredSubject,
+    item.requiredAction,
+  );
+
+  if (!moduleOk || !subjectOk) {
+    return null;
+  }
+
+  let children = item.children;
+
+  if (children?.length) {
+    children = children
+      .map((child) => filterNavChildRecursively(child, modules))
+      .filter((c): c is NavChild => c !== null);
+  }
+
+  if (!item.href && (!children || children.length === 0)) {
+    return null;
+  }
+
+  return { ...item, children };
+}
+
 export function buildNavItemsForUser(
   items: NavItem[],
   modules: EffectiveModule[],
 ): NavItem[] {
-  const mapped: Array<NavItem | null> = items.map((item) => {
-    if (
-      (item.requiredModuleName &&
-        !hasModuleAccess(modules, item.requiredModuleName)) ||
-      !hasSubjectActionAccess(
-        modules,
-        item.requiredSubject,
-        item.requiredAction,
-      )
-    ) {
-      return null;
-    }
+  return items
+    .map((item) => filterNavItemRecursively(item, modules))
+    .filter((item): item is NavItem => item !== null);
+}
 
-    let children = item.children;
+function navItemMatchesPath(item: NavItem | NavChild, pathname: string): boolean {
+  if (item.href && pathname.startsWith(item.href)) {
+    return true;
+  }
 
-    if (children?.length) {
-      children = children.filter((child) => {
-        const moduleOk =
-          !child.requiredModuleName ||
-          hasModuleAccess(modules, child.requiredModuleName);
+  if (item.children?.length) {
+    return item.children.some((child) => navItemMatchesPath(child, pathname));
+  }
 
-        const subjectOk = hasSubjectActionAccess(
-          modules,
-          child.requiredSubject,
-          child.requiredAction,
-        );
-
-        return moduleOk && subjectOk;
-      });
-    }
-
-    if (!item.href && (!children || children.length === 0)) {
-      return null;
-    }
-
-    return { ...item, children } as NavItem;
-  });
-
-  return mapped.filter((item): item is NavItem => item !== null);
+  return false;
 }
 
 export default function Sidebar() {
@@ -161,11 +206,7 @@ export default function Sidebar() {
   };
 
   React.useEffect(() => {
-    const found = navItems.find((item) =>
-      item.href
-        ? pathname.startsWith(item.href)
-        : item.children?.some((c: NavChild) => pathname.startsWith(c.href)),
-    );
+    const found = navItems.find((item) => navItemMatchesPath(item, pathname));
     setActiveItem(found);
     setFlyoutOpen(Boolean(found?.children?.length));
   }, [pathname, navItems]);
