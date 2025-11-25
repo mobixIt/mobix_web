@@ -48,7 +48,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: ['Inter', 'Poppins', 'Montserrat', 'sans-serif'].join(','),
+    fontFamily: ['Roboto', 'sans-serif'].join(','),
     fontWeightRegular: 400,
     fontWeightMedium: 500,
     fontWeightBold: 700,
