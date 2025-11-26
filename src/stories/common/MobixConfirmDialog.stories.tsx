@@ -6,7 +6,7 @@ import type { MobixModalProps } from '@/components/mobix/confirm-dialog/types';
 type ComponentType = typeof MobixConfirmDialog;
 
 const meta: Meta<ComponentType> = {
-  title: 'Mobix/MobixConfirmDialog',
+  title: 'Mobix/Common/MobixConfirmDialog',
   component: MobixConfirmDialog,
   parameters: {
     layout: 'centered',

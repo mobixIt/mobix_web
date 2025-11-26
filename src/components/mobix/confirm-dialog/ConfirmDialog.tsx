@@ -1,16 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import CloseIcon from '@mui/icons-material/Close';
 import type { MobixModalProps } from './types';
 import {
-  StyledDialog,
   ModalTitle,
   ModalContent,
   ModalActions,
   PrimaryActionButton,
   SecondaryActionButton,
 } from './styles';
+
+import { StyledDialog } from '@/components/mobix/modal';
 
 export function MobixConfirmDialog(props: MobixModalProps) {
   const {

@@ -4,7 +4,7 @@ import {
   MobixTable,
   type MobixTableColumn,
   type MobixTableProps,
-} from '@/components/mobix/Table';
+} from '@/components/mobix/table';
 
 interface UserRow {
   id: number;
@@ -74,7 +74,7 @@ const UserRowDetailsCard: React.FC<{ row: UserRow }> = ({ row }) => (
 );
 
 const meta: Meta<typeof MobixUserTable> = {
-  title: 'Mobix/MobixTable',
+  title: 'Mobix/Common/MobixTable',
   component: MobixUserTable,
   parameters: { layout: 'fullscreen' },
 };

@@ -1,46 +1,75 @@
 'use client';
 
 import React from 'react';
+import { styled } from '@mui/material/styles';
+import { MobixModal } from '@/components/mobix/modal';
 
 interface Props {
   secondsLeft: number;
   onStayActive: () => void;
+  open?: boolean;
 }
 
-export default function SessionTimeoutModal({ secondsLeft, onStayActive }: Props) {
+const Header = styled('span')(({ theme }) => ({
+  display: "block",
+  margin: 0,
+  textAlign: 'center',
+  fontFamily: theme.typography.fontFamily,
+}));
+
+const Body = styled('div')(({ theme }) => ({
+  textAlign: 'center',
+  fontFamily: theme.typography.fontFamily,
+}));
+
+const Footer = styled('div')({
+  display: 'flex',
+  justifyContent: 'center',
+});
+
+const ContinueButton = styled('button')({
+  marginTop: '1rem',
+  padding: '0.5rem 1.5rem',
+  backgroundColor: '#1E6687',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+
+  '&:hover': {
+    backgroundColor: '#12445A',
+  },
+});
+
+export default function SessionTimeoutModal({
+  secondsLeft,
+  onStayActive,
+  open = true,
+}: Props) {
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 9999,
-    }}>
-      <div style={{
-        backgroundColor: '#fff',
-        padding: '2rem',
-        borderRadius: '8px',
-        width: '90%',
-        maxWidth: '400px',
-        textAlign: 'center',
-      }}>
-        <h2>¿Sigues ahí?</h2>
-        <p>Tu sesión se cerrará automáticamente en <br />{secondsLeft} segundos por inactividad.</p>
-        <button
-          onClick={onStayActive}
-          style={{
-            marginTop: '1rem',
-            padding: '0.5rem 1.5rem',
-            backgroundColor: '#1E6687',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Continuar sesión
-        </button>
-      </div>
-    </div>
+    <MobixModal
+      open={open}
+      onClose={onStayActive}
+      disableBackdropClose
+      maxWidth="xs"
+      fullWidth
+      header={<Header>¿Sigues ahí?</Header>}
+      body={
+        <Body>
+          <p>
+            Tu sesión se cerrará automáticamente en <br />
+            {secondsLeft} segundos por inactividad.
+          </p>
+        </Body>
+      }
+      footer={
+        <Footer>
+          <ContinueButton onClick={onStayActive}>
+            Continuar sesión
+          </ContinueButton>
+        </Footer>
+      }
+    />
   );
 }

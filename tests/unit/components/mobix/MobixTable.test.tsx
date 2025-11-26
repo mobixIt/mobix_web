@@ -6,7 +6,7 @@ import {
   MobixTable,
   type MobixTableColumn,
   type MobixTableProps,
-} from '@/components/mobix/Table';
+} from '@/components/mobix/table';
 
 interface UserRow {
   id: number;
