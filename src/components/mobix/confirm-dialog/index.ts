@@ -1,2 +1,2 @@
-export { MobixConfirmDialog } from './confirmDialog';
+export { MobixConfirmDialog } from './ConfirmDialog';
 export type { MobixModalProps } from './types';

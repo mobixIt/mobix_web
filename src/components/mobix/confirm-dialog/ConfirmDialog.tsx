@@ -6,11 +6,13 @@ import {
   ModalTitle,
   ModalContent,
   ModalActions,
-  PrimaryActionButton,
-  SecondaryActionButton,
 } from './styles';
 
 import { StyledDialog } from '@/components/mobix/modal';
+import {
+  MobixButton,
+  MobixButtonText,
+} from '@/components/mobix/button';
 
 export function MobixConfirmDialog(props: MobixModalProps) {
   const {
@@ -29,9 +31,12 @@ export function MobixConfirmDialog(props: MobixModalProps) {
 
   const handleClose = (
     _event: object,
-    reason: 'backdropClick' | 'escapeKeyDown',
+    reason: 'backdropClick' | 'escapeKeyDown'
   ) => {
-    if (disableBackdropClose && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
+    if (
+      disableBackdropClose &&
+      (reason === 'backdropClick' || reason === 'escapeKeyDown')
+    ) {
       return;
     }
     onClose?.();
@@ -57,23 +62,15 @@ export function MobixConfirmDialog(props: MobixModalProps) {
       {showActions && (
         <ModalActions>
           {secondaryActionLabel && (
-            <SecondaryActionButton
-              variant="text"
-              color="primary"
-              onClick={onSecondaryAction}
-            >
+            <MobixButtonText onClick={onSecondaryAction}>
               {secondaryActionLabel}
-            </SecondaryActionButton>
+            </MobixButtonText>
           )}
 
           {primaryActionLabel && (
-            <PrimaryActionButton
-              variant="text"
-              color="primary"
-              onClick={onPrimaryAction}
-            >
+            <MobixButton onClick={onPrimaryAction}>
               {primaryActionLabel}
-            </PrimaryActionButton>
+            </MobixButton>
           )}
         </ModalActions>
       )}

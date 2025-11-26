@@ -3,6 +3,7 @@
 import React from 'react';
 import { styled } from '@mui/material/styles';
 import { MobixModal } from '@/components/mobix/modal';
+import { MobixButton } from '@/components/mobix/button';
 
 interface Props {
   secondsLeft: number;
@@ -11,7 +12,7 @@ interface Props {
 }
 
 const Header = styled('span')(({ theme }) => ({
-  display: "block",
+  display: 'block',
   margin: 0,
   textAlign: 'center',
   fontFamily: theme.typography.fontFamily,
@@ -25,21 +26,6 @@ const Body = styled('div')(({ theme }) => ({
 const Footer = styled('div')({
   display: 'flex',
   justifyContent: 'center',
-});
-
-const ContinueButton = styled('button')({
-  marginTop: '1rem',
-  padding: '0.5rem 1.5rem',
-  backgroundColor: '#1E6687',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-
-  '&:hover': {
-    backgroundColor: '#12445A',
-  },
 });
 
 export default function SessionTimeoutModal({
@@ -65,9 +51,9 @@ export default function SessionTimeoutModal({
       }
       footer={
         <Footer>
-          <ContinueButton onClick={onStayActive}>
+          <MobixButton variant="contained" onClick={onStayActive}>
             Continuar sesión
-          </ContinueButton>
+          </MobixButton>
         </Footer>
       }
     />
