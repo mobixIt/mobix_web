@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { MobixToggle, type MobixToggleProps } from '@/components/mobix/toggle/MobixToggle';
+import { MobixToggle } from '@/components/mobix/toggle/MobixToggle';
 
 interface ToggleStoryProps {
   onChange: (value: boolean) => void;

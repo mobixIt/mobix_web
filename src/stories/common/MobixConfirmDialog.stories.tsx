@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Typography } from '@mui/material';
 import { MobixConfirmDialog } from '@/components/mobix/confirm-dialog';
 import type { MobixModalProps } from '@/components/mobix/confirm-dialog/types';
