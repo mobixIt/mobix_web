@@ -10,7 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import type { AvatarProps } from '@mui/material/Avatar';
-import { styled } from '@mui/material/styles';
+import { styled, alpha } from '@mui/material/styles';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
@@ -33,18 +33,22 @@ const TriggerButton = styled(Button)(({ theme }) => ({
   borderRadius: 4,
   padding: theme.spacing(1, 1.5),
   textTransform: 'none',
-  borderColor: 'transparent',
   minWidth: 0,
   boxShadow: 'none',
-  backgroundColor: `${theme.palette.primary.main}15`,
+
+  backgroundColor: alpha(theme.palette.common.white, 0.05),
+  border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'flex-start',
   gap: theme.spacing(1),
-  color: theme.palette.text.primary,
+  color: theme.palette.common.white,
+
+  transition: 'all 0.3s ease',
+
   '&:hover': {
-    backgroundColor: `${theme.palette.primary.main}15`,
-    borderColor: 'transparent',
+    backgroundColor: alpha(theme.palette.secondary.main, 0.1),
+    borderColor: alpha(theme.palette.secondary.main, 0.4),
     boxShadow: 'none',
   },
 }));
@@ -62,12 +66,12 @@ const TriggerText = styled(Typography)(({ theme }) => ({
   fontWeight: 600,
   fontSize: 14,
   fontFamily: 'Roboto, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-  color: theme.palette.text.primary,
+  color: theme.palette.common.white,
 }));
 
 const TriggerArrow = styled(KeyboardArrowDownIcon)(({ theme }) => ({
-  fontSize: 18,
-  color: theme.palette.text.secondary,
+  fontSize: 24,
+  color: theme.palette.common.white,
   marginLeft: 'auto',
 }));
 
@@ -97,11 +101,22 @@ const StyledMenuItem = styled(MenuItem, {
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1),
+
+  borderWidth: 1,
+  borderStyle: 'solid',
+  borderColor: 'transparent',
+
+  transition:
+    'background-color 0.25s ease, border-color 0.25s ease',
+
   '&:hover': {
-    backgroundColor: `${theme.palette.primary.main}15`,
+    backgroundColor: `${theme.palette.secondary.main}15`,
+    borderColor: `${theme.palette.secondary.main}50`,
   },
+
   ...( $selected && {
-    backgroundColor: `${theme.palette.primary.main}15`,
+    backgroundColor: `${theme.palette.secondary.main}15`,
+    borderColor: `${theme.palette.secondary.main}50`,
   }),
 }));
 
@@ -149,7 +164,7 @@ const SelectedIconWrapper = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: theme.palette.primary.main,
+  color: theme.palette.secondary.main,
 }));
 
 const StyledMenu = styled(Menu)(({ theme }) => ({

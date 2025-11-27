@@ -1,6 +1,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from '@/theme';
 
 import {
   MobixTable,
@@ -31,6 +33,10 @@ const columns: MobixTableColumn<UserRow>[] = [
 
 type UserTableProps = MobixTableProps<UserRow>;
 
+function renderWithTheme(ui: React.ReactElement) {
+  return render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
+}
+
 function renderUserTable(extraProps: Partial<UserTableProps> = {}) {
   const defaultProps: UserTableProps = {
     title: 'Usuarios',
@@ -43,7 +49,9 @@ function renderUserTable(extraProps: Partial<UserTableProps> = {}) {
 
   const mergedProps = { ...defaultProps, ...extraProps };
 
-  return render(<MobixTable<UserRow> {...(mergedProps as UserTableProps)} />);
+  return renderWithTheme(
+    <MobixTable<UserRow> {...(mergedProps as UserTableProps)} />,
+  );
 }
 
 beforeEach(() => {
@@ -172,7 +180,9 @@ describe('MobixTable', () => {
   it('toggles a column visibility through column chooser', () => {
     renderUserTable({ enableColumnVisibility: true });
 
-    expect(screen.getByRole('columnheader', { name: 'Email' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Email' }),
+    ).toBeInTheDocument();
 
     const columnsButton = screen.getByLabelText('Mostrar selector de columnas');
     fireEvent.click(columnsButton);
@@ -181,7 +191,9 @@ describe('MobixTable', () => {
     const emailItem = within(menu).getByText('Email');
     fireEvent.click(emailItem);
 
-    expect(screen.queryByRole('columnheader', { name: 'Email' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('columnheader', { name: 'Email' }),
+    ).not.toBeInTheDocument();
   });
 
   it('calls onSaveColumnVisibility when saving column visibility', () => {
@@ -238,9 +250,9 @@ describe('MobixTable', () => {
       renderRowDetails: (row) => <div>Detalles de {row.name}</div>,
     });
 
-    const dataRow = screen.getAllByRole('row').find((row) =>
-      within(row).queryByText('Juan Pérez'),
-    );
+    const dataRow = screen
+      .getAllByRole('row')
+      .find((row) => within(row).queryByText('Juan Pérez'));
 
     const expandButton = within(dataRow!).getByRole('button');
     fireEvent.click(expandButton);

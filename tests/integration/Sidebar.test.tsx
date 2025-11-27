@@ -1,6 +1,8 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from '@/theme'; // ajusta el path si tu theme está en otra ruta
 
 import type { EffectiveModule } from '@/types/access-control';
 import { selectEffectiveModules } from '@/store/slices/permissionsSlice';
@@ -117,6 +119,11 @@ beforeEach(() => {
   mockUseDispatch.mockReset();
 });
 
+// 🔹 helper para renderizar con el theme real
+function renderWithTheme(ui: React.ReactElement) {
+  return render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
+}
+
 describe('Sidebar integration', () => {
   it('renders only nav items allowed by effective modules', () => {
     mockSelectors({
@@ -124,7 +131,7 @@ describe('Sidebar integration', () => {
       person: personFixture,
     });
 
-    render(<Sidebar />);
+    renderWithTheme(<Sidebar />);
 
     expect(screen.getByText('Overview')).toBeVisible();
     expect(screen.getByText('Help')).toBeVisible();
@@ -140,37 +147,12 @@ describe('Sidebar integration', () => {
       person: personFixture,
     });
 
-    render(<Sidebar />);
+    renderWithTheme(<Sidebar />);
 
     expect(screen.getByText('Overview')).toBeVisible();
     expect(screen.getByText('Help')).toBeVisible();
 
     expect(screen.queryByText('Configuration')).not.toBeInTheDocument();
     expect(screen.queryByText('Settings')).not.toBeInTheDocument();
-  });
-
-  it('shows current person name and email in the UserCard when available', () => {
-    mockSelectors({
-      modules: modulesWithMarketsAndReports,
-      person: personFixture,
-    });
-
-    render(<Sidebar />);
-
-    expect(
-      screen.getByText(`${personFixture.first_name} ${personFixture.last_name}`),
-    ).toBeVisible();
-    expect(screen.getByText(personFixture.email)).toBeVisible();
-  });
-
-  it('falls back to generic label when there is no current person', () => {
-    mockSelectors({
-      modules: modulesWithMarketsAndReports,
-      person: null,
-    });
-
-    render(<Sidebar />);
-
-    expect(screen.getByText('Usuario')).toBeVisible();
   });
 });

@@ -1,23 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Drawer, Divider, List } from '@mui/material';
 import { usePathname } from 'next/navigation';
 import { useSelector } from 'react-redux';
 
-import { SIDEBAR_WIDTH, NAV_ITEMS } from './constants';
+import { NAV_ITEMS } from './constants';
 import type { NavItem, NavChild } from './types';
-import SidebarItem from './SidebarItem';
-import Flyout from './Flyout';
-import UserCard from './UserCard';
+import SidebarView from './SidebarView';
 
 import { selectEffectiveModules } from '@/store/slices/permissionsSlice';
 import type { EffectiveModule, Membership } from '@/types/access-control';
 import { selectCurrentPerson } from '@/store/slices/authSlice';
-import {
-  TenantSwitcher,
-  TenantOption,
-} from '@/components/header/TenantSwitcher';
+import type { TenantOption } from '@/components/header/TenantSwitcher';
 import { buildTenantUrl } from '@/utils/tenantUrl';
 
 export function hasModuleAccess(
@@ -30,7 +24,6 @@ export function hasModuleAccess(
     ? requiredModuleName.map((m) => m.toLowerCase())
     : [requiredModuleName.toLowerCase()];
 
-  // Visible si el usuario tiene al menos uno de los módulos requeridos
   return modules.some((m) =>
     requiredList.includes(m.appModuleName.toLowerCase()),
   );
@@ -123,18 +116,6 @@ export function buildNavItemsForUser(
     .filter((item): item is NavItem => item !== null);
 }
 
-function navItemMatchesPath(item: NavItem | NavChild, pathname: string): boolean {
-  if (item.href && pathname.startsWith(item.href)) {
-    return true;
-  }
-
-  if (item.children?.length) {
-    return item.children.some((child) => navItemMatchesPath(child, pathname));
-  }
-
-  return false;
-}
-
 export default function Sidebar() {
   const pathname = usePathname();
 
@@ -143,11 +124,6 @@ export default function Sidebar() {
   ) as EffectiveModule[];
 
   const person = useSelector(selectCurrentPerson);
-
-  const [flyoutOpen, setFlyoutOpen] = React.useState(false);
-  const [activeItem, setActiveItem] = React.useState<NavItem | undefined>(
-    undefined,
-  );
 
   const navItems = React.useMemo(
     () => buildNavItemsForUser(NAV_ITEMS, effectiveModules),
@@ -205,102 +181,13 @@ export default function Sidebar() {
     window.location.href = dashboardUrl;
   };
 
-  React.useEffect(() => {
-    const found = navItems.find((item) => navItemMatchesPath(item, pathname));
-    setActiveItem(found);
-    setFlyoutOpen(Boolean(found?.children?.length));
-  }, [pathname, navItems]);
-
-  const handleItemClick = React.useCallback(
-    (key: NavItem['key']) => {
-      const item = navItems.find((i) => i.key === key);
-      if (!item) return;
-
-      const hasChildren = Boolean(item.children?.length);
-      const isSameItem = activeItem?.key === item.key;
-
-      if (hasChildren) {
-        if (isSameItem && flyoutOpen) {
-          return;
-        }
-
-        setActiveItem(item);
-        setFlyoutOpen(true);
-      } else {
-        setActiveItem(item);
-        setFlyoutOpen(false);
-      }
-    },
-    [navItems, activeItem, flyoutOpen],
-  );
-
-  const displayName = person
-    ? `${person.first_name} ${person.last_name}`.trim()
-    : 'Usuario';
-  const displayEmail = person?.email ?? '';
-
   return (
-    <Box
-      sx={{
-        height: '100vh',
-        display: 'flex',
-        bgcolor: (t) => t.palette.grey[50],
-      }}
-    >
-      <Drawer
-        variant="permanent"
-        slotProps={{
-          paper: {
-            sx: {
-              width: SIDEBAR_WIDTH,
-              boxSizing: 'border-box',
-              border: 0,
-              borderRight: '1px solid rgba(0, 0, 0, 0.12)',
-              px: 0,
-              py: 1,
-              bgcolor: 'background.paper',
-              gap: 0,
-            },
-          },
-        }}
-      >
-        {tenantOptions.length > 0 && currentTenant && (
-          <Box sx={{ px: 2, pt: 1, pb: 1.5 }}>
-            <TenantSwitcher
-              currentTenant={currentTenant}
-              tenants={tenantOptions}
-              onChange={handleTenantChange}
-            />
-          </Box>
-        )}
-
-        <List sx={{ flex: 1 }}>
-          {navItems.map((item) => (
-            <SidebarItem
-              key={item.key}
-              item={item}
-              active={activeItem?.key === item.key}
-              onClick={handleItemClick}
-            />
-          ))}
-        </List>
-
-        <Divider sx={{ my: 1 }} />
-
-        <UserCard
-          name={displayName}
-          email={displayEmail}
-          avatarUrl={undefined}
-          onMenuClick={() => console.log('Menú usuario')}
-        />
-      </Drawer>
-
-      {/* Flyout */}
-      <Flyout
-        parent={activeItem}
-        open={flyoutOpen}
-        onClose={() => setFlyoutOpen(false)}
-      />
-    </Box>
+    <SidebarView
+      navItems={navItems}
+      pathname={pathname}
+      tenantOptions={tenantOptions}
+      currentTenant={currentTenant}
+      onTenantChange={handleTenantChange}
+    />
   );
 }

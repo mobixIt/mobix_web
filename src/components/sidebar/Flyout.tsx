@@ -1,29 +1,65 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
-  Box,
   IconButton,
   Typography,
-  TextField,
-  InputAdornment,
   List,
-  ListItemButton,
-  ListItemText,
   Slide,
 } from '@mui/material';
-import { ChevronLeft, Search } from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
+import { ChevronLeft } from '@mui/icons-material';
+
 import { SIDEBAR_WIDTH, FLYOUT_WIDTH } from './constants';
-import type { NavItem, NavChild } from './types';
+import type { NavItem } from './types';
+import FlyoutItem from './FlyoutItem';
 
 interface FlyoutProps {
   parent?: NavItem;
   open: boolean;
   onClose: () => void;
+  pathname: string;
 }
 
-export default function Flyout({ parent, open, onClose }: FlyoutProps) {
+const ArrowButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.common.white,
+  transition: 'color 0.15s ease, transform 0.15s ease',
+
+  '&:hover': {
+    color: theme.palette.secondary.main,
+    transform: 'scale(1.05)',
+  },
+}));
+
+const HeaderTitle = styled(Typography)(({ theme }) => ({
+  color: theme.palette.common.white,
+  fontWeight: 800,
+}));
+
+const FlyoutContainer = styled('div')(({ theme }) => ({
+  position: 'fixed',
+  top: 0,
+  left: SIDEBAR_WIDTH,
+  width: FLYOUT_WIDTH,
+  height: '100vh',
+  backgroundColor: theme.palette.accent.main,
+  boxShadow: '4px 0 18px rgba(15, 23, 42, 0.15)',
+  padding: theme.spacing(2),
+  zIndex: theme.zIndex.drawer - 1,
+  overflowY: 'auto',
+  borderRadius: `0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0`,
+  display: 'flex',
+  flexDirection: 'column',
+}));
+
+const HeaderRow = styled('div')({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  paddingBottom: 16,
+});
+
+export default function Flyout({ parent, open, onClose, pathname }: FlyoutProps) {
   const ref = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -53,65 +89,28 @@ export default function Flyout({ parent, open, onClose }: FlyoutProps) {
       appear
       timeout={220}
     >
-      <Box
-        ref={ref}
-        sx={(theme) => ({
-          position: 'fixed',
-          top: 0,
-          left: SIDEBAR_WIDTH,
-          width: FLYOUT_WIDTH,
-          height: '100vh',
-          bgcolor: 'background.paper',
-          boxShadow: '4px 0 18px rgba(15, 23, 42, 0.15)',
-          p: 2,
-          zIndex: theme.zIndex.drawer - 1,
-          overflowY: 'auto',
-          borderRadius: '0 16px 16px 0',
-        })}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 2 }}>
-          <IconButton size="small" onClick={onClose}>
+      <FlyoutContainer ref={ref}>
+        <HeaderRow>
+          <ArrowButton size="small" onClick={onClose}>
             <ChevronLeft />
-          </IconButton>
-          <Typography variant="h6" fontWeight={800}>
+          </ArrowButton>
+
+          <HeaderTitle variant="h6">
             {parent.label}
-          </Typography>
-        </Box>
+          </HeaderTitle>
+        </HeaderRow>
 
-        <TextField
-          fullWidth
-          placeholder="Search"
-          size="small"
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-            },
-          }}
-          sx={{ mb: 2 }}
-        />
-
-        <List>
-          {parent.children
-            .filter(
-              (child): child is NavChild & { href: string } => Boolean(child.href),
-            )
-            .map((child) => (
-              <ListItemButton
-                key={child.href}
-                component={Link}
-                href={child.href}
-                sx={{ borderRadius: 2, mb: 0.5 }}
-                onClick={onClose}
-              >
-                <ListItemText primary={child.label} />
-              </ListItemButton>
-            ))}
+        <List disablePadding>
+          {parent.children.map((child) => (
+            <FlyoutItem
+              key={child.label}
+              node={child}
+              onClose={onClose}
+              pathname={pathname}
+            />
+          ))}
         </List>
-      </Box>
+      </FlyoutContainer>
     </Slide>
   );
 }

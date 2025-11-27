@@ -1,9 +1,14 @@
 import * as React from 'react';
 
+export type NavIconComponent =
+  | React.ElementType
+  | React.ComponentType<{ fontSize?: 'inherit' | 'small' | 'medium' | 'large' }>;
+
 export type NavChild = {
   label: string;
   href?: string;
   badge?: number;
+  icon?: NavIconComponent;
 
   /**
    * Name(s) of the backend app_module required for this item to be visible.
