@@ -51,7 +51,7 @@ export default function SessionTimeoutModal({
       }
       footer={
         <Footer>
-          <MobixButton variant="contained" onClick={onStayActive}>
+          <MobixButton variant="contained" onClick={onStayActive} color="info">
             Continuar sesión
           </MobixButton>
         </Footer>

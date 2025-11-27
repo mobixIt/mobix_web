@@ -5,13 +5,19 @@ import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import theme from '../src/theme';
+
 const preview: Preview = {
   decorators: [
     (Story) => {
       return (
-        <div className="mobix-story-wrapper">
-          {Story()}
-        </div>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <div className="mobix-story-wrapper">
+            <Story />
+          </div>
+        </ThemeProvider>
       );
     },
   ],

@@ -14,7 +14,7 @@ import {
   MobixButtonDelete,
   MobixButtonSecondaryAction,
   MobixButtonProgress,
-  MobixIconButton, // <-- nuevo import
+  MobixIconButton,
 } from '@/components/mobix/button';
 
 interface ButtonsStoryProps {
@@ -58,19 +58,91 @@ export const AllButtons: Story = {
           display: 'flex',
           flexDirection: 'column',
           gap: 20,
-          maxWidth: 360,
+          maxWidth: 520,
         }}
       >
-        {/* NORMAL BUTTON */}
+        {/* PRIMARY / SECONDARY / SUCCESS / WARNING / ERROR / INFO / ACCENT / DISABLED */}
         <section>
-          <h3>MobixButton (default)</h3>
-          <MobixButton
-            variant="contained"
-            color="primary"
-            onClick={onClick}
+          <h3>MobixButton (color variants)</h3>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
           >
-            Guardar
-          </MobixButton>
+            {/* Primary */}
+            <MobixButton
+              variant="contained"
+              color="primary"
+              onClick={onClick}
+            >
+              Primary
+            </MobixButton>
+
+            {/* Secondary */}
+            <MobixButton
+              variant="contained"
+              color="secondary"
+              onClick={onClick}
+            >
+              Secondary
+            </MobixButton>
+
+            {/* Success */}
+            <MobixButton
+              variant="contained"
+              color="success"
+              onClick={onClick}
+            >
+              Success
+            </MobixButton>
+
+            {/* Warning */}
+            <MobixButton
+              variant="contained"
+              color="warning"
+              onClick={onClick}
+            >
+              Warning
+            </MobixButton>
+
+            {/* Error / Danger */}
+            <MobixButton
+              variant="contained"
+              color="error"
+              onClick={onDelete}
+            >
+              Danger
+            </MobixButton>
+
+            {/* Info */}
+            <MobixButton
+              variant="contained"
+              color="info"
+              onClick={onClick}
+            >
+              Info
+            </MobixButton>
+
+            {/* Accent (custom palette color) */}
+            <MobixButton
+              variant="contained"
+              color="accent"
+              onClick={onClick}
+            >
+              Accent
+            </MobixButton>
+
+            {/* Disabled */}
+            <MobixButton
+              variant="contained"
+              color="primary"
+              disabled
+            >
+              Disabled
+            </MobixButton>
+          </div>
         </section>
 
         {/* SMALL BUTTON */}
@@ -90,6 +162,7 @@ export const AllButtons: Story = {
           <h3>MobixButtonOutlined (full width)</h3>
           <MobixButtonOutlined
             variant="outlined"
+            color="accent"
             onClick={onClick}
           >
             Descargar Reporte
@@ -99,7 +172,7 @@ export const AllButtons: Story = {
         {/* TEXT BUTTON */}
         <section>
           <h3>MobixButtonText</h3>
-          <MobixButtonText onClick={onClick}>
+          <MobixButtonText color="accent" onClick={onClick}>
             Continuar
           </MobixButtonText>
         </section>
@@ -125,7 +198,7 @@ export const AllButtons: Story = {
           <h3>MobixButtonSecondaryAction</h3>
           <MobixButtonSecondaryAction
             variant="contained"
-            color="primary"
+            color="secondary"
             onClick={onSecondaryAction}
           >
             Acción secundaria
@@ -144,31 +217,32 @@ export const AllButtons: Story = {
           </MobixButtonProgress>
         </section>
 
-        {/* ICON BUTTON */}
+        {/* ICON BUTTON LEFT */}
         <section>
-          <h3>MobixIconButton</h3>
-            <MobixIconButton
-              variant="contained"
-              color="primary"
-              icon={<UploadIcon />}
-              iconPosition="left"
-              onClick={onClick}
-            >
-              Subir Archivo
-            </MobixIconButton>
-          </section>
+          <h3>MobixIconButton (left icon)</h3>
+          <MobixIconButton
+            variant="contained"
+            color="primary"
+            icon={<UploadIcon />}
+            iconPosition="left"
+            onClick={onClick}
+          >
+            Subir archivo
+          </MobixIconButton>
+        </section>
 
-          <section>
-            <h3>MobixIconButton</h3>
-            <MobixIconButton
-              variant="contained"
-              color="primary"
-              icon={<UploadIcon />}
-              iconPosition="right"
-              onClick={onClick}
-            >
-              Upload Right
-            </MobixIconButton>
+        {/* ICON BUTTON RIGHT */}
+        <section>
+          <h3>MobixIconButton (right icon)</h3>
+          <MobixIconButton
+            variant="contained"
+            color="accent"
+            icon={<UploadIcon />}
+            iconPosition="right"
+            onClick={onClick}
+          >
+            Upload right
+          </MobixIconButton>
         </section>
       </div>
     );

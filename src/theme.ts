@@ -2,49 +2,99 @@ import { createTheme } from '@mui/material/styles';
 
 declare module '@mui/material/styles' {
   interface Palette {
+    accent: Palette['primary'];
     neutral: Palette['primary'];
   }
   interface PaletteOptions {
+    accent?: PaletteOptions['primary'];
     neutral?: PaletteOptions['primary'];
+  }
+  interface TypeBackground {
+    sidebar: string;
+  }
+}
+
+declare module '@mui/material/IconButton' {
+  interface IconButtonPropsColorOverrides {
+    accent: true;
+  }
+}
+
+declare module '@mui/material/Button' {
+  interface ButtonPropsColorOverrides {
+    accent: true;
   }
 }
 
 const theme = createTheme({
   shape: {
-    borderRadius: 8,
+    borderRadius: 4,
   },
   palette: {
     mode: 'light',
+
     primary: {
-      main: '#1E6687',       // Azul medio
-      dark: '#003B5C',       // Azul profundo (títulos y texto)
+      main: '#082A3F',
+      light: '#0E3D58',
+      dark: '#041A27',
       contrastText: '#FFFFFF',
     },
+
     secondary: {
-      main: '#F28C28',       // Naranja (alertas o acentos)
+      main: '#65BBB0',
+      light: '#8FD2C9',
+      dark: '#4A8A84',
+      contrastText: '#FFFFFF',
     },
+
     error: {
-      main: '#F44336',
+      main: '#EF4444',
+      light: '#F87171',
+      dark: '#B91C1C',
     },
+
     warning: {
-      main: '#FFA000',
+      main: '#FBBF24',
+      light: '#FCD34D',
+      dark: '#D97706',
     },
+
     info: {
-      main: '#5EC8D0',       // Aqua
+      main: '#2C7FFF',
+      light: '#5EA8FF',
+      dark: '#1E57CC',
     },
+
     success: {
-      main: '#7AC045',       // Verde lima
+      main: '#4ADE80',
+      light: '#86EFAC',
+      dark: '#22C55E',
     },
+
     background: {
-      default: '#F9FAFB',    // Fondo general
-      paper: '#FFFFFF',      // Tarjetas y formularios
+      default: '#F5F7FA',
+      paper: '#FFFFFF',
     },
+
     text: {
-      primary: '#003B5C',    // Texto en títulos
-      secondary: '#374151',  // Texto en labels
+      primary: '#082A3F',
+      secondary: '#4B5563',
+      disabled: '#9CA3AF',
     },
+
+    divider: '#000',
+
     neutral: {
-      main: '#D1D5DB',       // Borde de inputs
+      main: '#D1D5DB',
+      dark: '#9CA3AF',
+      light: '#F3F4F6',
+    },
+
+    accent: {
+      main: '#0D3045',
+      light: '#e0f3fe',
+      dark: '#062034',
+      contrastText: '#FFFFFF',
     },
   },
   typography: {
@@ -52,59 +102,6 @@ const theme = createTheme({
     fontWeightRegular: 400,
     fontWeightMedium: 500,
     fontWeightBold: 700,
-  },
-  components: {
-    MuiFormControl: {
-      styleOverrides: {
-        root: {
-          margin: '0',
-        }
-      }
-    },
-    MuiFilledInput: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#FFFFFF',
-          borderRadius: 4,
-          border: '1px solid #D1D5DB',
-          '&:hover': {
-            backgroundColor: '#F3F4F6',
-          },
-        },
-        input: {
-          color: '#003B5C',
-        },
-      },
-    },
-    MuiInputLabel: {
-      styleOverrides: {
-        root: {
-          color: '#374151',
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          py: 1.5,
-          borderRadius: 4,
-          textTransform: 'none',
-          fontWeight: 600,
-          backgroundColor: '#1E6687',
-          color: '#FFFFFF',
-          '&:hover': {
-            backgroundColor: '#12445A',
-          },
-        },
-      },
-    },
-    MuiTypography: {
-      styleOverrides: {
-        root: {
-          margin: 0,
-        }
-      }
-    }
   },
 });
 

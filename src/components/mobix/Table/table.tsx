@@ -11,7 +11,6 @@ import {
   TableCell,
   TableContainer,
   TablePagination,
-  Checkbox,
   IconButton,
   Typography,
   Collapse,
@@ -35,6 +34,7 @@ import {
   ToolbarRoot,
   TableName,
   ToolbarContent,
+  StyledCheckbox,
 } from './styles';
 
 import type { MobixTableProps } from './types';
@@ -259,33 +259,35 @@ export function MobixTable<T extends { id: Key }>(
   /*                     SORTED ROWS (CLIENT-SIDE SORTING)                   */
   /* ---------------------------------------------------------------------- */
 
+  function getValue<T, K extends keyof T>(row: T, key: K): T[K] {
+    return row[key];
+  }
+
   const sortedRows = React.useMemo(() => {
-    if (!isClientSorting || !effectiveSort) return rows;
+  if (!isClientSorting || !effectiveSort) return rows;
 
-    const { field, direction } = effectiveSort;
+  const { field, direction } = effectiveSort;
 
-    const column = columns.find(
-      (c) => String(c.id) === field,
-    );
+  const column = columns.find((c) => String(c.id) === field);
 
-    const fieldKey = (column?.field ??
-      field) as keyof T;
+  // fieldKey es una propiedad válida del row
+  const fieldKey = (column?.field ?? field) as keyof T;
 
-    const factor = direction === 'asc' ? 1 : -1;
+  const factor = direction === 'asc' ? 1 : -1;
 
-    return [...rows].sort((a, b) => {
-      const av = (a as any)[fieldKey];
-      const bv = (b as any)[fieldKey];
+  return [...rows].sort((a, b) => {
+    const av = getValue(a, fieldKey);
+    const bv = getValue(b, fieldKey);
 
-      if (av == null && bv == null) return 0;
-      if (av == null) return 1;
-      if (bv == null) return -1;
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
 
-      if (av < bv) return -1 * factor;
-      if (av > bv) return 1 * factor;
-      return 0;
-    });
-  }, [rows, columns, effectiveSort, isClientSorting]);
+    if (av < bv) return -1 * factor;
+    if (av > bv) return 1 * factor;
+    return 0;
+  });
+}, [rows, columns, effectiveSort, isClientSorting]);
 
   const sourceRows = isClientSorting ? sortedRows : rows;
 
@@ -628,6 +630,7 @@ export function MobixTable<T extends { id: Key }>(
                     <IconButton
                       aria-label="Download"
                       onClick={handleDownloadClick}
+                     color="info"
                     >
                       <SaveAlt />
                     </IconButton>
@@ -677,6 +680,7 @@ export function MobixTable<T extends { id: Key }>(
                   <IconButton
                     aria-label="Delete"
                     onClick={handleOpenDeleteDialog}
+                   color="info"
                   >
                     <Delete />
                   </IconButton>
@@ -689,6 +693,7 @@ export function MobixTable<T extends { id: Key }>(
                     <IconButton
                       aria-label="Mostrar selector de columnas"
                       onClick={handleOpenColumnsMenu}
+                     color="info"
                     >
                       <ViewColumn />
                     </IconButton>
@@ -717,7 +722,7 @@ export function MobixTable<T extends { id: Key }>(
                             handleToggleColumnVisibility(colId)
                           }
                         >
-                          <Checkbox
+                          <StyledCheckbox
                             checked={checked}
                             disabled={!hideable}
                             size="small"
@@ -779,7 +784,7 @@ export function MobixTable<T extends { id: Key }>(
                 <TableRow>
                   {enableSelection && (
                     <TableCell padding="checkbox">
-                      <Checkbox
+                      <StyledCheckbox
                         indeterminate={
                           hasSelection && !isAllPageSelected
                         }
@@ -886,7 +891,6 @@ export function MobixTable<T extends { id: Key }>(
                       <React.Fragment key={row.id}>
                         <TableRow
                           hover
-                          selected={isSelected}
                           onClick={
                             onRowClick
                               ? () => onRowClick(row)
@@ -900,7 +904,7 @@ export function MobixTable<T extends { id: Key }>(
                         >
                           {enableSelection && (
                             <TableCell padding="checkbox">
-                              <Checkbox
+                              <StyledCheckbox
                                 checked={isSelected}
                                 onClick={(event) =>
                                   event.stopPropagation()

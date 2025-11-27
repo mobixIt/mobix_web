@@ -1,7 +1,7 @@
 'use client';
 
 import { styled } from '@mui/material/styles';
-import { Box, Paper, Typography } from '@mui/material';
+import { Box, Paper, Typography, Checkbox } from '@mui/material';
 
 export const Root = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
@@ -34,11 +34,11 @@ export const ToolbarRoot = styled(
   borderBottom: 0,
 
   backgroundColor: hasSelection
-    ? theme.palette.primary.light
+    ? theme.palette.accent.light
     : theme.palette.background.paper,
 
   color: hasSelection
-    ? theme.palette.primary.main
+    ? theme.palette.info.main
     : theme.palette.text.primary,
 }));
 
@@ -58,4 +58,19 @@ export const TableName = styled(Typography)(({ theme }) => ({
   letterSpacing: '0.25px',
   lineHeight: '24px',
   margin: 0,
+}));
+
+export const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
+  '& .MuiSvgIcon-root': {
+    color: theme.palette.info.main,
+    borderRadius: 4,
+  },
+
+  '&.Mui-checked .MuiSvgIcon-root': {
+    color: theme.palette.info.main,
+  },
+
+  '&.MuiCheckbox-indeterminate .MuiSvgIcon-root': {
+    color: theme.palette.info.main,
+  },
 }));
