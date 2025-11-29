@@ -8,8 +8,8 @@ import { SIDEBAR_WIDTH } from './constants';
 import type { NavItem, NavChild } from './types';
 import SidebarItem from './SidebarItem';
 import Flyout from './Flyout';
-import type { TenantOption } from '@/components/header/TenantSwitcher';
-import { TenantSwitcher } from '@/components/header/TenantSwitcher';
+import type { TenantOption } from '@/components/sidebar/TenantSwitcher';
+import { TenantSwitcher } from '@/components/sidebar/TenantSwitcher';
 
 export type SidebarViewProps = {
   navItems: NavItem[];
@@ -99,13 +99,18 @@ export function SidebarView({
     [navItems]
   );
 
+  const effectiveCurrentTenant =
+    currentTenant ?? (tenantOptions.length > 0 ? tenantOptions[0] : null);
+
+  const showTenantSwitcher = !!effectiveCurrentTenant && tenantOptions.length > 0;
+
   return (
     <>
       <SidebarDrawer variant="permanent">
-        {tenantOptions.length > 0 && currentTenant && (
+        {showTenantSwitcher && (
           <TenantContainer>
             <TenantSwitcher
-              currentTenant={currentTenant}
+              currentTenant={effectiveCurrentTenant}
               tenants={tenantOptions}
               onChange={onTenantChange}
             />

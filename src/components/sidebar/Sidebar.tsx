@@ -11,7 +11,7 @@ import SidebarView from './SidebarView';
 import { selectEffectiveModules } from '@/store/slices/permissionsSlice';
 import type { EffectiveModule, Membership } from '@/types/access-control';
 import { selectCurrentPerson } from '@/store/slices/authSlice';
-import type { TenantOption } from '@/components/header/TenantSwitcher';
+import type { TenantOption } from '@/components/sidebar/TenantSwitcher';
 import { buildTenantUrl } from '@/utils/tenantUrl';
 
 export function hasModuleAccess(
@@ -117,7 +117,8 @@ export function buildNavItemsForUser(
 }
 
 export default function Sidebar() {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const pathname = rawPathname ?? '/';
 
   const effectiveModules = useSelector(
     selectEffectiveModules,

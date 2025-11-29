@@ -16,7 +16,7 @@ import SidebarView, {
 } from '@/components/sidebar/SidebarView';
 
 import type { NavItem } from '@/components/sidebar/types';
-import type { TenantOption } from '@/components/header/TenantSwitcher';
+import type { TenantOption } from '@/components/sidebar/TenantSwitcher';
 
 /* ===============================
    NAV ITEMS (BASIC)
