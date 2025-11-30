@@ -270,7 +270,6 @@ export function MobixTable<T extends { id: Key }>(
 
   const column = columns.find((c) => String(c.id) === field);
 
-  // fieldKey es una propiedad válida del row
   const fieldKey = (column?.field ?? field) as keyof T;
 
   const factor = direction === 'asc' ? 1 : -1;

@@ -52,6 +52,17 @@ export const IconSquareButton = styled(IconButton)(({ theme }) => ({
       color: theme.palette.secondary.main,
     },
   },
+
+  '&.active': {
+    transform: 'translateY(-1px)',
+    boxShadow: `0 12px 30px ${alpha(theme.palette.secondary.main, 0.18)}`,
+    borderColor: theme.palette.secondary.main,
+    backgroundColor: theme.palette.common.white,
+
+    '& .MuiSvgIcon-root': {
+      color: theme.palette.secondary.main,
+    },
+  },
 }));
 
 export const AvatarButton = styled(IconButton)(({ theme }) => ({

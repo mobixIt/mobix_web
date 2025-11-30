@@ -1,8 +1,5 @@
 import * as React from 'react';
-import {
-  Tooltip,
-  ListItemText,
-} from '@mui/material';
+import { Tooltip, ListItemText } from '@mui/material';
 import {
   NotificationsNone,
   CalendarMonth,
@@ -26,13 +23,24 @@ import {
 } from './Header.styled';
 import UserCard from '@/components/user-card/UserCard';
 import { getUserAvatarUrl } from '@/services/avatarService';
+import NotificationsDrawer, {
+  NotificationItem,
+} from '@/components/notifications/NotificationsDrawer';
 
 export type HeaderViewProps = {
   userName: string;
   userEmail: string;
   avatarUrl?: string;
+
+  notifications: NotificationItem[];
+  notificationsOpen: boolean;
   notificationsCount?: number;
-  onNotificationsClick?: () => void;
+  onOpenNotifications: () => void;
+  onCloseNotifications: () => void;
+  onMarkNotificationAsRead: (id: string) => void;
+  onNotificationClick?: (notification: NotificationItem) => void;
+  onViewAllNotifications?: () => void;
+
   onCalendarClick?: () => void;
   onMyAccountClick?: () => void;
   onLogoutClick?: () => void;
@@ -42,8 +50,14 @@ export function HeaderView({
   userName,
   userEmail,
   avatarUrl,
+  notifications,
+  notificationsOpen,
   notificationsCount = 0,
-  onNotificationsClick,
+  onOpenNotifications,
+  onCloseNotifications,
+  onMarkNotificationAsRead,
+  onNotificationClick,
+  onViewAllNotifications,
   onCalendarClick,
   onMyAccountClick,
   onLogoutClick,
@@ -75,68 +89,83 @@ export function HeaderView({
     avatarUrl || getUserAvatarUrl(userEmail || userName);
 
   return (
-    <HeaderRoot>
-      <HeaderLeft />
-      <HeaderRight>
-        <Tooltip title="Notificaciones">
-          <IconSquareButton onClick={onNotificationsClick}>
-            <NotificationBadge
-              invisible={!showBadge}
-              badgeContent={notificationsCount}
-              color="error"
-              overlap="circular"
+    <>
+      <HeaderRoot>
+        <HeaderLeft />
+        <HeaderRight>
+          <Tooltip title="Notificaciones">
+            <IconSquareButton
+              aria-label="notifications"
+              onClick={onOpenNotifications}
+              className={notificationsOpen ? 'active' : undefined}
             >
-              <NotificationsNone />
-            </NotificationBadge>
-          </IconSquareButton>
-        </Tooltip>
+              <NotificationBadge
+                invisible={!showBadge}
+                badgeContent={notificationsCount}
+                color="error"
+                overlap="circular"
+              >
+                <NotificationsNone />
+              </NotificationBadge>
+            </IconSquareButton>
+          </Tooltip>
 
-        <Tooltip title="Calendario">
-          <IconSquareButton onClick={onCalendarClick}>
-            <CalendarMonth />
-          </IconSquareButton>
-        </Tooltip>
+          <Tooltip title="Calendario">
+            <IconSquareButton onClick={onCalendarClick} aria-label="calendar">
+              <CalendarMonth />
+            </IconSquareButton>
+          </Tooltip>
 
-        <AvatarButton
-          onClick={handleAvatarClick}
-          className={userMenuOpen ? 'active' : undefined}
-        >
-          <AvatarCircle src={resolvedAvatarUrl} alt={userName}>
-            {!resolvedAvatarUrl && userName?.[0]?.toUpperCase()}
-          </AvatarCircle>
-        </AvatarButton>
+          <AvatarButton
+            onClick={handleAvatarClick}
+            className={userMenuOpen ? 'active' : undefined}
+          >
+            <AvatarCircle src={resolvedAvatarUrl} alt={userName}>
+              {!resolvedAvatarUrl && userName?.[0]?.toUpperCase()}
+            </AvatarCircle>
+          </AvatarButton>
 
-        <UserMenu
-          anchorEl={anchorEl}
-          open={userMenuOpen}
-          onClose={handleCloseMenu}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <UserMenuContent>
-            <UserCard
-              name={userName}
-              email={userEmail}
-              avatarUrl={resolvedAvatarUrl}
-            />
-          </UserMenuContent>
-          <StyledDivider />
-          <StyledMenuItem onClick={handleMyAccount}>
-            <StyledListItemIcon className="menu-item-icon">
-              <PersonOutline fontSize="small" />
-            </StyledListItemIcon>
-            <ListItemText primary="Mi cuenta" />
-          </StyledMenuItem>
+          <UserMenu
+            anchorEl={anchorEl}
+            open={userMenuOpen}
+            onClose={handleCloseMenu}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <UserMenuContent>
+              <UserCard
+                name={userName}
+                email={userEmail}
+                avatarUrl={resolvedAvatarUrl}
+              />
+            </UserMenuContent>
+            <StyledDivider />
+            <StyledMenuItem onClick={handleMyAccount}>
+              <StyledListItemIcon className="menu-item-icon">
+                <PersonOutline fontSize="small" />
+              </StyledListItemIcon>
+              <ListItemText primary="Mi cuenta" />
+            </StyledMenuItem>
 
-          <StyledMenuItem onClick={handleLogout}>
-            <StyledListItemIcon className="menu-item-icon">
-              <Logout fontSize="small" />
-            </StyledListItemIcon>
-            <ListItemText primary="Cerrar sesión" />
-          </StyledMenuItem>
-        </UserMenu>
-      </HeaderRight>
-    </HeaderRoot>
+            <StyledMenuItem onClick={handleLogout}>
+              <StyledListItemIcon className="menu-item-icon">
+                <Logout fontSize="small" />
+              </StyledListItemIcon>
+              <ListItemText primary="Cerrar sesión" />
+            </StyledMenuItem>
+          </UserMenu>
+        </HeaderRight>
+      </HeaderRoot>
+
+      <NotificationsDrawer
+        open={notificationsOpen}
+        onClose={onCloseNotifications}
+        notifications={notifications}
+        onMarkAsRead={onMarkNotificationAsRead}
+        onNotificationClick={onNotificationClick}
+        onViewAll={onViewAllNotifications}
+      />
+    </>
   );
 }
 
