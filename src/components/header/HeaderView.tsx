@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Tooltip, ListItemText } from '@mui/material';
+import ClickAwayListener from '@mui/material/ClickAwayListener';
 import {
   NotificationsNone,
   CalendarMonth,
@@ -26,6 +27,8 @@ import { getUserAvatarUrl } from '@/services/avatarService';
 import NotificationsDrawer, {
   NotificationItem,
 } from '@/components/notifications/NotificationsDrawer';
+import { CalendarFlyout } from '@/components/calendar-flyout/CalendarFlyout';
+import type { CalendarFlyoutProps, DayData } from '@/components/calendar-flyout/CalendarFlyout.types';
 
 export type HeaderViewProps = {
   userName: string;
@@ -42,8 +45,23 @@ export type HeaderViewProps = {
   onViewAllNotifications?: () => void;
 
   onCalendarClick?: () => void;
+
+  calendarDaysByDate?: Record<string, DayData>;
+  calendarInitialMonth?: CalendarFlyoutProps['initialMonth'];
+  calendarInitialSelectedDate?: CalendarFlyoutProps['initialSelectedDate'];
+  onOpenFullCalendar?: CalendarFlyoutProps['onOpenFullCalendar'];
+  onCreateCalendarEvent?: CalendarFlyoutProps['onCreateEvent'];
+  onCalendarDayClick?: CalendarFlyoutProps['onDayClick'];
+
   onMyAccountClick?: () => void;
   onLogoutClick?: () => void;
+};
+
+const getDateKey = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, '0');
+  const d = `${date.getDate()}`.padStart(2, '0');
+  return `${y}-${m}-${d}`;
 };
 
 export function HeaderView({
@@ -59,10 +77,18 @@ export function HeaderView({
   onNotificationClick,
   onViewAllNotifications,
   onCalendarClick,
+  calendarDaysByDate,
+  calendarInitialMonth,
+  calendarInitialSelectedDate,
+  onOpenFullCalendar,
+  onCreateCalendarEvent,
+  onCalendarDayClick,
   onMyAccountClick,
   onLogoutClick,
 }: HeaderViewProps) {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [calendarOpen, setCalendarOpen] = React.useState(false);
+
   const userMenuOpen = Boolean(anchorEl);
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -88,6 +114,32 @@ export function HeaderView({
   const resolvedAvatarUrl =
     avatarUrl || getUserAvatarUrl(userEmail || userName);
 
+  const hasTodayCalendarEvents = React.useMemo(() => {
+    if (!calendarDaysByDate) return false;
+
+    const today = new Date();
+    const key = getDateKey(today);
+    const dayData = calendarDaysByDate[key];
+
+    if (!dayData) return false;
+
+    const hasDots = Array.isArray(dayData.dots) && dayData.dots.length > 0;
+    const hasEvents = Array.isArray(dayData.events) && dayData.events.length > 0;
+
+    return hasDots || hasEvents;
+  }, [calendarDaysByDate]);
+
+  const handleCalendarButtonClick = () => {
+    setCalendarOpen((prev) => !prev);
+    onCalendarClick?.();
+  };
+
+  const handleCloseCalendar = () => {
+    if (calendarOpen) {
+      setCalendarOpen(false);
+    }
+  };
+
   return (
     <>
       <HeaderRoot>
@@ -110,11 +162,37 @@ export function HeaderView({
             </IconSquareButton>
           </Tooltip>
 
-          <Tooltip title="Calendario">
-            <IconSquareButton onClick={onCalendarClick} aria-label="calendar">
-              <CalendarMonth />
-            </IconSquareButton>
-          </Tooltip>
+          {/* Calendar: botón + flyout envueltos en el mismo ClickAwayListener */}
+          <ClickAwayListener onClickAway={handleCloseCalendar}>
+            <div style={{ position: 'relative', display: 'inline-flex' }}>
+              <Tooltip title="Calendario">
+                <IconSquareButton
+                  onClick={handleCalendarButtonClick}
+                  aria-label="calendar"
+                  className={calendarOpen ? 'active' : undefined}
+                >
+                  <NotificationBadge
+                    variant="dot"
+                    invisible={!hasTodayCalendarEvents}
+                    color="secondary"
+                    overlap="circular"
+                  >
+                    <CalendarMonth />
+                  </NotificationBadge>
+                </IconSquareButton>
+              </Tooltip>
+
+              <CalendarFlyout
+                open={calendarOpen}
+                daysByDate={calendarDaysByDate ?? {}}
+                initialMonth={calendarInitialMonth}
+                initialSelectedDate={calendarInitialSelectedDate}
+                onOpenFullCalendar={onOpenFullCalendar}
+                onCreateEvent={onCreateCalendarEvent}
+                onDayClick={onCalendarDayClick}
+              />
+            </div>
+          </ClickAwayListener>
 
           <AvatarButton
             onClick={handleAvatarClick}

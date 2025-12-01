@@ -3,12 +3,14 @@
 import * as React from 'react';
 import HeaderView from './HeaderView';
 import { NotificationItem } from '@/components/notifications/NotificationsDrawer';
+import { type DayData } from '@/components/calendar-flyout/CalendarFlyout.types';
+import { getDateKey } from '@/utils/date';
 
 const MOCK_NOTIFICATIONS: NotificationItem[] = [
   {
     id: '1',
-    title: 'Vehicle inspection completed',
-    message: 'Bus XC-123 has passed the scheduled inspection',
+    title: 'Inspección vehicular completada',
+    message: 'El bus XC-123 ha aprobado la inspección programada',
     createdAt: '2025-11-29T15:20:00Z',
     readAt: null,
     severity: 'success',
@@ -19,7 +21,7 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     action: {
       type: 'navigate',
       url: '/workshop/vehicles/XC-123/inspections/latest',
-      label: 'View inspection',
+      label: 'Ver inspección',
     },
     notifiable: {
       type: 'Vehicle',
@@ -29,8 +31,8 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
   },
   {
     id: '2',
-    title: 'Urgent: Battery replacement needed',
-    message: 'Unit 45 battery is showing critical levels',
+    title: 'Urgente: se requiere cambio de batería',
+    message: 'La batería de la unidad 45 muestra niveles críticos',
     createdAt: '2025-11-29T15:05:00Z',
     readAt: null,
     severity: 'error',
@@ -41,7 +43,7 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     action: {
       type: 'navigate',
       url: '/vehicles/45/maintenance/battery',
-      label: 'Review battery status',
+      label: 'Revisar estado de batería',
     },
     notifiable: {
       type: 'Vehicle',
@@ -51,8 +53,8 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
   },
   {
     id: '3',
-    title: 'Workshop appointment confirmed',
-    message: 'Service scheduled for tomorrow at 10:00 AM',
+    title: 'Cita en taller confirmada',
+    message: 'Servicio programado para mañana a las 10:00 AM',
     createdAt: '2025-11-29T14:00:00Z',
     readAt: null,
     severity: 'info',
@@ -63,7 +65,7 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     action: {
       type: 'navigate',
       url: '/workshop/appointments/next',
-      label: 'View appointment',
+      label: 'Ver cita',
     },
     notifiable: {
       type: 'Vehicle',
@@ -73,8 +75,8 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
   },
   {
     id: '4',
-    title: 'System maintenance completed',
-    message: 'All systems are now running normally',
+    title: 'Mantenimiento del sistema completado',
+    message: 'Todos los sistemas están funcionando con normalidad',
     createdAt: '2025-11-29T12:00:00Z',
     readAt: '2025-11-29T12:30:00Z',
     severity: 'info',
@@ -85,8 +87,8 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
   },
   {
     id: '5',
-    title: 'Monthly report ready',
-    message: 'Your fleet performance report is available for download',
+    title: 'Informe mensual disponible',
+    message: 'Tu informe de rendimiento de flota está listo para descargar',
     createdAt: '2025-11-28T09:00:00Z',
     readAt: null,
     severity: 'info',
@@ -97,10 +99,46 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     action: {
       type: 'navigate',
       url: '/reports/fleet/monthly',
-      label: 'Open report',
+      label: 'Abrir informe',
     },
   },
 ];
+
+const today = new Date();
+const todayKey = getDateKey(today);
+
+const MOCK_CALENDAR_DAYS: Record<string, DayData> = {
+  [todayKey]: {
+    heatLevel: 'medium',
+    dots: ['maintenance', 'dispatch'],
+    critical: false,
+    metrics: {
+      critical: 0,
+      important: 1,
+      scheduled: 2,
+    },
+    events: [
+      {
+        id: 'evt-1',
+        timeLabel: '09:00',
+        pillVariant: 'scheduled',
+        pillLabel: 'Programado',
+        iconVariant: 'maintenance',
+        title: 'Revisión preventiva · Unidad 32',
+        subtitle: 'Taller A',
+      },
+      {
+        id: 'evt-2',
+        timeLabel: '16:00',
+        pillVariant: 'upcoming',
+        pillLabel: 'Próximo',
+        iconVariant: 'dispatch',
+        title: 'Cambio de ruta · Línea 7',
+        subtitle: 'Despacho · Conductor Morales',
+      },
+    ],
+  },
+};
 
 export default function Header() {
   const userMock = {
@@ -125,7 +163,9 @@ export default function Header() {
 
   const handleMarkNotificationAsRead = (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+      prev.map((n) =>
+        n.id === id ? { ...n, readAt: new Date().toISOString() } : n,
+      ),
     );
   };
 
@@ -152,7 +192,17 @@ export default function Header() {
       onViewAllNotifications={handleViewAllNotifications}
       onMyAccountClick={() => console.log('Ir a Mi cuenta')}
       onLogoutClick={() => console.log('Cerrar sesión')}
-      onCalendarClick={() => console.log('Abrir calendario')}
+      onCalendarClick={() => console.log('Click header calendar button')}
+      calendarDaysByDate={MOCK_CALENDAR_DAYS}
+      calendarInitialMonth={today}
+      calendarInitialSelectedDate={today}
+      onOpenFullCalendar={() => console.log('Open full calendar')}
+      onCreateCalendarEvent={(date) =>
+        console.log('Create event on date:', date)
+      }
+      onCalendarDayClick={(date) =>
+        console.log('Day clicked in calendar flyout:', date)
+      }
     />
   );
 }
