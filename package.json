@@ -33,11 +33,16 @@
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
     "@mui/x-data-grid": "^8.19.0",
+    "@mui/x-date-pickers": "^8.19.0",
     "@reduxjs/toolkit": "^2.10.1",
     "axios": "^1.10.0",
+    "date-fns": "^4.1.0",
+    "dayjs": "^1.11.19",
     "next": "15.3.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-number-format": "^5.4.4",
+    "react-phone-number-input": "^3.4.14",
     "react-redux": "^9.2.0"
   },
   "devDependencies": {
@@ -71,5 +76,8 @@
     "storybook": "^10.0.8",
     "typescript": "^5",
     "vitest": "^3.2.4"
+  },
+  "optionalDependencies": {
+    "react-hook-form": "^7.67.0"
   }
 }
