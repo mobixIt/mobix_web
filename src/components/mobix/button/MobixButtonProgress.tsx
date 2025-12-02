@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { styled } from '@mui/material/styles';
+import type { SxProps, Theme } from '@mui/material/styles';
 import CircularProgress from '@mui/material/CircularProgress';
 import { MobixButton } from './MobixButton';
 
@@ -12,14 +13,17 @@ interface MobixButtonProgressProps {
   variant?: 'contained' | 'outlined' | 'text';
   disabled?: boolean;
   onClick?: () => void;
+  sx?: SxProps<Theme>;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 const Root = styled('div')({
   position: 'relative',
   display: 'inline-block',
+  width: '100%',
 });
 
-const ProgressContainer = styled('div')(({ theme }) => ({
+const ProgressContainer = styled('div')(() => ({
   position: 'absolute',
   top: 0,
   left: 0,
@@ -47,6 +51,7 @@ export function MobixButtonProgress({
   isSubmitting = false,
   children,
   variant = 'contained',
+  sx,
   ...props
 }: MobixButtonProgressProps) {
   const isContained = variant === 'contained';
@@ -61,6 +66,7 @@ export function MobixButtonProgress({
         className={isSubmitting ? 'no-border' : undefined}
         sx={{
           border: isSubmitting ? '0 !important' : undefined,
+          ...(sx || {}),
         }}
       >
         {isSubmitting ? <HiddenText>{children}</HiddenText> : children}

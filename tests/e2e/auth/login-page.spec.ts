@@ -14,9 +14,13 @@ test.describe('Root page when unauthenticated', () => {
       page.getByRole('heading', { name: 'Iniciar sesión', exact: true })
     ).toBeVisible();
 
-    await expect(page.getByLabel('ID ó Correo electrónico')).toBeVisible();
-    await expect(page.getByLabel('Contraseña')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible();
-    await expect(page.getByRole('link', { name: '¿Olvidó su contraseña?' })).toBeVisible();
+    await expect(page.getByTestId('login-email')).toBeVisible();
+    await expect(page.getByTestId('login-password')).toBeVisible();
+
+    await expect(page.getByTestId('login-submit')).toBeVisible();
+
+    await expect(
+      page.getByRole('link', { name: '¿Olvidó su contraseña?' })
+    ).toBeVisible();
   });
 });

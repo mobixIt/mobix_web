@@ -5,9 +5,12 @@ const LOGIN_URL = '**/auth/login';
 
 async function fillLoginForm(page: Page) {
   await page.goto('/');
-  await page.getByLabel('ID ó Correo electrónico', { exact: true }).fill('user@example.com');
-  await page.getByLabel('Contraseña', { exact: true }).fill('Password1!');
-  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+
+  await page.waitForURL('**/login', { timeout: 5_000 });
+
+  await page.getByTestId('login-email').fill('user@example.com');
+  await page.getByTestId('login-password').fill('Password1!');
+  await page.getByTestId('login-submit').click();
 }
 
 test.describe('Login error handling', () => {

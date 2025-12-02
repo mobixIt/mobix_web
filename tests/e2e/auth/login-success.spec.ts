@@ -82,15 +82,9 @@ test.describe('Login flow', () => {
 
     await page.goto('/');
 
-    await page
-      .getByLabel('ID ó Correo electrónico', { exact: true })
-      .fill('user@example.com');
-    await page
-      .getByLabel('Contraseña', { exact: true })
-      .fill('Password1!');
-    await page
-      .getByRole('button', { name: 'Iniciar sesión', exact: true })
-      .click();
+    await page.getByTestId('login-email').fill('user@example.com');
+    await page.getByTestId('login-password').fill('Password1!');
+    await page.getByTestId('login-submit').click();
 
     await page.waitForURL('http://coolitoral.localhost:4567/dashboard', {
       timeout: 5_000,
@@ -183,22 +177,15 @@ test.describe('Login flow', () => {
 
     await page.goto('/');
 
-    await page
-      .getByLabel('ID ó Correo electrónico', { exact: true })
-      .fill('user@example.com');
-    await page
-      .getByLabel('Contraseña', { exact: true })
-      .fill('Password1!');
-    await page
-      .getByRole('button', { name: 'Iniciar sesión', exact: true })
-      .click();
+    await page.getByTestId('login-email').fill('user@example.com');
+    await page.getByTestId('login-password').fill('Password1!');
+    await page.getByTestId('login-submit').click();
 
-    // Ahora debe redirigir al dashboard del primer tenant (coolitoral)
     await page.waitForURL('http://coolitoral.localhost:4567/dashboard', {
       timeout: 5_000,
     });
-    await expect(page).toHaveURL('http://coolitoral.localhost:4567/dashboard');
 
+    await expect(page).toHaveURL('http://coolitoral.localhost:4567/dashboard');
     await expect(page.getByTestId('person-dashboard')).toBeVisible();
     await expect(
       page.getByRole('heading', { name: /Bienvenido,\s*Harold Rangel/i }),
@@ -266,9 +253,9 @@ test.describe('Login flow', () => {
 
     await page.waitForURL('**/login');
 
-    await page.getByLabel('ID ó Correo electrónico').fill('single@tenant.test');
-    await page.getByLabel('Contraseña').fill('Password1!');
-    await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+    await page.getByTestId('login-email').fill('single@tenant.test');
+    await page.getByTestId('login-password').fill('Password1!');
+    await page.getByTestId('login-submit').click();
 
     await expect(page).toHaveURL('http://coolitoral.localhost:4567/dashboard');
   });

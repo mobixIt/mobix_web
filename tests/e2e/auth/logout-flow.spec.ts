@@ -136,9 +136,9 @@ test.describe('Logout flow', () => {
 
     await page.waitForURL('**/login');
 
-    await page.getByLabel('ID ó Correo electrónico').fill('user@example.com');
-    await page.getByLabel('Contraseña').fill('Password1!');
-    await page.getByRole('button', { name: /iniciar sesión/i }).click();
+    await page.getByTestId('login-email').fill('user@example.com');
+    await page.getByTestId('login-password').fill('Password1!');
+    await page.getByTestId('login-submit').click();
 
     await page.waitForURL('**/dashboard');
     const currentUrl = new URL(page.url());
