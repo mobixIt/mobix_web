@@ -141,7 +141,7 @@ export default function LoginPage() {
 
       <FooterBadge id="footer-badge">
         <Typography variant="caption">
-          Mobix © 2026 - Monitoreo de Flotas Urbanas
+          Mobix © 2026 - ERP para la Gestión del Transporte Urbano
         </Typography>
       </FooterBadge>
     </LoginContainer>

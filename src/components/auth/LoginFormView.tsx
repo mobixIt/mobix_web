@@ -52,8 +52,8 @@ export default function LoginFormView({
             <Image
               src="/logo.svg"
               alt="Mobix Logo"
-              width={100}
-              height={100}
+              width={120}
+              height={120}
               style={{ width: '100%', height: '100%' }}
               priority
             />
