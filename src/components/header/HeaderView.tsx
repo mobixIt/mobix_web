@@ -197,6 +197,7 @@ export function HeaderView({
           <AvatarButton
             onClick={handleAvatarClick}
             className={userMenuOpen ? 'active' : undefined}
+            data-testid="header-avatar-button"
           >
             <AvatarCircle src={resolvedAvatarUrl} alt={userName}>
               {!resolvedAvatarUrl && userName?.[0]?.toUpperCase()}
@@ -225,7 +226,7 @@ export function HeaderView({
               <ListItemText primary="Mi cuenta" />
             </StyledMenuItem>
 
-            <StyledMenuItem onClick={handleLogout}>
+            <StyledMenuItem onClick={handleLogout} data-testid="header-menu-logout">
               <StyledListItemIcon className="menu-item-icon">
                 <Logout fontSize="small" />
               </StyledListItemIcon>

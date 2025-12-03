@@ -140,8 +140,9 @@ export default function Sidebar() {
     () =>
       memberships.map((membership) => ({
         id: String(membership.tenant.id),
-        name: membership.tenant.slug ?? membership.tenant.slug,
+        name: membership.tenant.client?.name ?? membership.tenant.slug,
         slug: membership.tenant.slug,
+        logoUrl: membership.tenant.client?.logo_url ?? '',
       })),
     [memberships],
   );

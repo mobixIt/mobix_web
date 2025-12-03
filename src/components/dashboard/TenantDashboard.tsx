@@ -2,10 +2,6 @@
 
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Button } from '@mui/material';
-
-import { logoutUser } from '@/services/userAuthService';
-import { redirectToBaseLogin } from '@/utils/redirectToLogin';
 
 import {
   loadTenantPermissions,
@@ -37,14 +33,6 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
 
     loadAll();
   }, [tenantSlug, dispatch]);
-
-  const handleLogout = async () => {
-    try {
-      await logoutUser();
-    } finally {
-      redirectToBaseLogin();
-    }
-  };
 
   if (loading || (!membershipResponse && !error)) {
     return (
@@ -94,10 +82,6 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
         <div data-testid="current-membership-none">
           <p>No membership found for this tenant.</p>
         </div>
-
-        <Button variant="outlined" color="secondary" onClick={handleLogout}>
-          Cerrar sesión
-        </Button>
       </section>
     );
   }
@@ -127,10 +111,6 @@ export function TenantDashboard({ tenantSlug }: TenantDashboardProps) {
           ))}
         </ul>
       </div>
-
-      <Button variant="outlined" color="secondary" onClick={handleLogout}>
-        Cerrar sesión
-      </Button>
     </section>
   );
 }

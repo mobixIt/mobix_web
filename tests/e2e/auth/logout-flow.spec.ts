@@ -146,7 +146,10 @@ test.describe('Logout flow', () => {
 
     await expect(page.getByTestId('tenant-dashboard')).toBeVisible();
 
-    await page.getByRole('button', { name: /cerrar sesión/i }).click();
+    await page.getByTestId('header-avatar-button').click();
+
+    await expect(page.getByTestId('header-menu-logout')).toBeVisible();
+    await page.getByTestId('header-menu-logout').click();
 
     expect(logoutCalled).toBe(true);
 

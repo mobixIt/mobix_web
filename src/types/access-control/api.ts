@@ -1,6 +1,15 @@
+export interface Client {
+  id: number;
+  name: string;
+  short_name: string | null;
+  country_code: string | null;
+  logo_url: string | null;
+}
+
 export interface Tenant {
   id: number;
   slug: string;
+  client: Client | null;
 }
 
 export interface Role {

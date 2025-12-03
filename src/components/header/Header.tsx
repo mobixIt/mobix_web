@@ -5,6 +5,7 @@ import HeaderView from './HeaderView';
 import { NotificationItem } from '@/components/notifications/NotificationsDrawer';
 import { type DayData } from '@/components/calendar-flyout/CalendarFlyout.types';
 import { getDateKey } from '@/utils/date';
+import { useLogout } from '@/hooks/useLogout';
 
 const MOCK_NOTIFICATIONS: NotificationItem[] = [
   {
@@ -151,6 +152,8 @@ export default function Header() {
   const [notifications, setNotifications] =
     React.useState<NotificationItem[]>(MOCK_NOTIFICATIONS);
 
+  const handleLogout = useLogout();
+
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   const handleOpenNotifications = () => {
@@ -191,7 +194,7 @@ export default function Header() {
       onNotificationClick={handleNotificationClick}
       onViewAllNotifications={handleViewAllNotifications}
       onMyAccountClick={() => console.log('Ir a Mi cuenta')}
-      onLogoutClick={() => console.log('Cerrar sesión')}
+      onLogoutClick={handleLogout}
       onCalendarClick={() => console.log('Click header calendar button')}
       calendarDaysByDate={MOCK_CALENDAR_DAYS}
       calendarInitialMonth={today}
