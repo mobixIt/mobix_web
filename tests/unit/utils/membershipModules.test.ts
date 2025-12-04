@@ -63,7 +63,7 @@ describe('buildEffectiveModulesFromMembership', () => {
             {
               id: 102,
               subject_class: 'Vehicle',
-              action: 'read', // duplicado a propósito
+              action: 'read',
               app_module: {
                 id: 1,
                 name: 'Vehicles',

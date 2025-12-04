@@ -36,15 +36,40 @@ export function hasSubjectActionAccess(
 ): boolean {
   if (!requiredSubject) return true;
 
-  const allowedActions = modules.flatMap(
-    (m) => m.actionsBySubject[requiredSubject] ?? [],
-  );
+  const subjectKey = requiredSubject.toLowerCase();
+  const actionKey = requiredAction?.toLowerCase() ?? null;
 
-  if (!requiredAction) {
-    return allowedActions.length > 0;
+  for (const m of modules) {
+    const map = m.actionsBySubject;
+    if (!map) continue;
+
+    let actions =
+      map[requiredSubject] ??
+      map[subjectKey];
+
+    if (!actions) {
+      for (const key in map) {
+        if (key.toLowerCase() === subjectKey) {
+          actions = map[key];
+          break;
+        }
+      }
+    }
+
+    if (!actions || actions.length === 0) continue;
+
+    if (!actionKey) {
+      return true;
+    }
+
+    for (const action of actions) {
+      if (action.toLowerCase() === actionKey) {
+        return true;
+      }
+    }
   }
 
-  return allowedActions.includes(requiredAction);
+  return false;
 }
 
 function filterNavChildRecursively(

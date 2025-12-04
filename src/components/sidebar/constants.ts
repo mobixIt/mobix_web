@@ -10,12 +10,14 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Configuración',
     icon: SettingsOutlined,
     requiredModuleName: ['vehicles'],
+    testId: 'nav-item-configuration',
     children: [
       {
         label: 'Vehículos',
         href: '/vehicles',
         requiredModuleName: 'vehicles',
         requiredSubject: 'vehicle',
+        testId: 'nav-link-vehicles',
       },
     ],
   },

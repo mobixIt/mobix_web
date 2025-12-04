@@ -6,7 +6,6 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  Button,
 } from '@mui/material';
 
 export const ModalTitle = styled(DialogTitle)(({ theme }) => ({

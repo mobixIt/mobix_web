@@ -287,7 +287,7 @@ export interface MobixTableDownloadEnabledProps {
 /*                         DELETE DISCRIMINATED UNION                          */
 /* -------------------------------------------------------------------------- */
 
-export interface MobixTableDeleteDisabledProps<T extends { id: Key }> {
+export interface MobixTableDeleteDisabledProps {
   /**
    * When false or undefined, the delete button and confirm dialog
    * are not rendered.

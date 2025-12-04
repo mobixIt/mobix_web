@@ -9,6 +9,7 @@ export type NavChild = {
   href?: string;
   badge?: number;
   icon?: NavIconComponent;
+  testId?: string;
 
   /**
    * Name(s) of the backend app_module required for this item to be visible.
@@ -45,6 +46,7 @@ export type NavItem = {
   href?: string;
   children?: NavChild[];
   badge?: number;
+  testId?: string;
   action?: {
     label: string;
     onClick: () => void;

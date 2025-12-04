@@ -183,6 +183,7 @@ export default function FlyoutItem({
       $active={isActive}
       $isNested={isNested}
       $expanded={open && hasChildren}
+      data-testid={node.testId}
     >
       <LabelWrapper>
         {IconComponent && (

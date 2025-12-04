@@ -130,6 +130,7 @@ export default function SidebarItem({ item, active, onClick }: SidebarItemProps)
     <StyledListItemButton
       $active={active}
       onClick={handleClick}
+      data-testid={item.testId}
     >
       <StyledListItemIcon className="sidebar-icon" $active={active}>
         <Icon />
