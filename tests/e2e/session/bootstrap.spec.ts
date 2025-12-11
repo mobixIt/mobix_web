@@ -324,13 +324,17 @@ test('does not refetch /auth/me or /auth/membership when navigating from /dashbo
 
   const configItem = page.getByTestId('nav-item-configuration');
   await expect(configItem).toBeVisible();
+  await expect(configItem).toBeEnabled();
   await configItem.click();
 
   const vehiclesLink = page.getByTestId('nav-link-vehicles');
   await expect(vehiclesLink).toBeVisible();
-  await vehiclesLink.click();
+  await expect(vehiclesLink).toBeEnabled();
 
-  await page.waitForURL(/\/vehicles$/, { timeout: 5_000 });
+  await Promise.all([
+    page.waitForURL(/\/vehicles$/, { waitUntil: 'commit', timeout: 15_000 }),
+    vehiclesLink.click(),
+  ]);
 
   await expect(page.getByTestId('vehicles-header-title')).toBeVisible();
 
