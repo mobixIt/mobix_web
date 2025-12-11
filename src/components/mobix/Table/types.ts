@@ -317,4 +317,4 @@ export interface MobixTableDeleteEnabledProps<T extends { id: Key }> {
 export type MobixTableProps<T extends { id: Key }> =
   MobixTableBaseProps<T> &
     (MobixTableDownloadDisabledProps | MobixTableDownloadEnabledProps) &
-    (MobixTableDeleteDisabledProps<T> | MobixTableDeleteEnabledProps<T>);
+    (MobixTableDeleteDisabledProps | MobixTableDeleteEnabledProps<T>);

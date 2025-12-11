@@ -1,11 +1,14 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
 import permissionsReducer from './slices/permissionsSlice';
+import vehiclesReducer from './slices/vehiclesSlice';
+
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     permissions: permissionsReducer,
+    vehicles: vehiclesReducer,
   },
 });
 

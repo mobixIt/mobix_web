@@ -32,6 +32,8 @@ export const ToolbarRoot = styled(
   display: 'flex',
   minHeight: 72,
   borderBottom: 0,
+  borderTopLeftRadius: 4,
+  borderTopRightRadius: 4,
 
   backgroundColor: hasSelection
     ? theme.palette.accent.light

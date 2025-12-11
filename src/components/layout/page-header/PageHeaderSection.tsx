@@ -31,6 +31,7 @@ export type PageHeaderSectionProps = {
   actionIcon?: React.ReactNode;
   /** Position of the icon relative to the label text */
   actionIconPosition?: 'left' | 'right';
+  testId?: string;
 };
 
 /**
@@ -46,15 +47,16 @@ export default function PageHeaderSection({
   showActionButton = true,
   actionIcon,
   actionIconPosition = 'left',
+  testId,
 }: PageHeaderSectionProps) {
   const finalIcon = actionIcon ?? <AddIcon />;
   const isLeft = actionIconPosition === 'left';
 
   return (
-    <HeaderSection id="page-header-section">
+    <HeaderSection id="page-header-section" data-testid={testId}>
       <HeaderContent>
         <TitleBlock>
-          <PageTitle variant="h1">{title}</PageTitle>
+          <PageTitle variant="h1" data-testid={testId ? `${testId}-title` : undefined}>{title}</PageTitle>
           {subtitle && <PageSubtitle>{subtitle}</PageSubtitle>}
         </TitleBlock>
 

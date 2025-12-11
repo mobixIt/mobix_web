@@ -19,6 +19,12 @@ const initialState: AuthState = {
   errorStatus: null,
 };
 
+const normalizeMessage = (value?: string | null): string | undefined => {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : trimmed;
+};
+
 export const fetchMe = createAsyncThunk<
   MeResponse,
   void,
@@ -36,9 +42,9 @@ export const fetchMe = createAsyncThunk<
       const firstError = axiosErr.response?.data?.errors?.[0];
 
       const message =
-        firstError?.detail ??
-        firstError?.title ??
-        axiosErr.message ??
+        normalizeMessage(firstError?.detail) ??
+        normalizeMessage(firstError?.title) ??
+        normalizeMessage(axiosErr.message) ??
         'No se pudo cargar la información del usuario';
 
       return rejectWithValue({

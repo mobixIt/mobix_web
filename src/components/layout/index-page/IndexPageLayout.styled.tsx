@@ -40,9 +40,7 @@ export const FiltersSection = styled(Paper)(({ theme }) => ({
   ...cardLike(theme),
 }));
 
-export const TableSection = styled(Paper)(({ theme }) => ({
-  ...cardLike(theme),
-}));
+export const TableSection = styled(Paper)(() => ({}));
 
 export const SectionTitleRow = styled(Box)(({ theme }) => ({
   display: 'flex',

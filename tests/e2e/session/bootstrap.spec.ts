@@ -1,19 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
-
-async function setActiveIdleCookie(page: Page) {
-  await page.addInitScript(() => {
-    const meta = {
-      last_activity_at: Date.now(),
-      idle_timeout_minutes: 10,
-      expires_at: Date.now() + 60 * 60 * 1000,
-    };
-
-    document.cookie =
-      'mobix_idle_meta=' +
-      encodeURIComponent(JSON.stringify(meta)) +
-      '; path=/; SameSite=Lax';
-  });
-}
+import { test, expect } from '@playwright/test';
+import { setActiveIdleCookie } from '../support/idle-cookie';
 
 const DASHBOARD_TENANT_URL = 'http://coolitoral.localhost:4567/dashboard';
 const DASHBOARD_BASE_URL = 'http://localhost:4567/dashboard';
@@ -346,8 +332,7 @@ test('does not refetch /auth/me or /auth/membership when navigating from /dashbo
 
   await page.waitForURL(/\/vehicles$/, { timeout: 5_000 });
 
-  const vehiclesHeading = page.getByRole('heading', { name: /veh[ií]culos|vehicles/i });
-  await expect(vehiclesHeading).toBeVisible();
+  await expect(page.getByTestId('vehicles-header-title')).toBeVisible();
 
   expect(meCalls).toBe(1);
   expect(membershipCalls).toBe(1);
@@ -461,8 +446,7 @@ test('reload on /vehicles keeps sidebar and permissions', async ({ page }) => {
   await page.goto(VEHICLES_TENANT_URL);
 
   await expect(page.getByTestId('nav-item-configuration')).toBeVisible();
-  const vehiclesHeading = page.getByRole('heading', { name: /veh[ií]culos|vehicles/i });
-  await expect(vehiclesHeading).toBeVisible();
+  await expect(page.getByTestId('vehicles-header-title')).toBeVisible();
   await expect(page).toHaveURL(VEHICLES_TENANT_URL);
 
   expect(meCalls).toBe(1);
@@ -471,8 +455,7 @@ test('reload on /vehicles keeps sidebar and permissions', async ({ page }) => {
   await page.reload();
 
   await expect(page.getByTestId('nav-item-configuration')).toBeVisible();
-  const vehiclesHeadingAfterReload = page.getByRole('heading', { name: /veh[ií]culos|vehicles/i });
-  await expect(vehiclesHeadingAfterReload).toBeVisible();
+  await expect(page.getByTestId('vehicles-header-title')).toBeVisible();
   await expect(page).toHaveURL(VEHICLES_TENANT_URL);
 
   expect(meCalls).toBe(2);

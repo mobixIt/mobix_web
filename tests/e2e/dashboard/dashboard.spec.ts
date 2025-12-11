@@ -1,19 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
-
-async function setActiveIdleCookie(page: Page) {
-  await page.addInitScript(() => {
-    const meta = {
-      last_activity_at: Date.now(),
-      idle_timeout_minutes: 10,
-      expires_at: Date.now() + 60 * 60 * 1000,
-    };
-
-    document.cookie =
-      'mobix_idle_meta=' +
-      encodeURIComponent(JSON.stringify(meta)) +
-      '; path=/; SameSite=Lax';
-  });
-}
+import { test, expect } from '@playwright/test';
+import { setActiveIdleCookie } from '../support/idle-cookie';
 
 test('renders TenantDashboard when tenant subdomain is present and membership is valid', async ({ page }) => {
   await setActiveIdleCookie(page);

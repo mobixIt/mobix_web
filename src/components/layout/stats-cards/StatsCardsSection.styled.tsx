@@ -4,7 +4,7 @@ import { styled } from '@mui/material/styles';
 import { Box } from '@mui/material';
 
 export const StatsCardsSectionRoot = styled('section')(({ theme }) => ({
-  padding: theme.spacing(3, 4),
+  padding: theme.spacing(3, 0),
   paddingTop: 0,
 }));
 

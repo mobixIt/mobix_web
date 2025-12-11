@@ -20,7 +20,7 @@ import {
   selectMembershipRaw,
 } from '@/store/slices/permissionsSlice';
 
-import { ServerErrorPage } from '@/components/error-pages/ServerErrorPage';
+import { ServerErrorPage } from '@/components/error-pages';
 
 type SecureContentProps = {
   children: React.ReactNode;
