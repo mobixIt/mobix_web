@@ -11,9 +11,8 @@ import type {
 } from '@/types/access-control';
 import { fetchUserMembership } from '@/services/userAuthService';
 import { buildEffectiveModulesFromMembership } from '@/utils/membershipModules';
-import type { AxiosError } from 'axios';
-import type { ApiErrorResponse } from '@/types/api';
 import { VEHICLE_READ_ATTRIBUTES } from '@/types/vehicles/api';
+import { normalizeApiError } from '@/errors/normalizeApiError';
 
 /**
  * Shape of the error returned when loading memberships/permissions fails.
@@ -87,14 +86,16 @@ export const loadTenantPermissions = createAsyncThunk<
       const response = await fetchUserMembership(tenantSlug);
       return { membership: response.data, tenantSlug };
     } catch (error) {
-      const err = error as AxiosError<ApiErrorResponse>;
-      const apiError = err?.response?.data?.errors?.[0];
+      const normalized = normalizeApiError(error, {
+        defaultMessage: 'Something went wrong while loading memberships.',
+        useAxiosMessageAsFallback: false
+      });
 
       return thunkAPI.rejectWithValue({
-        code: apiError?.code ?? 'UNKNOWN_ERROR',
-        title: apiError?.title ?? 'Dashboard error',
+        code: normalized.code ?? 'UNKNOWN_ERROR',
+        title: normalized.title ?? 'Dashboard error',
         detail:
-          apiError?.detail ??
+          normalized.detail ??
           'Something went wrong while loading memberships.',
       });
     }

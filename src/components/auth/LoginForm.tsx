@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { AxiosError } from 'axios';
 
 import LoginFormView from './LoginFormView';
 
@@ -9,10 +8,13 @@ import { loginUser } from '@/services/userAuthService';
 import { writeSessionIdleCookie } from '@/utils/sessionIdleCookie';
 import { getLoginErrorMessage } from '@/errors/getLoginErrorMessage';
 import { buildTenantUrl } from '@/utils/tenantUrl';
-import type { ApiErrorResponse } from '@/types/api';
 
 import { useAppDispatch } from '@/store/hooks';
 import { fetchMe } from '@/store/slices/authSlice';
+import { normalizeApiError } from '@/errors/normalizeApiError';
+import {
+  normalizeSessionMeta,
+} from '@/session/sessionMeta';
 
 export default function LoginForm() {
   const dispatch = useAppDispatch();
@@ -30,20 +32,19 @@ export default function LoginForm() {
 
     try {
       const {
-        data: { expires_at, idle_timeout_minutes },
+        data: rawMeta,
       } = await loginUser(email, password);
 
-      const idleMinutes =
-        typeof idle_timeout_minutes === 'number' && idle_timeout_minutes > 0
-          ? idle_timeout_minutes
-          : 30;
-
-      const now = Date.now();
+      const normalized = normalizeSessionMeta({
+        last_activity_at: Date.now(),
+        idle_timeout_minutes: rawMeta.idle_timeout_minutes,
+        expires_at: rawMeta.expires_at,
+      });
 
       writeSessionIdleCookie({
-        last_activity_at: now,
-        idle_timeout_minutes: idleMinutes,
-        expires_at,
+        last_activity_at: normalized.last_activity_at,
+        idle_timeout_minutes: normalized.idle_timeout_minutes,
+        expires_at: normalized.expiresAtMs,
       });
 
       const { memberships } = await dispatch(fetchMe()).unwrap();
@@ -53,8 +54,8 @@ export default function LoginForm() {
 
       window.location.href = dashboardUrl;
     } catch (errorCaught) {
-      const err = errorCaught as AxiosError<ApiErrorResponse>;
-      const code = err?.response?.data?.errors?.[0]?.code;
+      const normalized = normalizeApiError(errorCaught);
+      const code = normalized.code;
       setError(getLoginErrorMessage(code));
       setIsSubmitting(false);
     }

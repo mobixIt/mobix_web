@@ -1,3 +1,10 @@
+import {
+  LOCAL_MULTI_TENANT_DOMAIN,
+  STAGING_DOMAIN,
+  PRODUCTION_DOMAIN,
+  LOCALHOST_WITH_PORT,
+} from '@/config/domains';
+
 export function getBaseDomain() {
   const env = process.env.NEXT_PUBLIC_ENVIRONMENT;
 
@@ -6,22 +13,22 @@ export function getBaseDomain() {
       const useNgrok = process.env.NEXT_PUBLIC_USE_NGROK === 'true';
 
       if (useNgrok) {
-        return 'local.mobix.fyi';
+        return LOCAL_MULTI_TENANT_DOMAIN;
       }
 
-      return 'localhost:4567';
+      return LOCALHOST_WITH_PORT;
     }
 
     case 'test':
-      return 'localhost:4567';
+      return LOCALHOST_WITH_PORT;
 
     case 'staging':
-      return 'mobix.fyi';
+      return STAGING_DOMAIN;
 
     case 'production':
-      return 'mobix.lat';
+      return PRODUCTION_DOMAIN;
 
     default:
-      return 'localhost:4567';
+      return LOCALHOST_WITH_PORT;
   }
 }

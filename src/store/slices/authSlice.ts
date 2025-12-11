@@ -2,8 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { fetchUserInfo } from '@/services/userAuthService';
 import type { MeResponse } from '@/types/access-control';
 import type { RootState } from '@/store/store';
-import type { AxiosError } from 'axios';
-import type { ApiErrorResponse } from '@/types/api';
+import { normalizeApiError } from '@/errors/normalizeApiError';
 
 export interface AuthState {
   me: MeResponse | null;
@@ -19,12 +18,6 @@ const initialState: AuthState = {
   errorStatus: null,
 };
 
-const normalizeMessage = (value?: string | null): string | undefined => {
-  if (!value) return undefined;
-  const trimmed = value.trim();
-  return trimmed === '' ? undefined : trimmed;
-};
-
 export const fetchMe = createAsyncThunk<
   MeResponse,
   void,
@@ -36,20 +29,13 @@ export const fetchMe = createAsyncThunk<
       const { data } = await fetchUserInfo();
       return data;
     } catch (err) {
-      const axiosErr = err as AxiosError<ApiErrorResponse>;
-
-      const status = axiosErr.response?.status;
-      const firstError = axiosErr.response?.data?.errors?.[0];
-
-      const message =
-        normalizeMessage(firstError?.detail) ??
-        normalizeMessage(firstError?.title) ??
-        normalizeMessage(axiosErr.message) ??
-        'No se pudo cargar la información del usuario';
+      const normalized = normalizeApiError(err, {
+        defaultMessage: 'No se pudo cargar la información del usuario',
+      });
 
       return rejectWithValue({
-        message,
-        status,
+        message: normalized.message,
+        status: normalized.status,
       });
     }
   }

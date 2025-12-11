@@ -1,5 +1,4 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { AxiosError } from 'axios';
 
 import type { RootState } from '@/store/store';
 import type { Vehicle } from '@/types/vehicles/api';
@@ -8,7 +7,7 @@ import {
   fetchVehiclesFromApi,
   type VehiclesIndexParams,
 } from '@/services/vehiclesService';
-import type { ApiErrorResponse } from '@/types/api';
+import { normalizeApiError } from '@/errors/normalizeApiError';
 
 /* -------------------------------------------------------------------------- */
 /*                                    STATE                                   */
@@ -182,18 +181,15 @@ export const fetchVehicles = createAsyncThunk<
 
       return { items, pagination };
     } catch (err) {
-      const axiosErr = err as AxiosError<ApiErrorResponse>;
+      const normalized = normalizeApiError(err, {
+        defaultMessage: 'Failed to load vehicles list',
+      });
 
-      const status = axiosErr.response?.status;
-      const firstError = axiosErr.response?.data?.errors?.[0];
+      return rejectWithValue({
+        message: normalized.message,
+        status: normalized.status,
+      });
 
-      const message =
-        firstError?.detail ??
-        firstError?.title ??
-        axiosErr.message ??
-        'Failed to load vehicles list';
-
-      return rejectWithValue({ message, status });
     }
   },
   {
