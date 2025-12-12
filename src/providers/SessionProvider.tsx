@@ -80,7 +80,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   function updateIdleCountdown(timeoutSeconds: number): number {
     const secondsIdle = getSecondsIdle();
     const secondsLeft = Math.max(0, timeoutSeconds - secondsIdle);
-    setSecondsUntilIdleLogout(Math.floor(secondsLeft));
+    setSecondsUntilIdleLogout(secondsLeft > 0 ? Math.ceil(secondsLeft) : 0);
     return secondsLeft;
   }
 
@@ -146,7 +146,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       hasUserInteracted.current = true;
       logoutScheduledRef.current = false;
 
-      setSecondsUntilIdleLogout(Math.floor(timeoutSeconds - secondsIdle));
+      const initialSecondsLeft = Math.max(0, timeoutSeconds - secondsIdle);
+      setSecondsUntilIdleLogout(initialSecondsLeft > 0 ? Math.ceil(initialSecondsLeft) : 0);
       setSecondsUntilTokenExpires(
         Math.max(0, Math.floor((meta.expiresAtMs - now) / 1000)),
       );

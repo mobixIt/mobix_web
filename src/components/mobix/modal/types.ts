@@ -13,4 +13,5 @@ export interface MobixModalProps {
   header?: ReactNode;
   body?: ReactNode;
   footer?: ReactNode;
+  testId?: string;
 }

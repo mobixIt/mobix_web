@@ -18,6 +18,7 @@ export function MobixModal({
   header,
   body,
   footer,
+  testId,
 }: MobixModalProps) {
   const handleClose: DialogProps['onClose'] = (
     _event,
@@ -38,6 +39,7 @@ export function MobixModal({
       onClose={handleClose}
       maxWidth={maxWidth}
       fullWidth={fullWidth}
+      data-testid={testId}
     >
       {header && <DialogTitle>{header}</DialogTitle>}
 

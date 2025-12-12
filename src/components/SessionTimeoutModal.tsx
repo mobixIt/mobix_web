@@ -35,23 +35,29 @@ export default function SessionTimeoutModal({
 }: Props) {
   return (
     <MobixModal
+      testId="session-timeout-modal"
       open={open}
       onClose={onStayActive}
       disableBackdropClose
       maxWidth="xs"
       fullWidth
-      header={<Header>¿Sigues ahí?</Header>}
+      header={<Header data-testid="session-timeout-header">¿Sigues ahí?</Header>}
       body={
-        <Body>
-          <p>
+        <Body data-testid="session-timeout-body">
+          <p data-testid="session-timeout-message">
             Tu sesión se cerrará automáticamente en <br />
-            {secondsLeft} segundos por inactividad.
+            <span data-testid="session-timeout-seconds">{secondsLeft}</span> segundos por inactividad.
           </p>
         </Body>
       }
       footer={
-        <Footer>
-          <MobixButton variant="contained" onClick={onStayActive} color="info">
+        <Footer data-testid="session-timeout-footer">
+          <MobixButton
+            variant="contained"
+            onClick={onStayActive}
+            color="info"
+            data-testid="session-timeout-stay-active"
+          >
             Continuar sesión
           </MobixButton>
         </Footer>
