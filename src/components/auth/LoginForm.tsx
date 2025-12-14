@@ -9,16 +9,12 @@ import { writeSessionIdleCookie } from '@/utils/sessionIdleCookie';
 import { getLoginErrorMessage } from '@/errors/getLoginErrorMessage';
 import { buildTenantUrl } from '@/utils/tenantUrl';
 
-import { useAppDispatch } from '@/store/hooks';
-import { fetchMe } from '@/store/slices/authSlice';
 import { normalizeApiError } from '@/errors/normalizeApiError';
 import {
   normalizeSessionMeta,
 } from '@/session/sessionMeta';
 
 export default function LoginForm() {
-  const dispatch = useAppDispatch();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -47,8 +43,7 @@ export default function LoginForm() {
         expires_at: normalized.expiresAtMs,
       });
 
-      const { memberships } = await dispatch(fetchMe()).unwrap();
-      const tenantSlug = memberships[0].tenant.slug;
+      const tenantSlug = rawMeta.default_membership.tenant.slug;
       const url = buildTenantUrl(tenantSlug);
       const dashboardUrl = `${url}/dashboard`;
 

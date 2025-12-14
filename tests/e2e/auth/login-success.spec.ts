@@ -45,6 +45,10 @@ test.describe('Login flow', () => {
           data: {
             expires_at: expiresAt,
             idle_timeout_minutes: 15,
+            default_membership: {
+              id: 10,
+              tenant: { id: 99, slug: 'coolitoral' },
+            },
           },
         }),
       });
@@ -140,6 +144,10 @@ test.describe('Login flow', () => {
           data: {
             expires_at: expiresAt,
             idle_timeout_minutes: 15,
+            default_membership: {
+              id: 10,
+              tenant: { id: 99, slug: 'coolitoral' },
+            },
           },
         }),
       });
@@ -209,17 +217,24 @@ test.describe('Login flow', () => {
     });
 
     await page.route('**/auth/login', async (route) => {
-      const json = {
-        data: {
-          expires_at: new Date(Date.now() + 3600_000).toISOString(),
-          idle_timeout_minutes: 10,
-        },
-      };
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
       await route.fulfill({
         status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(json),
+        headers: {
+          'Set-Cookie': 'auth_token=fake-jwt-value; Path=/; HttpOnly',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            expires_at: expiresAt,
+            idle_timeout_minutes: 15,
+            default_membership: {
+              id: 10,
+              tenant: { id: 99, slug: 'coolitoral' },
+            },
+          },
+        }),
       });
     });
 

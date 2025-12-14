@@ -8,162 +8,138 @@ import authReducer, {
   selectCurrentPerson,
 } from '@/store/slices/authSlice';
 import type { AuthState } from '@/store/slices/authSlice';
-import type { RootState } from '@/store/store';
 import type { MeResponse } from '@/types/access-control';
+import type { RootState } from '@/store/store';
 
-function buildAuthState(partial: Partial<AuthState> = {}): AuthState {
-  return {
-    me: null,
-    status: 'idle',
-    error: null,
-    errorStatus: null,
-    ...partial,
-  };
-}
+type RootStateWithAuthOnlyRealisticShape = RootState;
 
-function buildRootStateWithAuth(authState: AuthState): RootState {
-  return {
-    auth: authState,
-  } as unknown as RootState;
-}
+const buildRootState = (auth: AuthState): RootStateWithAuthOnlyRealisticShape =>
+  ({
+    auth,
+    permissions: {
+      loading: false,
+      error: null,
+      membership: null,
+      effectiveModules: [],
+    },
+    vehicles: {
+      items: [],
+      status: 'idle',
+      error: null,
+    },
+  } as unknown as RootStateWithAuthOnlyRealisticShape);
 
-describe('authSlice reducer state transitions', () => {
-  it('returns initial state when reducer is called with undefined state and unknown action', () => {
-    const nextState = authReducer(undefined, { type: 'unknown/action' });
-    expect(nextState).toEqual(buildAuthState());
+const buildMeResponse = (): MeResponse =>
+  ({
+    id: 'user-abc',
+    first_name: 'Unit',
+    last_name: 'Tester',
+    email: 'unit@test.com',
+    phone: null,
+  }) as unknown as MeResponse;
+
+describe('authSlice reducer and selectors', () => {
+  it('initial state is idle with empty user and no errors', () => {
+    const initialAuthState = authReducer(undefined, { type: 'init' });
+    const rootState = buildRootState(initialAuthState);
+
+    expect(selectAuthStatus(rootState)).toBe('idle');
+    expect(selectCurrentPerson(rootState)).toBeNull();
+    expect(selectAuthError(rootState)).toBeNull();
+    expect(selectAuthErrorStatus(rootState)).toBeNull();
   });
 
-  it('clearAuth resets state to initial values from a populated state', () => {
-    const populatedState: AuthState = buildAuthState({
-      me: { id: 'user-1', first_name: 'John', last_name: 'Doe', email: 'john@example.com', phone: null } as unknown as MeResponse,
+  it('clearAuth resets me, status and errors to the initial shape', () => {
+    const preState: AuthState = {
+      me: buildMeResponse(),
       status: 'succeeded',
-      error: 'Some error',
-      errorStatus: 401,
-    });
+      error: 'Previous error',
+      errorStatus: 500,
+    };
 
-    const nextState = authReducer(populatedState, clearAuth());
+    const after = authReducer(preState, clearAuth());
+    const rootState = buildRootState(after);
 
-    expect(nextState.me).toBeNull();
-    expect(nextState.status).toBe('idle');
-    expect(nextState.error).toBeNull();
-    expect(nextState.errorStatus).toBeNull();
+    expect(selectAuthStatus(rootState)).toBe('idle');
+    expect(selectCurrentPerson(rootState)).toBeNull();
+    expect(selectAuthError(rootState)).toBeNull();
+    expect(selectAuthErrorStatus(rootState)).toBeNull();
   });
 
-  it('sets loading status and clears previous error information when fetchMe is pending', () => {
-    const prevState: AuthState = buildAuthState({
-      me: { id: 'user-1', first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com', phone: null } as unknown as MeResponse,
+  it('fetchMe.pending sets loading and clears error fields', () => {
+    const preState: AuthState = {
+      me: buildMeResponse(),
       status: 'failed',
-      error: 'Previous error',
-      errorStatus: 500,
-    });
+      error: 'Old error',
+      errorStatus: 401,
+    };
 
-    const action = fetchMe.pending('req-1', undefined);
-    const nextState = authReducer(prevState, action);
+    const after = authReducer(preState, { type: fetchMe.pending.type });
+    const rootState = buildRootState(after);
 
-    expect(nextState.status).toBe('loading');
-    expect(nextState.error).toBeNull();
-    expect(nextState.errorStatus).toBeNull();
-    expect(nextState.me).toEqual(prevState.me);
+    expect(selectAuthStatus(rootState)).toBe('loading');
+    expect(selectAuthError(rootState)).toBeNull();
+    expect(selectAuthErrorStatus(rootState)).toBeNull();
   });
 
-  it('stores user information and sets succeeded status when fetchMe is fulfilled', () => {
-    const prevState: AuthState = buildAuthState({
+  it('fetchMe.fulfilled stores user and sets succeeded', () => {
+    const me = buildMeResponse();
+
+    const preState: AuthState = {
+      me: null,
       status: 'loading',
-      error: 'Previous error',
-      errorStatus: 500,
+      error: null,
+      errorStatus: null,
+    };
+
+    const after = authReducer(preState, {
+      type: fetchMe.fulfilled.type,
+      payload: me,
     });
 
-    const mePayload: MeResponse = {
-      id: 'user-123',
-      first_name: 'Alice',
-      last_name: 'Smith',
-      email: 'alice@example.com',
-      phone: null,
-    } as unknown as MeResponse;
+    const rootState = buildRootState(after);
 
-    const action = fetchMe.fulfilled(mePayload, 'req-2', undefined);
-    const nextState = authReducer(prevState, action);
-
-    expect(nextState.status).toBe('succeeded');
-    expect(nextState.me).toEqual(mePayload);
-    expect(nextState.errorStatus).toBeNull();
+    expect(selectAuthStatus(rootState)).toBe('succeeded');
+    expect(selectCurrentPerson(rootState)).toEqual(me);
+    expect(selectAuthError(rootState)).toBeNull();
+    expect(selectAuthErrorStatus(rootState)).toBeNull();
   });
 
-  it('sets failed status and stores structured error when fetchMe is rejected with payload', () => {
-    const prevState: AuthState = buildAuthState({
+  it('fetchMe.rejected stores rejectWithValue payload message and status, and clears user', () => {
+    const preState: AuthState = {
+      me: buildMeResponse(),
       status: 'loading',
-      me: { id: 'user-1', first_name: 'Old', last_name: 'User', email: 'old@example.com', phone: null } as unknown as MeResponse,
+      error: null,
+      errorStatus: null,
+    };
+
+    const after = authReducer(preState, {
+      type: fetchMe.rejected.type,
+      payload: { message: 'Session expired', status: 401 },
     });
 
-    const errorPayload = { message: 'Unauthorized', status: 401 };
-    const action = fetchMe.rejected(new Error('Unauthorized'), 'req-3', undefined, errorPayload);
+    const rootState = buildRootState(after);
 
-    const nextState = authReducer(prevState, action);
-
-    expect(nextState.status).toBe('failed');
-    expect(nextState.error).toBe('Unauthorized');
-    expect(nextState.errorStatus).toBe(401);
-    expect(nextState.me).toBeNull();
+    expect(selectAuthStatus(rootState)).toBe('failed');
+    expect(selectCurrentPerson(rootState)).toBeNull();
+    expect(selectAuthError(rootState)).toBe('Session expired');
+    expect(selectAuthErrorStatus(rootState)).toBe(401);
   });
 
-  it('sets generic error and null status when fetchMe is rejected without payload', () => {
-    const prevState: AuthState = buildAuthState({
+  it('fetchMe.rejected uses fallback message and null status when payload is missing', () => {
+    const preState: AuthState = {
+      me: buildMeResponse(),
       status: 'loading',
-      me: { id: 'user-2', first_name: 'Temp', last_name: 'User', email: 'temp@example.com', phone: null } as unknown as MeResponse,
-    });
+      error: null,
+      errorStatus: null,
+    };
 
-    const action = fetchMe.rejected(new Error('Network error'), 'req-4', undefined);
+    const after = authReducer(preState, { type: fetchMe.rejected.type });
+    const rootState = buildRootState(after);
 
-    const nextState = authReducer(prevState, action);
-
-    expect(nextState.status).toBe('failed');
-    expect(nextState.error).toBe('Error desconocido');
-    expect(nextState.errorStatus).toBeNull();
-    expect(nextState.me).toBeNull();
-  });
-});
-
-describe('authSlice selectors behavior with valid state', () => {
-  it('selectCurrentPerson returns the me object from auth state', () => {
-    const me: MeResponse = {
-      id: 'user-10',
-      first_name: 'Carlos',
-      last_name: 'Rangel',
-      email: 'carlos@example.com',
-      phone: null,
-    } as unknown as MeResponse;
-
-    const state = buildRootStateWithAuth(buildAuthState({ me }));
-
-    const result = selectCurrentPerson(state);
-    expect(result).toEqual(me);
-  });
-
-  it('selectCurrentPerson returns null when user is not authenticated', () => {
-    const state = buildRootStateWithAuth(buildAuthState({ me: null }));
-    const result = selectCurrentPerson(state);
-    expect(result).toBeNull();
-  });
-
-  it('selectAuthStatus returns current auth status value', () => {
-    const state = buildRootStateWithAuth(buildAuthState({ status: 'succeeded' }));
-    const result = selectAuthStatus(state);
-    expect(result).toBe('succeeded');
-  });
-
-  it('selectAuthError returns current auth error message or null', () => {
-    const stateWithError = buildRootStateWithAuth(buildAuthState({ error: 'Invalid token' }));
-    const stateWithoutError = buildRootStateWithAuth(buildAuthState({ error: null }));
-
-    expect(selectAuthError(stateWithError)).toBe('Invalid token');
-    expect(selectAuthError(stateWithoutError)).toBeNull();
-  });
-
-  it('selectAuthErrorStatus returns current errorStatus or null', () => {
-    const stateWithStatus = buildRootStateWithAuth(buildAuthState({ errorStatus: 401 }));
-    const stateWithoutStatus = buildRootStateWithAuth(buildAuthState({ errorStatus: null }));
-
-    expect(selectAuthErrorStatus(stateWithStatus)).toBe(401);
-    expect(selectAuthErrorStatus(stateWithoutStatus)).toBeNull();
+    expect(selectAuthStatus(rootState)).toBe('failed');
+    expect(selectCurrentPerson(rootState)).toBeNull();
+    expect(selectAuthError(rootState)).toBe('Error desconocido');
+    expect(selectAuthErrorStatus(rootState)).toBeNull();
   });
 });

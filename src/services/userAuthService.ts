@@ -1,6 +1,6 @@
 import apiClient from './apiClientService';
 import type { ApiSuccessResponse } from '@/types/api';
-import type { MeResponse, MembershipResponse } from '@/types/access-control';
+import type { MeResponse, MembershipResponse, LoginSuccessPayload } from '@/types/access-control';
 import { clearSessionIdleCookie } from '@/utils/sessionIdleCookie';
 
 /**
@@ -13,7 +13,7 @@ import { clearSessionIdleCookie } from '@/utils/sessionIdleCookie';
 export async function loginUser(
   emailOrId: string,
   password: string
-): Promise<ApiSuccessResponse<{ expires_at: string; idle_timeout_minutes?: number }>> {
+): Promise<ApiSuccessResponse<LoginSuccessPayload>> {
   const response = await apiClient.post('/auth/login', {
     person: { login: emailOrId, password },
   });

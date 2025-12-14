@@ -1,22 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchMe } from '@/store/slices/authSlice';
-import { fetchUserInfo } from '@/services/userAuthService';
+import * as userAuthService from '@/services/userAuthService';
 import type { MeResponse } from '@/types/access-control';
 import type { ApiErrorResponse } from '@/types/api';
 import type { AxiosError } from 'axios';
+import { configureStore } from '@reduxjs/toolkit';
+import authReducer from '@/store/slices/authSlice';
+import permissionsReducer from '@/store/slices/permissionsSlice';
+import vehiclesReducer from '@/store/slices/vehiclesSlice';
 
-vi.mock('@/services/userAuthService', () => ({
-  fetchUserInfo: vi.fn(),
-}));
+vi.mock('@/services/userAuthService', async () => {
+  const actual = await vi.importActual<typeof import('@/services/userAuthService')>(
+    '@/services/userAuthService',
+  );
 
-const mockedFetchUserInfo = fetchUserInfo as unknown as ReturnType<typeof vi.fn>;
+  return {
+    ...actual,
+    fetchUserInfo: vi.fn(),
+  };
+});
+
+const mockedFetchUserInfo = vi.mocked(userAuthService.fetchUserInfo);
+
+function createRootStateTypedStore() {
+  return configureStore({
+    reducer: {
+      auth: authReducer,
+      permissions: permissionsReducer,
+      vehicles: vehiclesReducer,
+    },
+  });
+}
 
 describe('fetchMe async thunk behavior on success and error branches', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('dispatches fulfilled action with MeResponse when fetchUserInfo resolves successfully', async () => {
+  it('dispatches fulfilled action with MeResponse when auth.status is idle and fetchUserInfo resolves successfully', async () => {
     const meResponse: MeResponse = {
       id: 'user-123',
       first_name: 'Ana',
@@ -27,18 +48,19 @@ describe('fetchMe async thunk behavior on success and error branches', () => {
 
     mockedFetchUserInfo.mockResolvedValueOnce({ data: meResponse });
 
-    const dispatch = vi.fn();
-    const getState = vi.fn();
-
-    const thunk = fetchMe();
-    const result = await thunk(dispatch, getState, undefined);
+    const store = createRootStateTypedStore();
+    const result = await store.dispatch(fetchMe());
 
     expect(mockedFetchUserInfo).toHaveBeenCalledTimes(1);
-    expect(result.type).toBe('auth/fetchMe/fulfilled');
-    expect(result.payload).toEqual(meResponse);
+    expect(fetchMe.fulfilled.match(result)).toBe(true);
+
+    if (fetchMe.fulfilled.match(result)) {
+      expect(result.type).toBe('auth/fetchMe/fulfilled');
+      expect(result.payload).toEqual(meResponse);
+    }
   });
 
-  it('dispatches rejected action with structured payload when AxiosError contains detail in first error', async () => {
+  it('dispatches rejected action with structured payload when auth.status is idle and AxiosError contains detail', async () => {
     const apiError: ApiErrorResponse = {
       errors: [
         {
@@ -59,21 +81,24 @@ describe('fetchMe async thunk behavior on success and error branches', () => {
 
     mockedFetchUserInfo.mockRejectedValueOnce(axiosError);
 
-    const dispatch = vi.fn();
-    const getState = vi.fn();
-
-    const thunk = fetchMe();
-    const result = await thunk(dispatch, getState, undefined);
+    const store = createRootStateTypedStore();
+    const result = await store.dispatch(fetchMe());
 
     expect(mockedFetchUserInfo).toHaveBeenCalledTimes(1);
-    expect(result.type).toBe('auth/fetchMe/rejected');
-    expect(result.payload).toEqual({
-      message: 'Token is invalid or expired',
-      status: 401,
-    });
+    expect(fetchMe.rejected.match(result)).toBe(true);
+
+    if (fetchMe.rejected.match(result)) {
+      expect(result.type).toBe('auth/fetchMe/rejected');
+      expect(result.payload).toEqual({
+        message: 'Token is invalid or expired',
+        status: 401,
+      });
+      expect(result.meta.requestStatus).toBe('rejected');
+      expect(result.meta.rejectedWithValue).toBe(true);
+    }
   });
 
-  it('uses title as fallback message when detail is missing in AxiosError payload', async () => {
+  it('uses title as fallback message when detail is missing and auth.status is idle', async () => {
     const apiError: ApiErrorResponse = {
       errors: [
         {
@@ -94,20 +119,20 @@ describe('fetchMe async thunk behavior on success and error branches', () => {
 
     mockedFetchUserInfo.mockRejectedValueOnce(axiosError);
 
-    const dispatch = vi.fn();
-    const getState = vi.fn();
+    const store = createRootStateTypedStore();
+    const result = await store.dispatch(fetchMe());
 
-    const thunk = fetchMe();
-    const result = await thunk(dispatch, getState, undefined);
+    expect(fetchMe.rejected.match(result)).toBe(true);
 
-    expect(result.type).toBe('auth/fetchMe/rejected');
-    expect(result.payload).toEqual({
-      message: 'Unauthorized access',
-      status: 403,
-    });
+    if (fetchMe.rejected.match(result)) {
+      expect(result.payload).toEqual({
+        message: 'Unauthorized access',
+        status: 403,
+      });
+    }
   });
 
-  it('uses axios error message when neither detail nor title exist in the first error entry', async () => {
+  it('uses axios error message when neither detail nor title exist and auth.status is idle', async () => {
     const apiError: ApiErrorResponse = {
       errors: [
         {
@@ -128,20 +153,20 @@ describe('fetchMe async thunk behavior on success and error branches', () => {
 
     mockedFetchUserInfo.mockRejectedValueOnce(axiosError);
 
-    const dispatch = vi.fn();
-    const getState = vi.fn();
+    const store = createRootStateTypedStore();
+    const result = await store.dispatch(fetchMe());
 
-    const thunk = fetchMe();
-    const result = await thunk(dispatch, getState, undefined);
+    expect(fetchMe.rejected.match(result)).toBe(true);
 
-    expect(result.type).toBe('auth/fetchMe/rejected');
-    expect(result.payload).toEqual({
-      message: 'Internal Server Error',
-      status: 500,
-    });
+    if (fetchMe.rejected.match(result)) {
+      expect(result.payload).toEqual({
+        message: 'Internal Server Error',
+        status: 500,
+      });
+    }
   });
 
-  it('uses generic fallback message when response and message are both missing', async () => {
+  it('uses generic fallback message when response and message are missing and auth.status is idle', async () => {
     const axiosError = {
       response: undefined,
       message: '',
@@ -149,16 +174,40 @@ describe('fetchMe async thunk behavior on success and error branches', () => {
 
     mockedFetchUserInfo.mockRejectedValueOnce(axiosError);
 
-    const dispatch = vi.fn();
-    const getState = vi.fn();
+    const store = createRootStateTypedStore();
+    const result = await store.dispatch(fetchMe());
 
-    const thunk = fetchMe();
-    const result = await thunk(dispatch, getState, undefined);
+    expect(fetchMe.rejected.match(result)).toBe(true);
 
-    expect(result.type).toBe('auth/fetchMe/rejected');
-    expect(result.payload).toEqual({
-      message: 'No se pudo cargar la información del usuario',
-      status: undefined,
-    });
+    if (fetchMe.rejected.match(result)) {
+      expect(result.payload).toEqual({
+        message: 'No se pudo cargar la información del usuario',
+        status: undefined,
+      });
+    }
+  });
+
+  it('does not call fetchUserInfo and returns rejected with meta.condition when auth.status is not idle', async () => {
+    const store = createRootStateTypedStore();
+
+    const seededUser: MeResponse = {
+      id: 'user-seeded',
+      first_name: 'Seeded',
+      last_name: 'User',
+      email: 'seeded@user.com',
+      phone: null,
+    } as unknown as MeResponse;
+
+    store.dispatch(fetchMe.fulfilled(seededUser, 'seed', undefined));
+
+    const result = await store.dispatch(fetchMe());
+
+    expect(mockedFetchUserInfo).toHaveBeenCalledTimes(0);
+    expect(fetchMe.rejected.match(result)).toBe(true);
+
+    if (fetchMe.rejected.match(result)) {
+      expect(result.meta.requestStatus).toBe('rejected');
+      expect(result.meta.condition).toBe(true);
+    }
   });
 });

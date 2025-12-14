@@ -70,3 +70,19 @@ export type MembershipResponse = {
   phone: string | null;
   memberships: Membership[];
 };
+
+export interface DefaultTenant {
+  id: number;
+  slug: string;
+}
+
+export interface DefaultMembership {
+  id: number;
+  tenant: DefaultTenant;
+}
+
+export interface LoginSuccessPayload {
+  expires_at: string;
+  idle_timeout_minutes?: number;
+  default_membership: DefaultMembership;
+}

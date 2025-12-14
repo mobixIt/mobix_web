@@ -21,7 +21,7 @@ const initialState: AuthState = {
 export const fetchMe = createAsyncThunk<
   MeResponse,
   void,
-  { rejectValue: { message: string; status?: number } }
+  { rejectValue: { message: string; status?: number }; state: RootState }
 >(
   'auth/fetchMe',
   async (_, { rejectWithValue }) => {
@@ -38,6 +38,12 @@ export const fetchMe = createAsyncThunk<
         status: normalized.status,
       });
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const state = getState();
+      return state.auth.status === 'idle';
+    },
   }
 );
 

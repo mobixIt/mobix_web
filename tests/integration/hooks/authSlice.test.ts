@@ -1,149 +1,173 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
+import type { ReducersMapObject } from '@reduxjs/toolkit';
+
 import authReducer, {
   fetchMe,
-  clearAuth,
-  selectAuthStatus,
   selectAuthError,
   selectAuthErrorStatus,
+  selectAuthStatus,
   selectCurrentPerson,
 } from '@/store/slices/authSlice';
+
 import { fetchUserInfo } from '@/services/userAuthService';
+import { normalizeApiError } from '@/errors/normalizeApiError';
+
 import type { MeResponse } from '@/types/access-control';
 import type { RootState } from '@/store/store';
-import type { ApiErrorResponse } from '@/types/api';
-import type { AxiosError } from 'axios';
+
+type FetchUserInfoResponseShape = { data: MeResponse };
+
+type NormalizedApiErrorShape = {
+  message: string;
+  status?: number;
+  code?: string;
+  title?: string;
+  detail?: string;
+};
 
 vi.mock('@/services/userAuthService', () => ({
   fetchUserInfo: vi.fn(),
 }));
 
-const mockedFetchUserInfo = fetchUserInfo as unknown as ReturnType<typeof vi.fn>;
+vi.mock('@/errors/normalizeApiError', () => ({
+  normalizeApiError: vi.fn(),
+}));
 
-function createTestStore() {
-  return configureStore({
-    reducer: {
-      auth: authReducer,
-    },
+const mockedFetchUserInfo = vi.mocked(fetchUserInfo);
+const mockedNormalizeApiError = vi.mocked(normalizeApiError);
+
+const buildMeResponse = (id: string): MeResponse =>
+  ({
+    id,
+    first_name: 'Integration',
+    last_name: 'Tester',
+    email: `${id}@test.com`,
+    phone: null,
+  }) as unknown as MeResponse;
+
+const buildRootReducerForAuthOnlyButTypedAsRootState = (): ReducersMapObject<RootState> => {
+  const reducerMap = { auth: authReducer } as unknown as ReducersMapObject<RootState>;
+  return reducerMap;
+};
+
+const createRootStateTypedStore = () =>
+  configureStore({
+    reducer: buildRootReducerForAuthOnlyButTypedAsRootState(),
   });
-}
 
-function selectAuthState(store: ReturnType<typeof createTestStore>): RootState {
-  return store.getState() as RootState;
-}
+type RootStateTypedStore = ReturnType<typeof createRootStateTypedStore>;
 
-describe('authSlice integration with real Redux store', () => {
+const readAuthRootState = (store: RootStateTypedStore): RootState =>
+  store.getState() as unknown as RootState;
+
+describe('authSlice thunk integration with condition and error normalization', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('performs full successful fetchMe flow updating store state correctly', async () => {
-    const store = createTestStore();
+  it('dispatches loading then succeeded when status is idle and fetchUserInfo resolves', async () => {
+    const store = createRootStateTypedStore();
+    const me = buildMeResponse('user-1');
 
-    const meResponse: MeResponse = {
-      id: 'user-999',
-      first_name: 'Integration',
-      last_name: 'Tester',
-      email: 'integration@test.com',
-      phone: null,
-    } as unknown as  MeResponse;
+    const resolvedResponse: FetchUserInfoResponseShape = { data: me };
+    mockedFetchUserInfo.mockResolvedValueOnce(resolvedResponse);
 
-    mockedFetchUserInfo.mockResolvedValueOnce({ data: meResponse });
-
-    const initialState = selectAuthState(store);
-    expect(selectAuthStatus(initialState)).toBe('idle');
-    expect(selectCurrentPerson(initialState)).toBeNull();
+    const stateBefore = readAuthRootState(store);
+    expect(selectAuthStatus(stateBefore)).toBe('idle');
+    expect(selectCurrentPerson(stateBefore)).toBeNull();
 
     const dispatchPromise = store.dispatch(fetchMe());
 
-    const stateDuring = selectAuthState(store);
-    expect(selectAuthStatus(stateDuring)).toBe('loading');
-    expect(selectAuthError(stateDuring)).toBeNull();
-    expect(selectAuthErrorStatus(stateDuring)).toBeNull();
+    const stateAfterPending = readAuthRootState(store);
+    expect(selectAuthStatus(stateAfterPending)).toBe('loading');
 
     await dispatchPromise;
 
-    const finalState = selectAuthState(store);
-    expect(selectAuthStatus(finalState)).toBe('succeeded');
-    expect(selectCurrentPerson(finalState)).toEqual(meResponse);
-    expect(selectAuthError(finalState)).toBeNull();
-    expect(selectAuthErrorStatus(finalState)).toBeNull();
+    const stateFinal = readAuthRootState(store);
+    expect(selectAuthStatus(stateFinal)).toBe('succeeded');
+    expect(selectCurrentPerson(stateFinal)).toEqual(me);
+    expect(selectAuthError(stateFinal)).toBeNull();
+    expect(selectAuthErrorStatus(stateFinal)).toBeNull();
+    expect(mockedFetchUserInfo).toHaveBeenCalledTimes(1);
   });
 
-  it('performs full failing fetchMe flow and clears previous user data while storing error', async () => {
-    const store = createTestStore();
+  it('dispatches loading then failed and clears user when status is idle and fetchUserInfo rejects, using normalizeApiError output', async () => {
+    const store = createRootStateTypedStore();
+    const preloadedUser = buildMeResponse('user-old');
 
-    const preloadedUser: MeResponse = {
-      id: 'user-old',
-      first_name: 'Old',
-      last_name: 'User',
-      email: 'old@test.com',
-      phone: null,
-    } as unknown as MeResponse;
+    store.dispatch(fetchMe.fulfilled(preloadedUser, 'seed', undefined));
 
-    store.dispatch(
-      fetchMe.fulfilled(preloadedUser, 'pre-req', undefined),
-    );
+    store.dispatch({ type: 'auth/forceIdleForRefetch', payload: null });
 
-    const apiError: ApiErrorResponse = {
-      errors: [
-        {
-          code: 'UNAUTHORIZED',
-          title: 'Unauthorized',
-          detail: 'Session expired',
-        },
-      ],
+    const stateAfterSeed = readAuthRootState(store);
+    expect(selectAuthStatus(stateAfterSeed)).toBe('succeeded');
+    expect(selectCurrentPerson(stateAfterSeed)).toEqual(preloadedUser);
+
+    const normalized: NormalizedApiErrorShape = {
+      message: 'Session expired',
+      status: 401,
     };
 
-    const axiosError = {
-      response: {
-        status: 401,
-        data: apiError,
-      },
-      message: 'Unauthorized',
-    } as AxiosError<ApiErrorResponse>;
+    const rawError = new Error('network-like error');
+    mockedFetchUserInfo.mockRejectedValueOnce(rawError);
+    mockedNormalizeApiError.mockReturnValueOnce(normalized);
 
-    mockedFetchUserInfo.mockRejectedValueOnce(axiosError);
+    const storeStateBeforeRefetch = readAuthRootState(store);
+    const authStateBeforeRefetch = storeStateBeforeRefetch.auth;
+    const forcedIdleAuthState = {
+      ...authStateBeforeRefetch,
+      status: 'idle' as const,
+    };
 
-    const dispatchPromise = store.dispatch(fetchMe());
+    store.dispatch(fetchMe.fulfilled(forcedIdleAuthState.me as unknown as MeResponse, 'noop', undefined));
 
-    const stateDuring = selectAuthState(store);
-    expect(selectAuthStatus(stateDuring)).toBe('loading');
+    const idleResetState = readAuthRootState(store);
+    const idleResetAuthState = {
+      ...idleResetState.auth,
+      status: 'idle' as const,
+    };
+
+    const storeWithIdleAuth = configureStore({
+      reducer: buildRootReducerForAuthOnlyButTypedAsRootState(),
+      preloadedState: { auth: idleResetAuthState } as unknown as RootState,
+    });
+
+    const dispatchPromise = storeWithIdleAuth.dispatch(fetchMe());
+
+    const during = storeWithIdleAuth.getState() as unknown as RootState;
+    expect(selectAuthStatus(during)).toBe('loading');
 
     await dispatchPromise;
 
-    const finalState = selectAuthState(store);
-    expect(selectAuthStatus(finalState)).toBe('failed');
-    expect(selectCurrentPerson(finalState)).toBeNull();
-    expect(selectAuthError(finalState)).toBe('Session expired');
-    expect(selectAuthErrorStatus(finalState)).toBe(401);
+    const final = storeWithIdleAuth.getState() as unknown as RootState;
+    expect(selectAuthStatus(final)).toBe('failed');
+    expect(selectCurrentPerson(final)).toBeNull();
+    expect(selectAuthError(final)).toBe('Session expired');
+    expect(selectAuthErrorStatus(final)).toBe(401);
+
+    expect(mockedFetchUserInfo).toHaveBeenCalledTimes(1);
+    expect(mockedNormalizeApiError).toHaveBeenCalledTimes(1);
   });
 
-  it('clearAuth resets store auth slice after a successful fetchMe call', async () => {
-    const store = createTestStore();
+  it('does not call fetchUserInfo and returns rejected with meta.condition when auth.status is not idle', async () => {
+    const store = createRootStateTypedStore();
+    const me = buildMeResponse('user-locked');
 
-    const meResponse: MeResponse = {
-      id: 'user-clear',
-      first_name: 'Clear',
-      last_name: 'Auth',
-      email: 'clear@test.com',
-      phone: null,
-    } as unknown as MeResponse;
+    store.dispatch(fetchMe.fulfilled(me, 'seed', undefined));
 
-    mockedFetchUserInfo.mockResolvedValueOnce({ data: meResponse });
+    const stateBefore = readAuthRootState(store);
+    expect(selectAuthStatus(stateBefore)).toBe('succeeded');
 
-    await store.dispatch(fetchMe());
+    const result = await store.dispatch(fetchMe());
 
-    const stateAfterFetch = selectAuthState(store);
-    expect(selectAuthStatus(stateAfterFetch)).toBe('succeeded');
-    expect(selectCurrentPerson(stateAfterFetch)).toEqual(meResponse);
+    expect(mockedFetchUserInfo).toHaveBeenCalledTimes(0);
 
-    store.dispatch(clearAuth());
-
-    const finalState = selectAuthState(store);
-    expect(selectAuthStatus(finalState)).toBe('idle');
-    expect(selectCurrentPerson(finalState)).toBeNull();
-    expect(selectAuthError(finalState)).toBeNull();
-    expect(selectAuthErrorStatus(finalState)).toBeNull();
+    expect(fetchMe.rejected.match(result)).toBe(true);
+    if (fetchMe.rejected.match(result)) {
+      expect(result.type).toBe('auth/fetchMe/rejected');
+      expect(result.meta.condition).toBe(true);
+      expect(result.meta.requestStatus).toBe('rejected');
+    }
   });
 });

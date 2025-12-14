@@ -17,8 +17,12 @@ test.describe('Logout flow', () => {
           data: {
             expires_at: expiresAt,
             idle_timeout_minutes: 15,
+            default_membership: {
+              id: 'm-1',
+              tenant: { id: 't1', slug: 'lacarolina', name: 'La Carolina' },
+            },
           },
-        }),
+        })
       });
     });
 

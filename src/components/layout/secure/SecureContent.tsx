@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Box, CircularProgress } from '@mui/material';
 
 import { useSession } from '@/providers/SessionProvider';
@@ -34,6 +34,9 @@ export function SecureContent({ children }: SecureContentProps) {
   const authErrorStatus = useAppSelector(selectAuthErrorStatus);
   const membership = useAppSelector(selectMembershipRaw);
 
+  // Prevent double-fetch of /auth/me in dev StrictMode or fast re-renders
+  const requestedMeRef = useRef(false);
+
   const tenantSlug =
     typeof window !== 'undefined'
       ? getTenantSlugFromHost(window.location.hostname)
@@ -51,10 +54,19 @@ export function SecureContent({ children }: SecureContentProps) {
   useEffect(() => {
     if (!sessionReady) return;
 
-    if (authStatus === 'idle') {
+    if (authStatus === 'idle' && !requestedMeRef.current) {
+      requestedMeRef.current = true;
       void dispatch(fetchMe());
     }
   }, [sessionReady, authStatus, dispatch]);
+
+  // If auth gets cleared back to idle (e.g. logout/clearAuth in same mount),
+  // allow fetching again next time we become ready.
+  useEffect(() => {
+    if (authStatus === 'idle') {
+      requestedMeRef.current = false;
+    }
+  }, [authStatus]);
 
   useEffect(() => {
     if (!sessionReady || !tenantSlug || authStatus !== 'succeeded') return;
