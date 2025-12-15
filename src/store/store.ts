@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
 import permissionsReducer from './slices/permissionsSlice';
 import vehiclesReducer from './slices/vehiclesSlice';
+import vehiclesStatsReducer from '@/store/slices/vehiclesStatsSlice';
 
 
 export const store = configureStore({
@@ -9,6 +10,7 @@ export const store = configureStore({
     auth: authReducer,
     permissions: permissionsReducer,
     vehicles: vehiclesReducer,
+    vehiclesStats: vehiclesStatsReducer,
   },
 });
 

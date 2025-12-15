@@ -13,6 +13,18 @@ type TestRootState = {
   auth: { me: TestAuthMe };
   permissions: Record<string, unknown>;
   vehicles: Record<string, unknown>;
+  vehiclesStats: {
+    byTenant: Record<
+      string,
+      {
+        data: unknown;
+        meta: unknown;
+        status: string;
+        error: unknown;
+        lastFetchedAt: string | null;
+      }
+    >;
+  };
 };
 
 type DeleteIds = (string | number)[];
@@ -45,6 +57,7 @@ vi.mock('@/store/hooks', () => ({
       auth: { me: { id: 101 } },
       permissions: {},
       vehicles: {},
+      vehiclesStats: { byTenant: {} },
     }),
 }));
 
@@ -94,9 +107,19 @@ vi.mock('@/store/slices/vehiclesSlice', () => {
   };
 });
 
-vi.mock('@/store/slices/permissionsSlice', () => ({
-  selectAllowedAttributesForSubjectAndAction: vi.fn(() => () => ['plate', 'status']),
-}));
+vi.mock('@/store/slices/permissionsSlice', async () => {
+  const actual = await vi.importActual<typeof import('@/store/slices/permissionsSlice')>(
+    '@/store/slices/permissionsSlice',
+  );
+
+  return {
+    __esModule: true,
+    ...actual,
+    selectAllowedAttributesForSubjectAndAction: vi.fn(() => () => ['plate', 'status']),
+    selectModuleByKey: vi.fn(() => () => ({ key: 'Vehicles', active: true })),
+    selectActionsForSubject: vi.fn(() => () => ['read']),
+  };
+});
 
 vi.mock('@/store/slices/authSlice', () => ({
   selectCurrentPerson: (state: TestRootState) => state.auth.me,
@@ -133,9 +156,7 @@ vi.mock('@mui/material', async () => {
     __esModule: true,
     ...actual,
     Box: (props: DivLikeProps) => <div data-testid="mui-box" {...props} />,
-    CircularProgress: (props: DivLikeProps) => (
-      <div data-testid="circular-progress" {...props} />
-    ),
+    CircularProgress: (props: DivLikeProps) => <div data-testid="circular-progress" {...props} />,
     Alert: (props: DivLikeProps) => <div data-testid="alert" {...props} />,
   };
 });
@@ -172,20 +193,6 @@ vi.mock('@/components/mobix/table', () => ({
       </div>
     );
   },
-}));
-
-vi.mock('@/components/layout/stats-cards/StatsCardsSection', () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="stats-cards-section">{children}</div>
-  ),
-}));
-
-vi.mock('@/components/stats/StatsCard', () => ({
-  __esModule: true,
-  default: ({ title, value }: { title: string; value: number }) => (
-    <div data-testid={`stats-card-${title}`}>{value}</div>
-  ),
 }));
 
 describe('Vehicles component integration between dispatch, pagination and MobixTable props', () => {
@@ -268,7 +275,6 @@ describe('Vehicles component integration between dispatch, pagination and MobixT
     render(<Vehicles />);
 
     expect(lastTableProps).not.toBeNull();
-    expect(lastTableProps?.rows).toBeDefined();
     expect((lastTableProps?.rows ?? []).length).toBe(2);
     expect(lastTableProps?.totalCount).toBe(2);
     expect(lastTableProps?.paginationMode).toBe('server');

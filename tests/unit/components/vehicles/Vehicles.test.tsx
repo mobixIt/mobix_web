@@ -13,6 +13,7 @@ type TestRootState = {
   auth: { me: TestAuthMe };
   permissions: Record<string, unknown>;
   vehicles: Record<string, unknown>;
+  vehiclesStats: { byTenant: Record<string, unknown> };
 };
 
 const dispatchMock = vi.fn();
@@ -24,6 +25,7 @@ vi.mock('@/store/hooks', () => ({
       auth: { me: { id: 101 } },
       permissions: {},
       vehicles: {},
+      vehiclesStats: { byTenant: {} },
     }),
 }));
 
@@ -73,9 +75,19 @@ vi.mock('@/store/slices/vehiclesSlice', () => {
   };
 });
 
-vi.mock('@/store/slices/permissionsSlice', () => ({
-  selectAllowedAttributesForSubjectAndAction: vi.fn(() => () => ['plate', 'status']),
-}));
+vi.mock('@/store/slices/permissionsSlice', async () => {
+  const actual = await vi.importActual<typeof import('@/store/slices/permissionsSlice')>(
+    '@/store/slices/permissionsSlice',
+  );
+
+  return {
+    __esModule: true,
+    ...actual,
+    selectAllowedAttributesForSubjectAndAction: vi.fn(() => () => ['plate', 'status']),
+    selectModuleByKey: vi.fn(() => () => ({ key: 'Vehicles', active: true })),
+    selectActionsForSubject: vi.fn(() => () => ['read']),
+  };
+});
 
 vi.mock('@/store/slices/authSlice', () => ({
   selectCurrentPerson: (state: TestRootState) => state.auth.me,

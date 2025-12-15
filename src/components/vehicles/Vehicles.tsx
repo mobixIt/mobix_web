@@ -12,24 +12,16 @@ import {
 } from '@/store/slices/vehiclesSlice';
 import {
   selectAllowedAttributesForSubjectAndAction,
+  selectActionsForSubject,
+  selectModuleByKey,
 } from '@/store/slices/permissionsSlice';
-
-import {
-  selectCurrentPerson,
-} from '@/store/slices/authSlice';
-
+import { selectCurrentPerson } from '@/store/slices/authSlice';
 import { getTenantSlugFromHost } from '@/lib/getTenantSlugFromHost';
 
 import PageHeaderSection from '@/components/layout/page-header/PageHeaderSection';
 import { MobixTable } from '@/components/mobix/table';
 
-import StatsCardsSection from '@/components/layout/stats-cards/StatsCardsSection';
-import StatsCard from '@/components/stats/StatsCard';
-
-import DirectionsBusIcon from '@mui/icons-material/DirectionsBus';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import TimelineIcon from '@mui/icons-material/Timeline';
+import { fetchVehiclesStats, selectVehiclesStatsError } from '@/store/slices/vehiclesStatsSlice';
 
 import {
   ALL_VEHICLE_COLUMNS,
@@ -37,6 +29,7 @@ import {
   type VehicleRow,
   type VehicleLike,
 } from './Vehicles.tableConfig';
+import VehiclesStatsCards from './VehiclesStatsCards';
 
 import { usePermissionedTable } from '@/hooks/usePermissionedTable';
 
@@ -50,7 +43,6 @@ const Vehicles: React.FC = () => {
       ? getTenantSlugFromHost(window.location.hostname)
       : null;
 
-  // Current user info from auth slice
   const currentPerson = useAppSelector(selectCurrentPerson);
   const currentUserId = React.useMemo<number | null>(
     () => (currentPerson ? currentPerson.id : null),
@@ -65,28 +57,18 @@ const Vehicles: React.FC = () => {
     tenantSlug ? selectVehiclesStatus(state, tenantSlug) : 'idle',
   );
 
-  // Pagination meta coming from API (via Redux slice)
   const paginationMeta = useAppSelector((state) =>
     tenantSlug ? selectVehiclesPagination(state, tenantSlug) : null,
   );
 
-  // Local pagination state (0-based for MUI TablePagination)
   const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] =
-    React.useState<number>(DEFAULT_PAGE_SIZE);
+  const [rowsPerPage, setRowsPerPage] = React.useState<number>(DEFAULT_PAGE_SIZE);
 
-  // Derive total count from meta (fallback to client length if needed)
   const totalCount =
-    paginationMeta?.count != null
-      ? paginationMeta.count
-      : vehicles.length;
+    paginationMeta?.count != null ? paginationMeta.count : vehicles.length;
 
   const allowedVehicleAttributes = useAppSelector(
-    selectAllowedAttributesForSubjectAndAction(
-      tenantSlug,
-      'vehicle',
-      'read',
-    ),
+    selectAllowedAttributesForSubjectAndAction(tenantSlug, 'vehicle', 'read'),
   );
 
   React.useEffect(() => {
@@ -96,10 +78,7 @@ const Vehicles: React.FC = () => {
       fetchVehicles({
         tenantSlug,
         params: {
-          page: {
-            number: page + 1,
-            size: rowsPerPage,
-          },
+          page: { number: page + 1, size: rowsPerPage },
         },
       }),
     );
@@ -130,9 +109,36 @@ const Vehicles: React.FC = () => {
     try {
       window.localStorage.removeItem('vehicles-table-columns');
     } catch {
-      // Ignore storage errors (private mode, etc.)
+      return;
     }
   }, [permissionsReady]);
+
+  const vehiclesModule = useAppSelector(selectModuleByKey('Vehicles'));
+  const vehicleActions = useAppSelector(selectActionsForSubject('vehicle'));
+  const canSeeVehicleStats =
+    Boolean(tenantSlug) &&
+    Boolean(vehiclesModule) &&
+    vehicleActions.includes('stats');
+
+  const vehiclesStatsError = useAppSelector((state) =>
+    tenantSlug ? selectVehiclesStatsError(state, tenantSlug) : null,
+  );
+
+  const statsErrorStatus = vehiclesStatsError?.status ?? null;
+
+  React.useEffect(() => {
+    if (!tenantSlug) return;
+    if (!canSeeVehicleStats) return;
+
+    void dispatch(fetchVehiclesStats({ tenantSlug }));
+  }, [dispatch, tenantSlug, canSeeVehicleStats]);
+
+  React.useEffect(() => {
+    if (statsErrorStatus !== 401) return;
+    if (typeof window === 'undefined') return;
+
+    window.location.assign('/login');
+  }, [statsErrorStatus]);
 
   const header = (
     <PageHeaderSection
@@ -146,26 +152,16 @@ const Vehicles: React.FC = () => {
 
   let table: React.ReactNode;
 
-  const isVehiclesLoading =
-    status === 'loading' || status === 'idle';
+  const isVehiclesLoading = status === 'loading' || status === 'idle';
 
   if (!permissionedTableReady) {
     table = (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight={200}
-      >
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
         <CircularProgress />
       </Box>
     );
   } else if (status === 'failed') {
-    table = (
-      <Alert severity="error">
-        No se pudo cargar la lista de vehículos.
-      </Alert>
-    );
+    table = <Alert severity="error">No se pudo cargar la lista de vehículos.</Alert>;
   } else {
     table = (
       <MobixTable<VehicleRow>
@@ -179,9 +175,7 @@ const Vehicles: React.FC = () => {
         page={page}
         rowsPerPage={rowsPerPage}
         totalCount={totalCount}
-        onPageChange={(newPage: number) => {
-          setPage(newPage);
-        }}
+        onPageChange={(newPage: number) => setPage(newPage)}
         onRowsPerPageChange={(value: number) => {
           setRowsPerPage(value);
           setPage(0);
@@ -209,41 +203,7 @@ const Vehicles: React.FC = () => {
     <div data-testid="vehicles-page">
       <IndexPageLayout
         header={header}
-        statsCards={
-          <StatsCardsSection>
-            <StatsCard
-              title="Total vehículos"
-              value={totalCount}
-              helperText="Flota registrada"
-              variant="secondary"
-              icon={<DirectionsBusIcon />}
-            />
-
-            <StatsCard
-              title="Activos"
-              value={98}
-              helperText="En operación"
-              variant="success"
-              icon={<CheckCircleIcon />}
-            />
-
-            <StatsCard
-              title="Inactivos"
-              value={30}
-              helperText="Fuera de servicio"
-              variant="warning"
-              icon={<CancelIcon />}
-            />
-
-            <StatsCard
-              title="Nuevos este mes"
-              value={6}
-              helperText="+2 vs mes anterior"
-              variant="primary"
-              icon={<TimelineIcon />}
-            />
-          </StatsCardsSection>
-        }
+        statsCards={<VehiclesStatsCards tenantSlug={tenantSlug} />}
         table={table}
       />
     </div>
