@@ -12,8 +12,7 @@ import {
 } from '@/store/slices/vehiclesSlice';
 import {
   selectAllowedAttributesForSubjectAndAction,
-  selectActionsForSubject,
-  selectModuleByKey,
+  selectPermissionsReady,
 } from '@/store/slices/permissionsSlice';
 import { selectCurrentPerson } from '@/store/slices/authSlice';
 import { getTenantSlugFromHost } from '@/lib/getTenantSlugFromHost';
@@ -32,6 +31,7 @@ import {
 import VehiclesStatsCards from './VehiclesStatsCards';
 
 import { usePermissionedTable } from '@/hooks/usePermissionedTable';
+import { useHasPermission } from '@/hooks/useHasPermission';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -71,6 +71,10 @@ const Vehicles: React.FC = () => {
     selectAllowedAttributesForSubjectAndAction(tenantSlug, 'vehicle', 'read'),
   );
 
+  const permissionsReady = useAppSelector(selectPermissionsReady);
+  const canCreateVehicle = useHasPermission('vehicle:create');
+  const canSeeVehicleStats = useHasPermission('vehicle:stats');
+
   React.useEffect(() => {
     if (!tenantSlug) return;
 
@@ -90,7 +94,6 @@ const Vehicles: React.FC = () => {
     columns: vehicleColumns,
     defaultVisibleColumnIds,
     columnVisibilityStorageKey,
-    permissionsReady,
     isReady: permissionedTableReady,
   } = usePermissionedTable<VehicleRow>({
     tableId: 'vehicles',
@@ -113,12 +116,7 @@ const Vehicles: React.FC = () => {
     }
   }, [permissionsReady]);
 
-  const vehiclesModule = useAppSelector(selectModuleByKey('Vehicles'));
-  const vehicleActions = useAppSelector(selectActionsForSubject('vehicle'));
-  const canSeeVehicleStats =
-    Boolean(tenantSlug) &&
-    Boolean(vehiclesModule) &&
-    vehicleActions.includes('stats');
+  const shouldRenderStats = Boolean(tenantSlug) && permissionsReady && canSeeVehicleStats;
 
   const vehiclesStatsError = useAppSelector((state) =>
     tenantSlug ? selectVehiclesStatsError(state, tenantSlug) : null,
@@ -128,10 +126,11 @@ const Vehicles: React.FC = () => {
 
   React.useEffect(() => {
     if (!tenantSlug) return;
+    if (!permissionsReady) return;
     if (!canSeeVehicleStats) return;
 
     void dispatch(fetchVehiclesStats({ tenantSlug }));
-  }, [dispatch, tenantSlug, canSeeVehicleStats]);
+  }, [dispatch, tenantSlug, permissionsReady, canSeeVehicleStats]);
 
   React.useEffect(() => {
     if (statsErrorStatus !== 401) return;
@@ -147,6 +146,7 @@ const Vehicles: React.FC = () => {
       actionLabel="Crear nuevo vehículo"
       actionIconPosition="left"
       testId="vehicles-header"
+      showActionButton={permissionsReady && canCreateVehicle}
     />
   );
 
@@ -203,7 +203,7 @@ const Vehicles: React.FC = () => {
     <div data-testid="vehicles-page">
       <IndexPageLayout
         header={header}
-        statsCards={<VehiclesStatsCards tenantSlug={tenantSlug} />}
+        statsCards={shouldRenderStats ? <VehiclesStatsCards tenantSlug={tenantSlug} /> : null}
         table={table}
       />
     </div>

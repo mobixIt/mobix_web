@@ -1,6 +1,6 @@
 'use client';
 
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/store/store';
 import type {
   MembershipResponse,
@@ -51,6 +51,13 @@ export type PermissionsState = {
    * for the current tenant, derived from the membership.
    */
   effectiveModules: ReturnType<typeof buildEffectiveModulesFromMembership> | [];
+
+  /**
+   * Flat permission strings for quick gating in the UI.
+   * Format: "{subject}:{action}" lowercased, unique.
+   * Must remain serializable (array), Set is derived via selector.
+   */
+  flatPermissions: string[];
 };
 
 /**
@@ -61,7 +68,26 @@ const initialState: PermissionsState = {
   error: null,
   membership: null,
   effectiveModules: [],
+  flatPermissions: [],
 };
+
+function normalizeToken(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function normalizePermissionString(value: string): string | null {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+
+  const parts = raw.split(':').map((p) => p.trim()).filter(Boolean);
+  if (parts.length !== 2) return null;
+
+  const subject = normalizeToken(parts[0]);
+  const action = normalizeToken(parts[1]);
+  if (!subject || !action) return null;
+
+  return `${subject}:${action}`;
+}
 
 /**
  * Thunk that loads the current user's membership for a given tenant
@@ -160,6 +186,31 @@ export const permissionsSlice = createSlice({
           state.effectiveModules = membershipForTenant
             ? buildEffectiveModulesFromMembership(membershipForTenant)
             : [];
+
+          // Derive flat permissions (union across all roles + modules).
+          // - Ignore perms with missing app_module (match builder behavior)
+          // - Case-insensitive normalization
+          // - No duplicates
+          if (!membershipForTenant) {
+            state.flatPermissions = [];
+          } else {
+            const flat = new Set<string>();
+
+            for (const role of membershipForTenant.roles ?? []) {
+              for (const perm of role.permissions ?? []) {
+                if (!perm?.app_module) continue;
+
+                const subject = normalizeToken(perm.subject_class);
+                const action = normalizeToken(perm.action);
+                if (!subject || !action) continue;
+
+                flat.add(`${subject}:${action}`);
+              }
+            }
+
+            // Stable ordering helps testing + debugging.
+            state.flatPermissions = Array.from(flat).sort();
+          }
         },
       )
 
@@ -178,6 +229,7 @@ export const permissionsSlice = createSlice({
           };
         state.membership = null;
         state.effectiveModules = [];
+        state.flatPermissions = [];
       });
   },
 });
@@ -380,6 +432,54 @@ export const selectAllowedAttributesForSubjectAndAction =
     return allAttrsForSubject.filter(
       (attr) => !denied.includes(attr),
     );
+  };
+
+/**
+ * Selector: flat permissions array (serializable).
+ */
+export const selectFlatPermissions = (state: RootState) =>
+  state.permissions.flatPermissions;
+
+/**
+ * Selector: readiness for gating (prevents UI flicker).
+ * "Ready" means: membership loaded (non-null) and not loading.
+ */
+export const selectPermissionsReady = (state: RootState) =>
+  !state.permissions.loading && state.permissions.membership !== null;
+
+/**
+ * Memo selector: Set for efficient permission checks.
+ */
+export const selectFlatPermissionsSet = createSelector(
+  [selectFlatPermissions],
+  (perms) => new Set(perms),
+);
+
+/**
+ * Selector factory: checks "subject:action" permission.
+ * - returns false while permissions not ready (loading or membership null)
+ * - case-insensitive, safe for invalid inputs
+ */
+export const selectHasPermission =
+  (permission: string) =>
+  (state: RootState): boolean => {
+    if (state.permissions.loading) return false;
+    if (!state.permissions.membership) return false;
+
+    const normalized = normalizePermissionString(permission);
+    if (!normalized) {
+      if (process.env.NODE_ENV !== 'production') {
+        // dev-only observability
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[permissions] Invalid permission string: "${permission}"`,
+        );
+      }
+      return false;
+    }
+
+    const set = selectFlatPermissionsSet(state);
+    return set.has(normalized);
   };
 
 export default permissionsSlice.reducer;

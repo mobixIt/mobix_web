@@ -33,6 +33,9 @@ import {
   selectActionsForSubject,
   selectModuleByKey,
   selectAllowedAttributesForSubjectAndAction,
+  selectFlatPermissions,
+  selectPermissionsReady,
+  selectHasPermission,
   type PermissionsState,
   type PermissionsError,
 } from '@/store/slices/permissionsSlice';
@@ -57,6 +60,7 @@ function createInitialPermissionsState(
     error: null,
     membership: null,
     effectiveModules: [],
+    flatPermissions: [],
     ...partial,
   };
 }
@@ -86,6 +90,7 @@ describe('permissionsSlice reducer', () => {
       error: null,
       membership: null,
       effectiveModules: [],
+      flatPermissions: [],
     });
   });
 
@@ -103,6 +108,7 @@ describe('permissionsSlice reducer', () => {
       error: null,
       membership: null,
       effectiveModules: [],
+      flatPermissions: [],
     });
   });
 
@@ -751,5 +757,183 @@ describe('selectAllowedAttributesForSubjectAndAction', () => {
     );
 
     expect(selector(state)).toEqual(ALL_VEHICLE_ATTRS);
+  });
+});
+
+describe('flatPermissions derivation', () => {
+  it('derives unique, normalized flat permissions from roles', () => {
+    const membershipForTenant: Membership = {
+      id: 1,
+      active: true,
+      tenant: {
+        id: 1,
+        slug: 'coolitoral',
+        client: { name: 'Coolitoral', logo_url: '' },
+      },
+      roles: [
+        {
+          id: 1,
+          name: 'Manager',
+          key: 'manager',
+          tenant_permissions: [],
+          permissions: [
+            {
+              id: 1,
+              subject_class: 'Vehicle',
+              action: 'READ',
+              app_module: { id: 1, name: 'Vehicles', active: true },
+            },
+            {
+              id: 2,
+              subject_class: 'vehicle',
+              action: 'stats',
+              app_module: { id: 1, name: 'Vehicles', active: true },
+            },
+            // duplicate (should be deduped)
+            {
+              id: 3,
+              subject_class: 'VEHICLE',
+              action: 'read',
+              app_module: { id: 1, name: 'Vehicles', active: true },
+            },
+          ],
+        },
+      ],
+    } as unknown as Membership;
+
+    const membershipResponse: MembershipResponse = {
+      memberships: [membershipForTenant],
+    } as MembershipResponse;
+
+    buildEffectiveModulesFromMembershipMock.mockReturnValue([]);
+
+    const action = loadTenantPermissions.fulfilled(
+      { membership: membershipResponse, tenantSlug: 'coolitoral' },
+      'req-flat',
+      'coolitoral',
+    );
+
+    const state = permissionsSlice.reducer(
+      createInitialPermissionsState({ loading: true }),
+      action,
+    );
+
+    expect(state.flatPermissions).toEqual([
+      'vehicle:read',
+      'vehicle:stats',
+    ]);
+  });
+
+  it('sets flatPermissions to empty when tenant membership is missing', () => {
+    const membershipResponse: MembershipResponse = {
+      memberships: [],
+    } as unknown as MembershipResponse;
+
+    const action = loadTenantPermissions.fulfilled(
+      { membership: membershipResponse, tenantSlug: 'coolitoral' },
+      'req-flat-empty',
+      'coolitoral',
+    );
+
+    const state = permissionsSlice.reducer(
+      createInitialPermissionsState({ loading: true }),
+      action,
+    );
+
+    expect(state.flatPermissions).toEqual([]);
+  });
+});
+
+describe('flat permissions selectors', () => {
+  it('selectFlatPermissions returns flatPermissions array', () => {
+    const state = buildRootState(
+      createInitialPermissionsState({
+        flatPermissions: ['vehicle:read'],
+      }),
+    );
+
+    expect(selectFlatPermissions(state)).toEqual(['vehicle:read']);
+  });
+
+  it('selectPermissionsReady is false while loading', () => {
+    const state = buildRootState(
+      createInitialPermissionsState({
+        loading: true,
+        membership: null,
+      }),
+    );
+
+    expect(selectPermissionsReady(state)).toBe(false);
+  });
+
+  it('selectPermissionsReady is true when membership loaded and not loading', () => {
+    const state = buildRootState(
+      createInitialPermissionsState({
+        loading: false,
+        membership: { memberships: [] } as unknown as MembershipResponse,
+      }),
+    );
+
+    expect(selectPermissionsReady(state)).toBe(true);
+  });
+});
+
+describe('selectHasPermission', () => {
+  it('returns false while permissions are loading', () => {
+    const state = buildRootState(
+      createInitialPermissionsState({
+        loading: true,
+        flatPermissions: ['vehicle:read'],
+      }),
+    );
+
+    expect(selectHasPermission('vehicle:read')(state)).toBe(false);
+  });
+
+  it('returns false when membership is null', () => {
+    const state = buildRootState(
+      createInitialPermissionsState({
+        membership: null,
+        flatPermissions: ['vehicle:read'],
+      }),
+    );
+
+    expect(selectHasPermission('vehicle:read')(state)).toBe(false);
+  });
+
+  it('returns true for existing permission (case-insensitive)', () => {
+    const state = buildRootState(
+      createInitialPermissionsState({
+        membership: { memberships: [] } as unknown as MembershipResponse,
+        flatPermissions: ['vehicle:read'],
+      }),
+    );
+
+    expect(selectHasPermission('Vehicle:READ')(state)).toBe(true);
+  });
+
+  it('returns false for missing permission', () => {
+    const state = buildRootState(
+      createInitialPermissionsState({
+        membership: { memberships: [] } as unknown as MembershipResponse,
+        flatPermissions: ['vehicle:read'],
+      }),
+    );
+
+    expect(selectHasPermission('vehicle:stats')(state)).toBe(false);
+  });
+
+  it('returns false for invalid permission strings', () => {
+    const state = buildRootState(
+      createInitialPermissionsState({
+        membership: { memberships: [] } as unknown as MembershipResponse,
+        flatPermissions: ['vehicle:read'],
+      }),
+    );
+
+    expect(selectHasPermission('')(state)).toBe(false);
+    expect(selectHasPermission('vehicle')(state)).toBe(false);
+    expect(selectHasPermission('vehicle:')(state)).toBe(false);
+    expect(selectHasPermission(':read')(state)).toBe(false);
   });
 });
