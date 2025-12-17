@@ -7,6 +7,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { MenuItem, InputAdornment } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import {
   FiltersSectionRoot,
@@ -23,6 +25,19 @@ import {
 
 import { MobixButton, MobixButtonText } from '@/components/mobix/button';
 import { MobixTextField } from '@/components/mobix/inputs/MobixTextField';
+
+export type AsyncSelectOption = {
+  label: string;
+  value: string;
+};
+
+export type AsyncSelectFilterField = FilterFieldBase & {
+  type: 'async-select';
+  placeholder?: string;
+  loadOptions: (input: string) => Promise<AsyncSelectOption[]>;
+  minCharsToSearch?: number;
+  debounceMs?: number;
+};
 
 export type FilterFieldBase = {
   id: string;
@@ -49,15 +64,17 @@ export type CustomFilterField = FilterFieldBase & {
 export type FiltersSectionField =
   | SelectFilterField
   | TextFilterField
-  | CustomFilterField;
+  | CustomFilterField
+  | AsyncSelectFilterField;
 
-export type FiltersSectionValues = Record<string, string>;
+export type FiltersSectionValue = string | AsyncSelectOption | null;
+export type FiltersSectionValues = Record<string, FiltersSectionValue>;
 
 export type FiltersSectionProps = {
   title?: string;
   fields: FiltersSectionField[];
   values: FiltersSectionValues;
-  onFieldChange: (fieldId: string, value: string) => void;
+  onFieldChange: (fieldId: string, value: FiltersSectionValue) => void;
   columns?: 2 | 3 | 4;
   onClear?: () => void;
   onApply?: () => void;
@@ -71,7 +88,7 @@ export type FiltersSectionProps = {
 };
 
 export default function FiltersSection({
-  title = 'Filtros de búsqueda',
+  title = 'Filtros',
   fields,
   values,
   onFieldChange,
@@ -80,8 +97,8 @@ export default function FiltersSection({
   onApply,
   showApplyButton = true,
   showClearButton = true,
-  clearLabel = 'Limpiar filtros',
-  applyLabel = 'Aplicar filtros',
+  clearLabel = 'Restablecer',
+  applyLabel = 'Aplicar',
   id = 'filters-section',
   enableRowToggle = true,
   collapsedRows = 1,
@@ -112,6 +129,94 @@ export default function FiltersSection({
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       onFieldChange(fieldId, event.target.value);
     };
+  
+  function useDebouncedValue<T>(value: T, delayMs: number) {
+    const [debounced, setDebounced] = React.useState(value);
+
+    React.useEffect(() => {
+      const t = setTimeout(() => setDebounced(value), delayMs);
+      return () => clearTimeout(t);
+    }, [value, delayMs]);
+
+    return debounced;
+  }
+
+  function AsyncSelectControl({
+    field,
+    value,
+    onChange,
+  }: {
+    field: AsyncSelectFilterField;
+    value: FiltersSectionValue | undefined;
+    onChange: (fieldId: string, value: FiltersSectionValue) => void;
+  }) {
+    const selected = (value && typeof value === 'object' ? value : null) as AsyncSelectOption | null;
+
+    const [inputValue, setInputValue] = React.useState('');
+    const [options, setOptions] = React.useState<AsyncSelectOption[]>([]);
+    const [loading, setLoading] = React.useState(false);
+
+    const debounceMs = field.debounceMs ?? 300;
+    const minChars = field.minCharsToSearch ?? 2;
+    const debounced = useDebouncedValue(inputValue, debounceMs);
+
+    React.useEffect(() => {
+      let alive = true;
+
+      async function run() {
+        const q = debounced.trim();
+        if (!q || q.length < minChars) {
+          setOptions([]);
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const result = await field.loadOptions(q);
+          if (alive) setOptions(result ?? []);
+        } finally {
+          if (alive) setLoading(false);
+        }
+      }
+
+      run();
+      return () => {
+        alive = false;
+      };
+    }, [debounced, field, minChars]);
+
+    return (
+      <Autocomplete
+        options={options}
+        value={selected}
+        loading={loading}
+        onChange={(_, newValue) => onChange(field.id, newValue ?? null)}
+        inputValue={inputValue}
+        onInputChange={(_, newInput) => setInputValue(newInput)}
+        isOptionEqualToValue={(a, b) => a.value === b.value}
+        getOptionLabel={(opt) => opt?.label ?? ''}
+        renderInput={(params) => (
+          <MobixTextField
+            {...params}
+            fullWidth
+            size="small"
+            placeholder={field.placeholder}
+            slotProps={{
+              input: {
+                ...params.InputProps,
+                endAdornment: (
+                  <>
+                    {loading ? <CircularProgress size={16} /> : null}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              },
+            }}
+          />
+        )}
+      />
+    );
+  }
 
   const renderFieldControl = (field: FiltersSectionField) => {
     if (field.type === 'custom') {
@@ -119,7 +224,7 @@ export default function FiltersSection({
     }
 
     if (field.type === 'select') {
-      const currentValue = values[field.id] ?? '';
+      const currentValue = (values[field.id] as string) ?? '';
 
       return (
         <MobixTextField
@@ -129,9 +234,7 @@ export default function FiltersSection({
           value={currentValue}
           onChange={handleSelectChange(field.id)}
         >
-          {field.placeholder && (
-            <MenuItem value="">{field.placeholder}</MenuItem>
-          )}
+          {field.placeholder && <MenuItem value="">{field.placeholder}</MenuItem>}
           {field.options.map((opt) => (
             <MenuItem key={opt.value} value={opt.value}>
               {opt.label}
@@ -141,7 +244,11 @@ export default function FiltersSection({
       );
     }
 
-    const currentValue = values[field.id] ?? '';
+    if (field.type === 'async-select') {
+      return <AsyncSelectControl field={field} value={values[field.id]} onChange={onFieldChange} />;
+    }
+
+    const currentValue = (values[field.id] as string) ?? '';
     const isSearch = field.type === 'search';
 
     return (
@@ -160,9 +267,7 @@ export default function FiltersSection({
                     <InputAdornment position="start">
                       <SearchIcon
                         fontSize="small"
-                        sx={(theme) => ({
-                          color: theme.palette.neutral.dark,
-                        })}
+                        sx={(theme) => ({ color: theme.palette.neutral.dark })}
                       />
                     </InputAdornment>
                   ),
@@ -173,7 +278,6 @@ export default function FiltersSection({
       />
     );
   };
-
   /**
    * Calcula qué campos caben en las primeras `collapsedRows` filas.
    */
@@ -236,30 +340,6 @@ export default function FiltersSection({
       <FiltersCard>
         <FiltersHeader>
           <FiltersTitle component="h2">{title}</FiltersTitle>
-
-          <FiltersActions>
-            {showClearButton && onClear && (
-              <MobixButtonText
-                size="small"
-                color="secondary"
-                onClick={onClear}
-                startIcon={<RotateRightIcon fontSize="small" />}
-              >
-                {clearLabel}
-              </MobixButtonText>
-            )}
-
-            {showApplyButton && onApply && (
-              <MobixButton
-                size="small"
-                variant="contained"
-                color="primary"
-                onClick={onApply}
-              >
-                {applyLabel}
-              </MobixButton>
-            )}
-          </FiltersActions>
         </FiltersHeader>
 
         <FiltersGridWrapper
@@ -276,29 +356,58 @@ export default function FiltersSection({
           </FiltersGrid>
         </FiltersGridWrapper>
 
-        {hasHiddenFields && (
+        
           <FiltersToggleWrapper>
-            <MobixButtonText
-              size="small"
-              color="secondary"
-              onClick={handleToggleExpand}
-              startIcon={
-                isExpanded ? (
-                  <KeyboardArrowUpIcon fontSize="small" />
-                ) : (
-                  <KeyboardArrowDownIcon fontSize="small" />
-                )
-              }
-              sx={{
-                padding: '0 2px',
-                minWidth: 0,
-                justifyContent: 'flex-start',
-              }}
-            >
-              {isExpanded ? 'Mostrar menos filtros' : 'Mostrar más filtros'}
-            </MobixButtonText>
+            {
+              hasHiddenFields && (
+                <MobixButtonText
+                  size="small"
+                  color="secondary"
+                  onClick={handleToggleExpand}
+                  data-testid="filters-section-toggle"
+                  startIcon={
+                    isExpanded ? (
+                      <KeyboardArrowUpIcon fontSize="small" />
+                    ) : (
+                      <KeyboardArrowDownIcon fontSize="small" />
+                    )
+                  }
+                  sx={{
+                    padding: '0 2px',
+                    minWidth: 0,
+                    justifyContent: 'flex-start',
+                  }}
+                >
+                  {isExpanded ? 'Ocultar Filtros avanzados' : 'Mostrar Filtros avanzados'}
+                </MobixButtonText>
+              )
+            }
+            <FiltersActions>
+                {showClearButton && onClear && (
+                  <MobixButtonText
+                    size="small"
+                    color="secondary"
+                    data-testid="filters-section-clear"
+                    onClick={onClear}
+                    startIcon={<RotateRightIcon fontSize="small" />}
+                  >
+                    {clearLabel}
+                  </MobixButtonText>
+                )}
+
+                {showApplyButton && onApply && (
+                  <MobixButton
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    data-testid="filters-section-apply"
+                    onClick={onApply}
+                  >
+                    {applyLabel}
+                  </MobixButton>
+                )}
+              </FiltersActions>
           </FiltersToggleWrapper>
-        )}
       </FiltersCard>
     </FiltersSectionRoot>
   );

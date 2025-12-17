@@ -122,6 +122,7 @@ const VehiclesStatsCards: React.FC<VehiclesStatsCardsProps> = ({ tenantSlug }) =
               <Button
                 color="inherit"
                 size="small"
+                data-testid="vehicles-stats-retry"
                 onClick={() => {
                   void dispatch(fetchVehiclesStats({ tenantSlug, force: true }));
                 }}
@@ -141,15 +142,15 @@ const VehiclesStatsCards: React.FC<VehiclesStatsCardsProps> = ({ tenantSlug }) =
   if (!stats) return null;
 
   const totalHelperText = stats.total_prev_month === 0
-    ? '100%+ del total'
-    : `${stats.delta_total_pct_vs_prev_month.toFixed(1)}% del total`;
+    ? '100%+ vs mes anterior'
+    : `${stats.delta_total_pct_vs_prev_month.toFixed(1)}% vs mes anterior`;
 
   const deltaUi = buildDeltaUi(stats.delta_new_vs_prev_month);
 
   return (
     <StatsCardsSection>
       <StatsCard
-        title="Total vehículos"
+        title="Total flota"
         value={stats.total}
         helperText={totalHelperText}
         variant="secondary"
@@ -158,7 +159,7 @@ const VehiclesStatsCards: React.FC<VehiclesStatsCardsProps> = ({ tenantSlug }) =
       />
 
       <StatsCard
-        title="Activos"
+        title="Operativos"
         value={stats.active}
         helperText={`${formatPercent(stats.active_pct_of_total)} del total`}
         variant="success"

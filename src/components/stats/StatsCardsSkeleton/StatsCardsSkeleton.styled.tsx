@@ -50,7 +50,7 @@ export const CardRoot = styled(Paper, {
   return {
     backgroundColor: $active ? activeBg : theme.palette.background.paper,
     borderRadius: Number(theme.shape.borderRadius) * 2, // igual StatsCard
-    padding: theme.spacing(3.5), // igual StatsCard (28px)
+    padding: theme.spacing(2, 3),
     borderLeftWidth: 4,
     borderLeftStyle: 'solid',
     borderLeftColor: $active ? alpha(accent, 0.9) : accent,

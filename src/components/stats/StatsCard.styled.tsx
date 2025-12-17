@@ -30,7 +30,7 @@ export const StatCardRoot = styled(Box, {
   return {
     backgroundColor: active ? activeBg : baseBg,
     borderRadius: Number(theme.shape.borderRadius) * 2,
-    padding: theme.spacing(3.5),
+    padding: theme.spacing(2, 3),
     borderLeftWidth: 4,
     borderLeftStyle: 'solid',
     borderLeftColor: active ? paletteColor.dark : paletteColor.main,

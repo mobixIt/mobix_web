@@ -7,10 +7,62 @@ function baseUrlForTenant(tenantSlug: string) {
   return `http://${tenantSlug}.localhost:${FE_PORT}`;
 }
 
-async function mockAuthenticatedTenantUserWithVehiclesStatsPermissions(page: Page, tenantSlug: string) {
+function isApiRequest(route: Route) {
+  const rt = route.request().resourceType();
+  // Playwright resource types: document|xhr|fetch|script|stylesheet|image|font|...
+  return rt === 'xhr' || rt === 'fetch';
+}
+
+function urlPath(url: string) {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return '';
+  }
+}
+
+function isVehiclesStatsApiUrl(url: string) {
+  const path = urlPath(url);
+  // Covers: /v1/vehicles/stats, /api/firstparty/v1/vehicles/stats, etc.
+  return /\/v1\/vehicles\/stats$/.test(path) || /\/api\/firstparty\/v1\/vehicles\/stats$/.test(path);
+}
+
+function isVehiclesIndexApiUrl(url: string) {
+  const path = urlPath(url);
+
+  // Do not match the FE route /vehicles
+  if (path === '/vehicles') return false;
+
+  // Covers: /v1/vehicles, /api/firstparty/v1/vehicles
+  const isIndex = /\/v1\/vehicles$/.test(path) || /\/api\/firstparty\/v1\/vehicles$/.test(path);
+
+  // Avoid catching /v1/vehicles/stats
+  const isStats = path.endsWith('/vehicles/stats');
+
+  return isIndex && !isStats;
+}
+
+async function mockAuthenticatedTenantUserWithVehiclesStatsPermissions(
+  page: Page,
+  tenantSlug: string,
+) {
   await setActiveIdleCookie(page);
 
-  await page.route('**/auth/me', async (route: Route) => {
+  const vehicleRead = {
+    id: 100,
+    subject_class: 'vehicle',
+    action: 'read',
+    app_module: { id: 1, name: 'Vehicles', description: 'Vehicles module', active: true },
+  };
+
+  const vehicleStats = {
+    id: 101,
+    subject_class: 'vehicle',
+    action: 'stats',
+    app_module: { id: 1, name: 'Vehicles', description: 'Vehicles module', active: true },
+  };
+
+  await page.route('**/auth/me**', async (route: Route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -26,7 +78,7 @@ async function mockAuthenticatedTenantUserWithVehiclesStatsPermissions(page: Pag
     });
   });
 
-  await page.route('**/auth/membership', async (route: Route) => {
+  await page.route('**/auth/membership**', async (route: Route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -46,29 +98,15 @@ async function mockAuthenticatedTenantUserWithVehiclesStatsPermissions(page: Pag
                 slug: tenantSlug,
                 client: { name: 'Coolitoral', logo_url: '' },
               },
+              // Covers multiple shapes used by the FE
+              tenant_permissions: [vehicleRead, vehicleStats],
               roles: [
                 {
                   id: 10,
                   name: 'Manager',
                   key: 'manager',
-                  tenant_permissions: [],
-                  permissions: [
-                    // 👇 IMPORTANTE:
-                    // Usa subject_class como lo consume el FE: 'vehicle'
-                    // y módulo 'Vehicles'
-                    {
-                      id: 100,
-                      subject_class: 'vehicle',
-                      action: 'read',
-                      app_module: { id: 1, name: 'Vehicles', description: 'Vehicles module', active: true },
-                    },
-                    {
-                      id: 101,
-                      subject_class: 'vehicle',
-                      action: 'stats',
-                      app_module: { id: 1, name: 'Vehicles', description: 'Vehicles module', active: true },
-                    },
-                  ],
+                  tenant_permissions: [vehicleRead, vehicleStats],
+                  permissions: [vehicleRead, vehicleStats],
                 },
               ],
             },
@@ -80,7 +118,20 @@ async function mockAuthenticatedTenantUserWithVehiclesStatsPermissions(page: Pag
 }
 
 async function mockVehiclesIndexOk(page: Page) {
-  await page.route('**/v1/vehicles**', async (route: Route) => {
+  await page.route('**/*', async (route: Route) => {
+    const url = route.request().url();
+
+    // Only intercept API calls (fetch/xhr), never the /vehicles document
+    if (!isApiRequest(route)) {
+      await route.fallback();
+      return;
+    }
+
+    if (!isVehiclesIndexApiUrl(url)) {
+      await route.fallback();
+      return;
+    }
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -150,17 +201,55 @@ function buildStatsResponse(overrides?: {
   };
 }
 
-test('vehicles page shows stats skeleton while request is in-flight', async ({ page }) => {
+async function mockVehiclesStats(page: Page, handler: (route: Route) => Promise<void>) {
+  await page.route('**/*', async (route: Route) => {
+    const url = route.request().url();
+
+    // Only API fetch/xhr
+    if (!isApiRequest(route)) {
+      await route.fallback();
+      return;
+    }
+
+    if (!isVehiclesStatsApiUrl(url)) {
+      await route.fallback();
+      return;
+    }
+
+    await handler(route);
+  });
+}
+
+async function gotoVehicles(page: Page, tenantSlug: string) {
+  await page.goto(`${baseUrlForTenant(tenantSlug)}/vehicles`);
+  await expect(page.getByTestId('vehicles-page')).toBeVisible();
+}
+
+async function openStats(page: Page) {
+  const statsBtn = page.getByRole('button', { name: /estadísticas/i });
+  await expect(statsBtn).toBeVisible();
+  await statsBtn.click();
+  await expect(page.getByTestId('index-page-cards')).toBeVisible();
+}
+
+test('vehicles page shows stats skeleton while stats request is in-flight', async ({ page }) => {
   const tenantSlug = 'coolitoral';
 
   await mockAuthenticatedTenantUserWithVehiclesStatsPermissions(page, tenantSlug);
   await mockVehiclesIndexOk(page);
 
-  await page.route('**/v1/vehicles/stats**', async () => {
-    await new Promise(() => {});
+  await mockVehiclesStats(page, async (route: Route) => {
+    // Keep it in-flight long enough to assert skeleton
+    await new Promise((r) => setTimeout(r, 30_000));
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(buildStatsResponse()),
+    });
   });
 
-  await page.goto(`${baseUrlForTenant(tenantSlug)}/vehicles`);
+  await gotoVehicles(page, tenantSlug);
+  await openStats(page);
 
   await expect(page.getByTestId('vehicles-stats-skeleton-total')).toBeVisible();
   await expect(page.getByTestId('vehicles-stats-skeleton-active')).toBeVisible();
@@ -174,7 +263,7 @@ test('vehicles page renders 4 stats tiles after successful load', async ({ page 
   await mockAuthenticatedTenantUserWithVehiclesStatsPermissions(page, tenantSlug);
   await mockVehiclesIndexOk(page);
 
-  await page.route('**/v1/vehicles/stats**', async (route: Route) => {
+  await mockVehiclesStats(page, async (route: Route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -182,7 +271,8 @@ test('vehicles page renders 4 stats tiles after successful load', async ({ page 
     });
   });
 
-  await page.goto(`${baseUrlForTenant(tenantSlug)}/vehicles`);
+  await gotoVehicles(page, tenantSlug);
+  await openStats(page);
 
   await expect(page.getByTestId('vehicles-stats-total')).toBeVisible();
   await expect(page.getByTestId('vehicles-stats-active')).toBeVisible();
@@ -198,11 +288,16 @@ test('vehicles stats error state provides retry action that re-dispatches the re
 
   let calls = 0;
 
-  await page.route('**/v1/vehicles/stats**', async (route: Route) => {
+  await mockVehiclesStats(page, async (route: Route) => {
     calls += 1;
 
-    if (calls === 1) {
-      await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+    // Covers the two automatic dispatches (page load + stats panel mount)
+    if (calls <= 2) {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'error' }),
+      });
       return;
     }
 
@@ -213,12 +308,31 @@ test('vehicles stats error state provides retry action that re-dispatches the re
     });
   });
 
-  await page.goto(`${baseUrlForTenant(tenantSlug)}/vehicles`);
+  // Listen for the first 500 before navigating to avoid race conditions
+  const firstFailPromise = page.waitForResponse((res) => {
+    const path = urlPath(res.url());
+    const isStats =
+      path.includes('/v1/vehicles/stats') || path.includes('/api/firstparty/v1/vehicles/stats');
+    return isStats && res.status() === 500;
+  });
 
-  const retryButton = page.getByRole('button', { name: 'Reintentar' });
+  await gotoVehicles(page, tenantSlug);
+  await firstFailPromise;
+
+  await openStats(page);
+
+  const retryButton = page.getByTestId('vehicles-stats-retry');
   await expect(retryButton).toBeVisible();
 
+  const okPromise = page.waitForResponse((res) => {
+    const path = urlPath(res.url());
+    const isStats =
+      path.includes('/v1/vehicles/stats') || path.includes('/api/firstparty/v1/vehicles/stats');
+    return isStats && res.status() === 200;
+  });
+
   await retryButton.click();
+  await okPromise;
 
   await expect(page.getByTestId('vehicles-stats-total')).toBeVisible();
 });

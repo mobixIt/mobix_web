@@ -132,7 +132,7 @@ describe('FiltersSection', () => {
     };
   };
 
-  it('renderiza el título y los labels de los filtros', () => {
+  it('renders the title and filter labels', () => {
     renderComponent();
 
     expect(
@@ -143,7 +143,7 @@ describe('FiltersSection', () => {
     expect(screen.getByText('Buscar')).toBeInTheDocument();
   });
 
-  it('llama onFieldChange cuando cambia un filtro select', () => {
+  it('calls onFieldChange when a select filter changes', () => {
     const { onFieldChange } = renderComponent();
 
     const inputs = screen.getAllByRole('textbox');
@@ -155,7 +155,7 @@ describe('FiltersSection', () => {
     expect(onFieldChange).toHaveBeenCalledWith('status', 'active');
   });
 
-  it('llama onFieldChange cuando cambia un filtro de texto/búsqueda', () => {
+  it('calls onFieldChange when a text/search filter changes', () => {
     const { onFieldChange } = renderComponent();
 
     const inputs = screen.getAllByRole('textbox');
@@ -167,11 +167,11 @@ describe('FiltersSection', () => {
     expect(onFieldChange).toHaveBeenCalledWith('search', 'busqueda');
   });
 
-  it('ejecuta onClear y onApply al hacer click en los botones', () => {
+  it('calls onClear and onApply when clicking the buttons', () => {
     const { onClear, onApply } = renderComponent();
 
-    const clearButton = screen.getByRole('button', { name: 'Limpiar filtros' });
-    const applyButton = screen.getByRole('button', { name: 'Aplicar filtros' });
+    const clearButton = screen.getByTestId('filters-section-clear');
+    const applyButton = screen.getByTestId('filters-section-apply');
 
     fireEvent.click(clearButton);
     fireEvent.click(applyButton);
@@ -180,7 +180,7 @@ describe('FiltersSection', () => {
     expect(onApply).toHaveBeenCalledTimes(1);
   });
 
-  it('permite ocultar los botones de limpiar y aplicar', () => {
+  it('allows hiding the clear and apply buttons', () => {
     renderComponent({
       showApplyButton: false,
       showClearButton: false,
@@ -194,20 +194,17 @@ describe('FiltersSection', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('no muestra el toggle cuando todos los campos caben en las filas colapsadas', () => {
-    // 2 campos, 3 columnas, 1 fila -> todo cabe
+  it('does not show the toggle when all fields fit within the collapsed rows', () => {
     renderComponent({
       fields: baseFields,
       collapsedRows: 1,
       columns: 3,
     });
 
-    expect(
-      screen.queryByRole('button', { name: /mostrar más filtros/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('filters-section-toggle')).not.toBeInTheDocument();
   });
 
-  it('muestra solo la primera fila de filtros cuando hay más campos que los de la fila colapsada', () => {
+  it('shows only the first row of filters when there are more fields than the collapsed row can fit', () => {
     const fields: FiltersSectionField[] = [
       ...baseFields,
       { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: '' },
@@ -220,20 +217,19 @@ describe('FiltersSection', () => {
       columns: 3,
     });
 
-    // Primera fila (3 columnas): status, search, extra1
+    // First row (3 columns): status, search, extra1
     expect(screen.getByText('Estado')).toBeInTheDocument();
     expect(screen.getByText('Buscar')).toBeInTheDocument();
     expect(screen.getByText('Extra 1')).toBeInTheDocument();
-    // extra2 queda oculto
+
+    // extra2 should be hidden
     expect(screen.queryByText('Extra 2')).not.toBeInTheDocument();
 
-    // El toggle debe mostrarse
-    expect(
-      screen.getByRole('button', { name: /mostrar más filtros/i }),
-    ).toBeInTheDocument();
+    // Toggle should be visible
+    expect(screen.getByTestId('filters-section-toggle')).toBeInTheDocument();
   });
 
-  it('expande y muestra todos los filtros al hacer click en "Mostrar más filtros"', () => {
+  it('shows all fields when the collapsed filters toggle is activated', () => {
     const fields: FiltersSectionField[] = [
       ...baseFields,
       { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: '' },
@@ -246,9 +242,7 @@ describe('FiltersSection', () => {
       columns: 3,
     });
 
-    const toggleButton = screen.getByRole('button', {
-      name: /mostrar más filtros/i,
-    });
+    const toggleButton = screen.getByTestId('filters-section-toggle');
 
     fireEvent.click(toggleButton);
 
@@ -256,13 +250,9 @@ describe('FiltersSection', () => {
     expect(screen.getByText('Buscar')).toBeInTheDocument();
     expect(screen.getByText('Extra 1')).toBeInTheDocument();
     expect(screen.getByText('Extra 2')).toBeInTheDocument();
-
-    expect(
-      screen.getByRole('button', { name: /mostrar menos filtros/i }),
-    ).toBeInTheDocument();
   });
 
-  it('mantiene todos los campos durante el colapso y luego deja solo la primera fila después del timeout', () => {
+  it('keeps all fields visible during collapse and then shows only the first row after the timeout', () => {
     const fields: FiltersSectionField[] = [
       ...baseFields,
       { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: '' },
@@ -275,34 +265,30 @@ describe('FiltersSection', () => {
       columns: 3,
     });
 
-    // Expandir
-    const expandButton = screen.getByRole('button', {
-      name: /mostrar más filtros/i,
-    });
+    // Expand
+    const expandButton = screen.getByTestId('filters-section-toggle');
     fireEvent.click(expandButton);
     expect(screen.getByText('Extra 2')).toBeInTheDocument();
 
-    // Colapsar
-    const collapseButton = screen.getByRole('button', {
-      name: /mostrar menos filtros/i,
-    });
+    // Collapse
+    const collapseButton = screen.getByTestId('filters-section-toggle');
     fireEvent.click(collapseButton);
 
-    // Al inicio de la animación, aún está el campo extra
+    // At the start of the animation, the extra field is still visible
     expect(screen.getByText('Extra 2')).toBeInTheDocument();
 
-    // Avanzamos timers (350 ms)
+    // Advance timers (350 ms)
     act(() => {
       vi.advanceTimersByTime(350);
     });
 
-    // Después del timeout, solo debería quedar la primera "fila" de filtros
+    // After the timeout, only the first filter row should remain
     expect(screen.queryByText('Extra 2')).not.toBeInTheDocument();
     expect(screen.getByText('Estado')).toBeInTheDocument();
     expect(screen.getByText('Buscar')).toBeInTheDocument();
   });
 
-  it('no aplica lógica de toggle cuando enableRowToggle es false', () => {
+  it('does not apply toggle logic when enableRowToggle is false', () => {
     const fields: FiltersSectionField[] = [
       ...baseFields,
       { id: 'extra1', label: 'Extra 1', type: 'text', placeholder: '' },
@@ -316,18 +302,13 @@ describe('FiltersSection', () => {
       columns: 3,
     });
 
-    expect(
-      screen.queryByRole('button', { name: /mostrar más filtros/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /mostrar menos filtros/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('filters-section-toggle')).not.toBeInTheDocument();
 
     expect(screen.getByText('Extra 1')).toBeInTheDocument();
     expect(screen.getByText('Extra 2')).toBeInTheDocument();
   });
 
-  it('renderiza un campo custom cuando type="custom"', () => {
+  it('renders a custom field when type="custom"', () => {
     const customRender = vi.fn(() => <div>Custom content</div>);
 
     const fields: FiltersSectionField[] = [

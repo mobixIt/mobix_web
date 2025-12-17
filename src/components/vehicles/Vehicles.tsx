@@ -5,7 +5,6 @@ import { Box, CircularProgress, Alert } from '@mui/material';
 import { IndexPageLayout } from '@/components/layout/index-page/IndexPageLayout';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  fetchVehicles,
   selectVehicles,
   selectVehiclesStatus,
   selectVehiclesPagination,
@@ -29,6 +28,7 @@ import {
   type VehicleLike,
 } from './Vehicles.tableConfig';
 import VehiclesStatsCards from './VehiclesStatsCards';
+import VehiclesFilters from './VehiclesFilters';
 
 import { usePermissionedTable } from '@/hooks/usePermissionedTable';
 import { useHasPermission } from '@/hooks/useHasPermission';
@@ -63,6 +63,7 @@ const Vehicles: React.FC = () => {
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState<number>(DEFAULT_PAGE_SIZE);
+  const [activeFiltersCount, setActiveFiltersCount] = React.useState(0);
 
   const totalCount =
     paginationMeta?.count != null ? paginationMeta.count : vehicles.length;
@@ -74,19 +75,6 @@ const Vehicles: React.FC = () => {
   const permissionsReady = useAppSelector(selectPermissionsReady);
   const canCreateVehicle = useHasPermission('vehicle:create');
   const canSeeVehicleStats = useHasPermission('vehicle:stats');
-
-  React.useEffect(() => {
-    if (!tenantSlug) return;
-
-    void dispatch(
-      fetchVehicles({
-        tenantSlug,
-        params: {
-          page: { number: page + 1, size: rowsPerPage },
-        },
-      }),
-    );
-  }, [dispatch, tenantSlug, page, rowsPerPage]);
 
   const rows: VehicleRow[] = mapVehiclesToRows(vehicles);
 
@@ -165,7 +153,6 @@ const Vehicles: React.FC = () => {
   } else {
     table = (
       <MobixTable<VehicleRow>
-        title="Listado de vehículos"
         rows={rows}
         columns={vehicleColumns}
         loading={isVehiclesLoading}
@@ -204,7 +191,22 @@ const Vehicles: React.FC = () => {
       <IndexPageLayout
         header={header}
         statsCards={shouldRenderStats ? <VehiclesStatsCards tenantSlug={tenantSlug} /> : null}
+        filters={
+          <VehiclesFilters
+            tenantSlug={tenantSlug}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            onResetPage={() => setPage(0)}
+            onFiltersAppliedChange={setActiveFiltersCount}
+          />
+        }
         table={table}
+        activeFiltersCount={activeFiltersCount}
+        totalCountText={
+          <>
+            <b>{totalCount}</b> vehículos en total
+          </>
+        }
       />
     </div>
   );

@@ -4,7 +4,6 @@ import { styled } from '@mui/material/styles';
 import { Box, Typography } from '@mui/material';
 
 export const HeaderSection = styled('section')(({ theme }) => ({
-  padding: theme.spacing(3, 0),
   backgroundColor: theme.palette.background.default,
   width: '100%'
 }));

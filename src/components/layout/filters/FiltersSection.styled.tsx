@@ -6,7 +6,7 @@ import { Box } from '@mui/material';
 import Typography, { type TypographyProps } from '@mui/material/Typography';
 
 export const FiltersSectionRoot = styled('section')(({ theme }) => ({
-  padding: theme.spacing(0, 4, 4),
+  padding: theme.spacing(0),
   backgroundColor: theme.palette.background.default,
 }));
 
@@ -37,6 +37,8 @@ export const FiltersActions = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1.5),
+  justifyContent: 'flex-end',
+  flex: 1,
 }));
 
 type FiltersGridProps = {

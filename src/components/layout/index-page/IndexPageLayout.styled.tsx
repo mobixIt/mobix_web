@@ -4,10 +4,9 @@ import { styled } from '@mui/material/styles';
 import type { Theme } from '@mui/material/styles';
 import { Box, Paper } from '@mui/material';
 
-export const IndexPageRoot = styled(Box)(({ theme }) => ({
+export const IndexPageRoot = styled(Box)(() => ({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.spacing(4),
 }));
 
 export const HeaderSection = styled('section')(({ theme }) => ({
@@ -25,6 +24,7 @@ export const CardsSection = styled('section')(({ theme }) => ({
   display: 'grid',
   gap: theme.spacing(3),
   gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+  marginTop: theme.spacing(3),
 }));
 
 const cardLike = (theme: Theme) => ({
@@ -40,7 +40,13 @@ export const FiltersSection = styled(Paper)(({ theme }) => ({
   ...cardLike(theme),
 }));
 
-export const TableSection = styled(Paper)(() => ({}));
+export const FiltersWrapper = styled('div')(({ theme }) => ({
+  marginTop: theme.spacing(3),
+}));
+
+export const TableSection = styled(Paper)(({ theme }) => ({
+  marginTop: theme.spacing(3),
+}));
 
 export const SectionTitleRow = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -67,4 +73,11 @@ export const SectionActions = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1.5),
+}));
+
+export const ToolbarSection = styled('section')(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing(2),
+  marginTop: theme.spacing(3),
 }));
