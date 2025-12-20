@@ -32,9 +32,11 @@ import {
   Root,
   TablePaper,
   ToolbarRoot,
+  ToolbarActions,
   TableName,
   ToolbarContent,
   StyledCheckbox,
+  TableTopProgress,
 } from './styles';
 
 import type { MobixTableProps } from './types';
@@ -326,6 +328,11 @@ export function MobixTable<T extends { id: Key }>(
     ],
   );
 
+  const keepPreviousData = props.keepPreviousData ?? false;
+  const isRefreshing = Boolean(loading && keepPreviousData && rows.length > 0);
+  const shouldShowLoadingRow = Boolean(loading && !isRefreshing);
+  const interactionDisabled = isRefreshing;
+
   /* ---------------------------------------------------------------------- */
   /*                          SELECTION & HANDLERS                           */
   /* ---------------------------------------------------------------------- */
@@ -405,6 +412,7 @@ export function MobixTable<T extends { id: Key }>(
     _event: unknown,
     newPage: number,
   ) => {
+    if (interactionDisabled) return;
     if (!enablePagination) return;
 
     if (isServerPagination) {
@@ -420,6 +428,7 @@ export function MobixTable<T extends { id: Key }>(
   const handleChangeRowsPerPage = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
+    if (interactionDisabled) return;
     const value = parseInt(event.target.value, 10);
 
     if (isServerPagination) {
@@ -614,13 +623,7 @@ export function MobixTable<T extends { id: Key }>(
                 : title}
             </TableName>
 
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-              }}
-            >
+            <ToolbarActions>
               {!hasSelection && renderToolbarActions}
 
               {isDownloadEnabled && !hasSelection && (
@@ -761,7 +764,7 @@ export function MobixTable<T extends { id: Key }>(
                   </Menu>
                 </>
               )}
-            </Box>
+            </ToolbarActions>
           </ToolbarContent>
 
           {renderBatchActions && hasSelection && (
@@ -777,7 +780,15 @@ export function MobixTable<T extends { id: Key }>(
         </ToolbarRoot>
 
         <TablePaper>
-          <TableContainer>
+          {isRefreshing && <TableTopProgress color="secondary" />}
+          <TableContainer
+            sx={{
+              opacity: isRefreshing ? 0.2 : 1,
+              pointerEvents: isRefreshing ? 'none' : 'auto',
+              transition: (theme) =>
+                theme.transitions.create(['opacity'], { duration: 200 }),
+            }}
+          >
             <Table size="medium">
               <TableHead>
                 <TableRow>
@@ -845,7 +856,7 @@ export function MobixTable<T extends { id: Key }>(
               </TableHead>
 
               <TableBody>
-                {loading && (
+                {shouldShowLoadingRow && (
                   <TableRow>
                     <TableCell
                       colSpan={
@@ -854,63 +865,45 @@ export function MobixTable<T extends { id: Key }>(
                         (hasRowDetails ? 1 : 0)
                       }
                     >
-                      <Typography variant="body2">
-                        Loading…
-                      </Typography>
+                      <Typography variant="body2">Loading…</Typography>
                     </TableCell>
                   </TableRow>
                 )}
 
-                {!loading &&
-                  paginatedRows.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={
-                          visibleColumns.length +
-                          (enableSelection ? 1 : 0) +
-                          (hasRowDetails ? 1 : 0)
-                        }
-                      >
-                        {emptyStateContent ?? (
-                          <Typography variant="body2">
-                            No data
-                          </Typography>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )}
+                {!shouldShowLoadingRow && paginatedRows.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={
+                        visibleColumns.length +
+                        (enableSelection ? 1 : 0) +
+                        (hasRowDetails ? 1 : 0)
+                      }
+                    >
+                      {emptyStateContent ?? <Typography variant="body2">No data</Typography>}
+                    </TableCell>
+                  </TableRow>
+                )}
 
-                {!loading &&
+                {!shouldShowLoadingRow &&
                   paginatedRows.map((row) => {
                     const open = openRowId === row.id;
-                    const isSelected =
-                      selectedRowSet.has(row.id);
+                    const isSelected = selectedRowSet.has(row.id);
 
                     return (
                       <React.Fragment key={row.id}>
                         <TableRow
                           hover
-                          onClick={
-                            onRowClick
-                              ? () => onRowClick(row)
-                              : undefined
-                          }
+                          onClick={onRowClick ? () => onRowClick(row) : undefined}
                           sx={{
-                            cursor: onRowClick
-                              ? 'pointer'
-                              : 'default',
+                            cursor: onRowClick ? 'pointer' : 'default',
                           }}
                         >
                           {enableSelection && (
                             <TableCell padding="checkbox">
                               <StyledCheckbox
                                 checked={isSelected}
-                                onClick={(event) =>
-                                  event.stopPropagation()
-                                }
-                                onChange={() =>
-                                  handleToggleRow(row.id)
-                                }
+                                onClick={(event) => event.stopPropagation()}
+                                onChange={() => handleToggleRow(row.id)}
                               />
                             </TableCell>
                           )}
@@ -924,25 +917,18 @@ export function MobixTable<T extends { id: Key }>(
                                   handleToggleExpand(row.id);
                                 }}
                               >
-                                {open ? (
-                                  <KeyboardArrowUp />
-                                ) : (
-                                  <KeyboardArrowDown />
-                                )}
+                                {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
                               </IconButton>
                             </TableCell>
                           )}
 
                           {visibleColumns.map((col) => (
-                            <TableCell
-                              key={col.id}
-                              align={col.align ?? 'left'}
-                            >
+                            <TableCell key={col.id} align={col.align ?? 'left'}>
                               {col.render
                                 ? col.render(row)
                                 : col.field
-                                ? (row[col.field] as React.ReactNode)
-                                : null}
+                                  ? (row[col.field] as React.ReactNode)
+                                  : null}
                             </TableCell>
                           ))}
                         </TableRow>
@@ -954,17 +940,9 @@ export function MobixTable<T extends { id: Key }>(
                                 paddingBottom: 0,
                                 paddingTop: 0,
                               }}
-                              colSpan={
-                                visibleColumns.length +
-                                (enableSelection ? 1 : 0) +
-                                1
-                              }
+                              colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + 1}
                             >
-                              <Collapse
-                                in={open}
-                                timeout="auto"
-                                unmountOnExit
-                              >
+                              <Collapse in={open} timeout="auto" unmountOnExit>
                                 <Box sx={{ m: 2 }}>
                                   <Divider sx={{ mb: 2 }} />
                                   {renderRowDetailsContent(row)}

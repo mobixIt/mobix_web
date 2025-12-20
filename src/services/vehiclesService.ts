@@ -6,6 +6,8 @@ export interface VehiclesIndexParams {
     number?: number;
     size?: number;
   };
+  filters?: Record<string, string | number | boolean | null | undefined>;
+  sort?: string;
 }
 
 export async function fetchVehiclesFromApi(

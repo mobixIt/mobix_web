@@ -249,6 +249,8 @@ export interface MobixTableBaseProps<T extends { id: Key }> {
    * If not provided, a default "No data" message is shown.
    */
   emptyStateContent?: ReactNode;
+
+  keepPreviousData?: boolean;
 }
 
 /* -------------------------------------------------------------------------- */

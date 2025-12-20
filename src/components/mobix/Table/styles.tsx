@@ -1,7 +1,7 @@
 'use client';
 
 import { styled } from '@mui/material/styles';
-import { Box, Paper, Typography, Checkbox } from '@mui/material';
+import { Box, Paper, Typography, Checkbox, LinearProgress } from '@mui/material';
 
 export const Root = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
@@ -16,6 +16,7 @@ export const Root = styled(Box)(({ theme }) => ({
 export const TablePaper = styled(Paper)(({ theme }) => ({
   boxShadow: 'none',
   backgroundColor: theme.palette.background.paper,
+  position: 'relative',
 }));
 
 interface ToolbarRootProps {
@@ -42,6 +43,12 @@ export const ToolbarRoot = styled(
   color: hasSelection
     ? theme.palette.info.main
     : theme.palette.text.primary,
+}));
+
+export const ToolbarActions = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
 }));
 
 export const ToolbarContent = styled(Box)(({ theme }) => ({
@@ -75,4 +82,14 @@ export const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
   '&.MuiCheckbox-indeterminate .MuiSvgIcon-root': {
     color: theme.palette.info.main,
   },
+}));
+
+export const TableTopProgress = styled(LinearProgress)(() => ({
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: 2,
+  opacity: 0.6,
+  zIndex: 1,
 }));

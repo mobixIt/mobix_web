@@ -156,6 +156,7 @@ const Vehicles: React.FC = () => {
         rows={rows}
         columns={vehicleColumns}
         loading={isVehiclesLoading}
+        keepPreviousData
         enableSelection
         enablePagination
         paginationMode="server"

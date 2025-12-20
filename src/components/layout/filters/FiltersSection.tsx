@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import type { ReactNode } from 'react';
 import RotateRightIcon from '@mui/icons-material/RotateRight';
 import SearchIcon from '@mui/icons-material/Search';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -22,70 +21,169 @@ import {
   FiltersToggleWrapper,
   FiltersGridWrapper,
 } from './FiltersSection.styled';
+import {
+  AsyncSelectOption,
+  AsyncSelectFilterField,
+  FiltersSectionValue,
+  FiltersSectionProps,
+  FiltersSectionField,
+} from './FiltersSection.types';
 
-import { MobixButton, MobixButtonText } from '@/components/mobix/button';
+import { MobixButtonProgress, MobixButtonText } from '@/components/mobix/button';
 import { MobixTextField } from '@/components/mobix/inputs/MobixTextField';
 
-export type AsyncSelectOption = {
-  label: string;
-  value: string;
-};
+// --- Helpers ---
 
-export type AsyncSelectFilterField = FilterFieldBase & {
-  type: 'async-select';
-  placeholder?: string;
-  loadOptions: (input: string) => Promise<AsyncSelectOption[]>;
-  minCharsToSearch?: number;
-  debounceMs?: number;
-};
+const normalizeStr = (x: unknown): string => String(x ?? '').trim();
+const toLowerSafe = (x: unknown): string => normalizeStr(x).toLowerCase();
 
-export type FilterFieldBase = {
-  id: string;
-  label: string;
-  colSpan?: number;
-};
+function filterAsyncOptionsByLabelAndCode(
+  options: AsyncSelectOption[],
+  inputValue: string,
+): AsyncSelectOption[] {
+  const q = toLowerSafe(inputValue);
+  if (!q) return options;
 
-export type SelectFilterField = FilterFieldBase & {
-  type: 'select';
-  options: { label: string; value: string }[];
-  placeholder?: string;
-};
+  return options.filter((o) => {
+    const token = `${o.label} ${(o.code ?? '')}`.toLowerCase();
+    return token.includes(q);
+  });
+}
 
-export type TextFilterField = FilterFieldBase & {
-  type: 'text' | 'search';
-  placeholder?: string;
-};
+function useDebouncedValue<T>(value: T, delayMs: number) {
+  const [debounced, setDebounced] = React.useState(value);
 
-export type CustomFilterField = FilterFieldBase & {
-  type: 'custom';
-  render: () => ReactNode;
-};
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(t);
+  }, [value, delayMs]);
 
-export type FiltersSectionField =
-  | SelectFilterField
-  | TextFilterField
-  | CustomFilterField
-  | AsyncSelectFilterField;
+  return debounced;
+}
 
-export type FiltersSectionValue = string | AsyncSelectOption | null;
-export type FiltersSectionValues = Record<string, FiltersSectionValue>;
+// --- Componentes Internos Optimizados ---
 
-export type FiltersSectionProps = {
-  title?: string;
-  fields: FiltersSectionField[];
-  values: FiltersSectionValues;
-  onFieldChange: (fieldId: string, value: FiltersSectionValue) => void;
-  columns?: 2 | 3 | 4;
-  onClear?: () => void;
-  onApply?: () => void;
-  showApplyButton?: boolean;
-  showClearButton?: boolean;
-  clearLabel?: string;
-  applyLabel?: string;
-  id?: string;
-  enableRowToggle?: boolean;
-  collapsedRows?: number;
-};
+const AsyncSelectControl = React.memo(({
+  field,
+  value,
+  onChange,
+}: {
+  field: AsyncSelectFilterField;
+  value: FiltersSectionValue | undefined;
+  onChange: (fieldId: string, value: FiltersSectionValue) => void;
+}) => {
+  const selected = (value && typeof value === 'object' ? value : null) as AsyncSelectOption | null;
+
+  const [inputValue, setInputValue] = React.useState('');
+  const [options, setOptions] = React.useState<AsyncSelectOption[]>([]);
+  const [loading, setLoading] = React.useState(false);
+
+  const debounceMs = field.debounceMs ?? 300;
+  const minChars = field.minCharsToSearch ?? 2;
+  const debounced = useDebouncedValue(inputValue, debounceMs);
+
+  const isDisabled = Boolean(field.disabled) || Boolean(field.loading);
+
+  const runLoad = React.useCallback(
+    async (q: string) => {
+      setLoading(true);
+      try {
+        const result = await field.loadOptions(q);
+        setOptions(result ?? []);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [field],
+  );
+
+  React.useEffect(() => {
+    let alive = true;
+
+    async function run() {
+      if (isDisabled) {
+        setOptions([]);
+        return;
+      }
+
+      const q = debounced.trim();
+
+      if (minChars > 0 && (!q || q.length < minChars)) {
+        setOptions([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const result = await field.loadOptions(q);
+        if (alive) setOptions(result ?? []);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }
+
+    run();
+    return () => { alive = false; };
+  }, [debounced, field, minChars, isDisabled]);
+
+  const handleOpen = () => {
+    if (isDisabled) return;
+    if ((field.minCharsToSearch ?? 2) !== 0) return;
+    void runLoad('');
+  };
+
+  return (
+    <Autocomplete
+      options={options}
+      value={selected}
+      loading={loading || Boolean(field.loading)}
+      disabled={isDisabled}
+      onChange={(_, newValue) => onChange(field.id, (newValue as AsyncSelectOption) ?? null)}
+      inputValue={inputValue}
+      onInputChange={(_, newInput) => setInputValue(newInput)}
+      isOptionEqualToValue={(a, b) => a.value === b.value}
+      getOptionLabel={(opt) => opt?.label ?? ''}
+      filterOptions={(opts, state) => filterAsyncOptionsByLabelAndCode(opts, state.inputValue)}
+      onOpen={handleOpen}
+      renderOption={(props, option) => {
+        const code = (option.code ?? '').trim();
+        return (
+          <li {...props}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span>{option.label}</span>
+              {code ? (
+                <span style={{ opacity: 0.7, fontSize: 12, lineHeight: 1.2 }}>{code}</span>
+              ) : null}
+            </div>
+          </li>
+        );
+      }}
+      renderInput={(params) => (
+        <MobixTextField
+          {...params}
+          fullWidth
+          size="small"
+          placeholder={field.placeholder}
+          disabled={isDisabled}
+          slotProps={{
+            input: {
+              ...params.InputProps,
+              endAdornment: (
+                <>
+                  {loading || field.loading ? <CircularProgress size={16} /> : null}
+                  {params.InputProps.endAdornment}
+                </>
+              ),
+            },
+          }}
+        />
+      )}
+    />
+  );
+});
+
+AsyncSelectControl.displayName = 'AsyncSelectControl';
+// --- Componente Principal ---
 
 export default function FiltersSection({
   title = 'Filtros',
@@ -99,146 +197,59 @@ export default function FiltersSection({
   showClearButton = true,
   clearLabel = 'Restablecer',
   applyLabel = 'Aplicar',
+  isApplying = false,
   id = 'filters-section',
   enableRowToggle = true,
   collapsedRows = 1,
 }: FiltersSectionProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
-
   const [renderAllFields, setRenderAllFields] = React.useState(false);
-  const collapseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const collapseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     return () => {
-      if (collapseTimeoutRef.current) {
-        clearTimeout(collapseTimeoutRef.current);
-      }
+      if (collapseTimeoutRef.current) clearTimeout(collapseTimeoutRef.current);
     };
   }, []);
 
-  const handleSelectChange =
-    (fieldId: string) =>
-    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      onFieldChange(fieldId, event.target.value);
-    };
+  const handleToggleExpand = React.useCallback(() => {
+    if (!enableRowToggle) return;
 
-  const handleTextChange =
-    (fieldId: string) =>
-    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      onFieldChange(fieldId, event.target.value);
-    };
-  
-  function useDebouncedValue<T>(value: T, delayMs: number) {
-    const [debounced, setDebounced] = React.useState(value);
-
-    React.useEffect(() => {
-      const t = setTimeout(() => setDebounced(value), delayMs);
-      return () => clearTimeout(t);
-    }, [value, delayMs]);
-
-    return debounced;
-  }
-
-  function AsyncSelectControl({
-    field,
-    value,
-    onChange,
-  }: {
-    field: AsyncSelectFilterField;
-    value: FiltersSectionValue | undefined;
-    onChange: (fieldId: string, value: FiltersSectionValue) => void;
-  }) {
-    const selected = (value && typeof value === 'object' ? value : null) as AsyncSelectOption | null;
-
-    const [inputValue, setInputValue] = React.useState('');
-    const [options, setOptions] = React.useState<AsyncSelectOption[]>([]);
-    const [loading, setLoading] = React.useState(false);
-
-    const debounceMs = field.debounceMs ?? 300;
-    const minChars = field.minCharsToSearch ?? 2;
-    const debounced = useDebouncedValue(inputValue, debounceMs);
-
-    React.useEffect(() => {
-      let alive = true;
-
-      async function run() {
-        const q = debounced.trim();
-        if (!q || q.length < minChars) {
-          setOptions([]);
-          return;
-        }
-
-        setLoading(true);
-        try {
-          const result = await field.loadOptions(q);
-          if (alive) setOptions(result ?? []);
-        } finally {
-          if (alive) setLoading(false);
-        }
-      }
-
-      run();
-      return () => {
-        alive = false;
-      };
-    }, [debounced, field, minChars]);
-
-    return (
-      <Autocomplete
-        options={options}
-        value={selected}
-        loading={loading}
-        onChange={(_, newValue) => onChange(field.id, newValue ?? null)}
-        inputValue={inputValue}
-        onInputChange={(_, newInput) => setInputValue(newInput)}
-        isOptionEqualToValue={(a, b) => a.value === b.value}
-        getOptionLabel={(opt) => opt?.label ?? ''}
-        renderInput={(params) => (
-          <MobixTextField
-            {...params}
-            fullWidth
-            size="small"
-            placeholder={field.placeholder}
-            slotProps={{
-              input: {
-                ...params.InputProps,
-                endAdornment: (
-                  <>
-                    {loading ? <CircularProgress size={16} /> : null}
-                    {params.InputProps.endAdornment}
-                  </>
-                ),
-              },
-            }}
-          />
-        )}
-      />
-    );
-  }
-
-  const renderFieldControl = (field: FiltersSectionField) => {
-    if (field.type === 'custom') {
-      return field.render();
+    if (!isExpanded) {
+      setRenderAllFields(true);
+      setIsExpanded(true);
+    } else {
+      setIsExpanded(false);
+      if (collapseTimeoutRef.current) clearTimeout(collapseTimeoutRef.current);
+      collapseTimeoutRef.current = setTimeout(() => {
+        setRenderAllFields(false);
+      }, 350);
     }
+  }, [enableRowToggle, isExpanded]);
+
+  const renderFieldControl = React.useCallback((field: FiltersSectionField) => {
+    if (field.type === 'custom') return field.render();
+
+    const isDisabled = Boolean(field.disabled) || Boolean(field.loading);
 
     if (field.type === 'select') {
       const currentValue = (values[field.id] as string) ?? '';
-
       return (
         <MobixTextField
+          id={field.id}
           select
           fullWidth
           size="small"
           value={currentValue}
-          onChange={handleSelectChange(field.id)}
+          onChange={(e) => onFieldChange(field.id, e.target.value)}
+          disabled={isDisabled}
+          slotProps={{
+            input: { endAdornment: field.loading ? <CircularProgress size={16} /> : undefined },
+          }}
         >
           {field.placeholder && <MenuItem value="">{field.placeholder}</MenuItem>}
           {field.options.map((opt) => (
-            <MenuItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </MenuItem>
+            <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
           ))}
         </MobixTextField>
       );
@@ -253,87 +264,76 @@ export default function FiltersSection({
 
     return (
       <MobixTextField
+        id={field.id}
         fullWidth
         size="small"
         placeholder={field.placeholder}
         value={currentValue}
-        onChange={handleTextChange(field.id)}
+        onChange={(e) => onFieldChange(field.id, e.target.value)}
         type={isSearch ? 'search' : 'text'}
-        slotProps={
-          isSearch
-            ? {
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon
-                        fontSize="small"
-                        sx={(theme) => ({ color: theme.palette.neutral.dark })}
-                      />
-                    </InputAdornment>
-                  ),
-                },
-              }
-            : undefined
-        }
+        disabled={isDisabled}
+        slotProps={isSearch ? {
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" sx={(theme) => ({ color: theme.palette.neutral.dark })} />
+              </InputAdornment>
+            ),
+          },
+        } : undefined}
       />
     );
-  };
-  /**
-   * Calcula qué campos caben en las primeras `collapsedRows` filas.
-   */
-  const computeCollapsedFields = (): FiltersSectionField[] => {
+  }, [values, onFieldChange]);
+
+  // Memoize visible fields calculation
+  const { visibleFields } = React.useMemo(() => {
+    if (!enableRowToggle || renderAllFields || isExpanded) {
+      return { visibleFields: fields, hasHiddenFields: false };
+    }
+
     const visible: FiltersSectionField[] = [];
     let currentRow = 0;
     let currentCol = 0;
 
     for (const field of fields) {
       const span = Math.min(field.colSpan ?? 1, columns);
-
       if (currentCol + span > columns) {
         currentRow += 1;
         currentCol = 0;
       }
-
-      if (currentRow >= collapsedRows) {
-        break;
-      }
-
+      if (currentRow >= collapsedRows) break;
       visible.push(field);
       currentCol += span;
     }
 
-    return visible;
-  };
+    return { 
+      visibleFields: visible, 
+      hasHiddenFields: visible.length < fields.length 
+    };
+  }, [fields, enableRowToggle, renderAllFields, isExpanded, columns, collapsedRows]);
 
-  const collapsedFields = computeCollapsedFields();
-  const hasHiddenFields =
-    enableRowToggle && collapsedFields.length < fields.length;
-
-  const visibleFields =
-    !enableRowToggle || renderAllFields || isExpanded
-      ? fields
-      : collapsedFields;
-
-  const isGridExpanded = !enableRowToggle || isExpanded;
-
-  const handleToggleExpand = () => {
-    if (!enableRowToggle) return;
-
-    if (!isExpanded) {
-      setRenderAllFields(true);
-      setIsExpanded(true);
-    } else {
-      setIsExpanded(false);
-
-      if (collapseTimeoutRef.current) {
-        clearTimeout(collapseTimeoutRef.current);
+  // Update hasHiddenFields only when fully expanded/collapsed state is stable
+  // But for the toggle button visibility, we need to know if fields *would* be hidden
+  // Reworking this: calculate collapsed fields once to know if toggle is needed
+  const shouldShowToggle = React.useMemo(() => {
+    if (!enableRowToggle) return false;
+    // Calculate if collapsing would hide anything
+    let currentRow = 0;
+    let currentCol = 0;
+    let count = 0;
+    
+    for (const field of fields) {
+      const span = Math.min(field.colSpan ?? 1, columns);
+      if (currentCol + span > columns) {
+        currentRow += 1;
+        currentCol = 0;
       }
-
-      collapseTimeoutRef.current = setTimeout(() => {
-        setRenderAllFields(false);
-      }, 350);
+      if (currentRow >= collapsedRows) break;
+      currentCol += span;
+      count++;
     }
-  };
+    return count < fields.length;
+  }, [fields, columns, collapsedRows, enableRowToggle]);
 
   return (
     <FiltersSectionRoot id={id}>
@@ -342,10 +342,7 @@ export default function FiltersSection({
           <FiltersTitle component="h2">{title}</FiltersTitle>
         </FiltersHeader>
 
-        <FiltersGridWrapper
-          expanded={isGridExpanded}
-          collapsedRows={collapsedRows}
-        >
+        <FiltersGridWrapper expanded={!enableRowToggle || isExpanded} collapsedRows={collapsedRows}>
           <FiltersGrid columns={columns}>
             {visibleFields.map((field) => (
               <FilterFieldItem key={field.id} colSpan={field.colSpan}>
@@ -356,58 +353,47 @@ export default function FiltersSection({
           </FiltersGrid>
         </FiltersGridWrapper>
 
-        
-          <FiltersToggleWrapper>
-            {
-              hasHiddenFields && (
-                <MobixButtonText
-                  size="small"
-                  color="secondary"
-                  onClick={handleToggleExpand}
-                  data-testid="filters-section-toggle"
-                  startIcon={
-                    isExpanded ? (
-                      <KeyboardArrowUpIcon fontSize="small" />
-                    ) : (
-                      <KeyboardArrowDownIcon fontSize="small" />
-                    )
-                  }
-                  sx={{
-                    padding: '0 2px',
-                    minWidth: 0,
-                    justifyContent: 'flex-start',
-                  }}
-                >
-                  {isExpanded ? 'Ocultar Filtros avanzados' : 'Mostrar Filtros avanzados'}
-                </MobixButtonText>
-              )
-            }
-            <FiltersActions>
-                {showClearButton && onClear && (
-                  <MobixButtonText
-                    size="small"
-                    color="secondary"
-                    data-testid="filters-section-clear"
-                    onClick={onClear}
-                    startIcon={<RotateRightIcon fontSize="small" />}
-                  >
-                    {clearLabel}
-                  </MobixButtonText>
-                )}
+        <FiltersToggleWrapper>
+          {shouldShowToggle && (
+            <MobixButtonText
+              size="small"
+              color="secondary"
+              onClick={handleToggleExpand}
+              data-testid="filters-section-toggle"
+              startIcon={isExpanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
+              sx={{ padding: '0 2px', minWidth: 0, justifyContent: 'flex-start' }}
+            >
+              {isExpanded ? 'Ocultar Filtros avanzados' : 'Mostrar Filtros avanzados'}
+            </MobixButtonText>
+          )}
 
-                {showApplyButton && onApply && (
-                  <MobixButton
-                    size="small"
-                    variant="contained"
-                    color="primary"
-                    data-testid="filters-section-apply"
-                    onClick={onApply}
-                  >
-                    {applyLabel}
-                  </MobixButton>
-                )}
-              </FiltersActions>
-          </FiltersToggleWrapper>
+          <FiltersActions>
+            {showClearButton && onClear && (
+              <MobixButtonText
+                size="small"
+                color="secondary"
+                data-testid="filters-section-clear"
+                onClick={onClear}
+                startIcon={<RotateRightIcon fontSize="small" />}
+              >
+                {clearLabel}
+              </MobixButtonText>
+            )}
+
+            {showApplyButton && onApply && (
+              <MobixButtonProgress
+                size="small"
+                variant="contained"
+                color="primary"
+                data-testid="filters-section-apply"
+                isSubmitting={isApplying}
+                onClick={onApply}
+              >
+                {applyLabel}
+              </MobixButtonProgress>
+            )}
+          </FiltersActions>
+        </FiltersToggleWrapper>
       </FiltersCard>
     </FiltersSectionRoot>
   );

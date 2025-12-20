@@ -26,10 +26,11 @@ export interface TenantVehiclesState {
   items: Vehicle[];
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
-  lastFetchedAt: string | null; // ISO timestamp
+  lastFetchedAt: string | null;
   pagination: PaginationMeta | null;
   lastPage: number | null;
   lastPageSize: number | null;
+  lastFiltersSig: string | null;
 }
 
 /**
@@ -57,11 +58,22 @@ const createEmptyTenantState = (): TenantVehiclesState => ({
   pagination: null,
   lastPage: null,
   lastPageSize: null,
+  lastFiltersSig: null,
 });
 
 const initialState: VehiclesState = {
   byTenant: {},
 };
+
+function stableFiltersSig(filters: unknown): string {
+  const obj = (filters && typeof filters === 'object') ? (filters as Record<string, unknown>) : {};
+  const entries = Object.entries(obj)
+    .filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== '')
+    .map(([k, v]) => [k, String(v)])
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  return JSON.stringify(entries);
+}
 
 /**
  * Default cache expiration time for vehicle data (in ms).
@@ -112,18 +124,6 @@ interface FetchVehiclesPayload {
  * @param state - The Redux root state, used to access cached tenant vehicle data.
  *
  * @returns `true` if a new API request should be made, `false` when cached data is valid and reused.
- *
- * @example
- * ```ts
- * const shouldFetch = shouldFetchVehicles(
- *   { tenantSlug: 'tenant-a', params: { page: { number: 1, size: 20 } } },
- *   store.getState()
- * );
- *
- * if (shouldFetch) {
- *   dispatch(fetchVehicles({ tenantSlug: 'tenant-a' }));
- * }
- * ```
  */
 export function shouldFetchVehicles(args: FetchVehiclesArgs, state: RootState): boolean {
   const tenantSlug = args?.tenantSlug;
@@ -137,22 +137,21 @@ export function shouldFetchVehicles(args: FetchVehiclesArgs, state: RootState): 
   const requestedPage = args.params?.page?.number ?? 1;
   const requestedSize = args.params?.page?.size ?? tenantState.lastPageSize ?? 10;
 
+  const requestedFiltersSig = stableFiltersSig(args.params?.filters);
+  const lastFiltersSig = tenantState.lastFiltersSig ?? stableFiltersSig(undefined);
+
   if (!lastFetchedAt) return true;
 
-  if (
-    tenantState.lastPage !== requestedPage ||
-    tenantState.lastPageSize !== requestedSize
-  ) {
+  if (requestedFiltersSig !== lastFiltersSig) return true;
+
+  if (tenantState.lastPage !== requestedPage || tenantState.lastPageSize !== requestedSize) {
     return true;
   }
 
   const last = new Date(lastFetchedAt).getTime();
   if (Number.isNaN(last)) return true;
 
-  const now = Date.now();
-  const diff = now - last;
-
-  return diff > VEHICLES_CACHE_TTL_MS;
+  return (Date.now() - last) > VEHICLES_CACHE_TTL_MS;
 }
 
 /**
@@ -284,6 +283,8 @@ const vehiclesSlice = createSlice({
         tenantState.items = action.payload.items;
         tenantState.lastFetchedAt = new Date().toISOString();
         tenantState.pagination = action.payload.pagination;
+
+        tenantState.lastFiltersSig = stableFiltersSig(action.meta.arg.params?.filters);
 
         const requestedPage =
           action.meta.arg.params?.page?.number ??

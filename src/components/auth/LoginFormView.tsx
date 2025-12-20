@@ -103,6 +103,7 @@ export default function LoginFormView({
 
           <Box sx={{ mt: 1, width: '100%', display: 'flex', justifyContent: 'stretch' }}>
             <MobixButtonProgress
+              fullWidth
               isSubmitting={isSubmitting}
               variant="contained"
               onClick={undefined}
