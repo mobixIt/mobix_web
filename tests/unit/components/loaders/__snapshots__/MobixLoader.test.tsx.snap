@@ -3,16 +3,13 @@
 exports[`MobixLoader Component > matches the DOM snapshot to prevent visual regression 1`] = `
 <DocumentFragment>
   <div
-    class="MuiBox-root css-dvxtzn"
+    class="MuiBox-root"
   >
     <div
-      class="MuiBox-root css-1hhzass"
+      class="MuiBox-root"
     >
-      <div
-        class="css-aso4k9"
-      />
+      <div />
       <svg
-        class="css-klx8wn"
         viewBox="0 0 140 140"
       >
         <circle
@@ -22,7 +19,6 @@ exports[`MobixLoader Component > matches the DOM snapshot to prevent visual regr
         />
       </svg>
       <svg
-        class="css-4wj8eq"
         viewBox="0 0 140 140"
       >
         <circle
@@ -32,7 +28,6 @@ exports[`MobixLoader Component > matches the DOM snapshot to prevent visual regr
         />
       </svg>
       <svg
-        class="css-ywgdvw"
         viewBox="0 0 160 160"
       >
         <path
@@ -63,21 +58,19 @@ exports[`MobixLoader Component > matches the DOM snapshot to prevent visual regr
           pathLength="100"
         />
       </svg>
+      <div />
       <div
-        class="css-1ittna8"
+        class="s-1"
       />
       <div
-        class="s-1 css-1pu2lh4"
+        class="s-2"
       />
       <div
-        class="s-2 css-1pu2lh4"
-      />
-      <div
-        class="s-3 css-1pu2lh4"
+        class="s-3"
       />
     </div>
     <h3
-      class="MuiTypography-root MuiTypography-h3 css-18rgud5-MuiTypography-root"
+      class="MuiTypography-root MuiTypography-h3"
     >
       ACTIVANDO MOVILIDAD INTELIGENTE...
     </h3>

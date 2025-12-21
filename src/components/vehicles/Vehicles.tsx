@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Box, CircularProgress, Alert } from '@mui/material';
+import { Alert } from '@mui/material';
 import { IndexPageLayout } from '@/components/layout/index-page/IndexPageLayout';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -20,6 +20,8 @@ import PageHeaderSection from '@/components/layout/page-header/PageHeaderSection
 import { MobixTable } from '@/components/mobix/table';
 
 import { fetchVehiclesStats, selectVehiclesStatsError } from '@/store/slices/vehiclesStatsSlice';
+import { TableSkeletonContainer } from '@/components/mobix/table/TableSkeleton.styled';
+import { TableSkeleton } from '@/components/mobix/table/TableSkeleton'
 
 import {
   ALL_VEHICLE_COLUMNS,
@@ -141,13 +143,10 @@ const Vehicles: React.FC = () => {
   let table: React.ReactNode;
 
   const isVehiclesLoading = status === 'loading' || status === 'idle';
+  const shouldShowToolbarSkeleton = !permissionedTableReady || isVehiclesLoading;
 
   if (!permissionedTableReady) {
-    table = (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
-        <CircularProgress />
-      </Box>
-    );
+    table = <TableSkeletonContainer><TableSkeleton /></TableSkeletonContainer>;
   } else if (status === 'failed') {
     table = <Alert severity="error">No se pudo cargar la lista de vehículos.</Alert>;
   } else {
@@ -208,6 +207,7 @@ const Vehicles: React.FC = () => {
             <b>{totalCount}</b> vehículos en total
           </>
         }
+        isLoading={shouldShowToolbarSkeleton}
       />
     </div>
   );

@@ -16,7 +16,7 @@ vi.mock('@/components/mobix/button/MobixButton', async () => {
   const ReactLocal = ReactModule.default;
 
   const MobixButton = ReactLocal.forwardRef<HTMLButtonElement, MobixButtonMockProps>(
-    ({ children, ...props }, ref) => (
+    ({ children, fullWidth, ...props }, ref) => (
       <button ref={ref} type="button" {...props}>
         {children}
       </button>

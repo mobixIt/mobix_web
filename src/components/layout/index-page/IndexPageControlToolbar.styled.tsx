@@ -1,7 +1,7 @@
 'use client';
 
-import { styled } from '@mui/material/styles';
-import { Badge, Box, Chip, Paper, Typography } from '@mui/material';
+import { styled, Theme, CSSObject } from '@mui/material/styles';
+import { Badge, Box, Chip, Paper, Typography, keyframes } from '@mui/material';
 
 import { MobixButtonOutlined } from '@/components/mobix/button';
 
@@ -77,4 +77,56 @@ export const ToggleButton = styled(MobixButtonOutlined, {
     color: theme.palette.secondary.main,
     backgroundColor: theme.palette.action.hover,
   }),
+}));
+
+const mobixShimmer = keyframes`
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+`;
+
+const shimmerBase = (theme: Theme): CSSObject => ({
+  background: theme.palette.grey[200],
+  position: 'relative',
+  overflow: 'hidden',
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    inset: 0,
+    transform: 'translateX(-100%)',
+    background:
+      'linear-gradient(90deg, rgba(243,244,246,0) 0%, rgba(229,231,235,0.9) 50%, rgba(243,244,246,0) 100%)',
+    animation: `${mobixShimmer} 2s linear infinite`,
+  },
+});
+
+export const ToolbarSkeletonRow = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-start',
+  gap: theme.spacing(2),
+}));
+
+export const ToolbarSkeletonPill = styled('div')(({ theme }) => ({
+  height: 36,
+  width: 140,
+  borderRadius: Number(theme.shape.borderRadius) * 1.5,
+  ...shimmerBase(theme),
+}));
+
+export const ToolbarSkeletonChip = styled('div')(({ theme }) => ({
+  height: 24,
+  width: 90,
+  borderRadius: 999,
+  ...shimmerBase(theme),
+}));
+
+export const ToolbarSkeletonText = styled('div')(({ theme }) => ({
+  height: 16,
+  width: 120,
+  borderRadius: theme.shape.borderRadius,
+  ...shimmerBase(theme),
+}));
+
+export const ToolbarSkeletonSeparator = styled('div')(() => ({
+  flex: 1,
 }));

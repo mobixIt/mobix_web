@@ -132,7 +132,9 @@ export const HeatLegendItem = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const HeatLegendSwatch = styled('div')<{
+export const HeatLegendSwatch = styled('div', {
+  shouldForwardProp: (prop) => prop !== 'level',
+})<{
   level: 'light' | 'medium' | 'high' | 'critical';
 }>(({ theme, level }) => {
   const getBg = () => {
@@ -178,7 +180,10 @@ export const CalendarGrid = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1),
 }));
 
-export const HeatDayTile = styled(Box)<{
+export const HeatDayTile = styled(Box, {
+  shouldForwardProp: (prop) =>
+    prop !== 'heatLevel' && prop !== 'outsideMonth' && prop !== 'isCritical' && prop !== 'selected',
+})<{
   heatLevel: HeatLevel;
   selected?: boolean;
   outsideMonth?: boolean;
@@ -237,7 +242,9 @@ export const HeatDayTile = styled(Box)<{
   };
 });
 
-export const DayNumber = styled(Typography)<{
+export const DayNumber = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'outsideMonth',
+})<{
   outsideMonth?: boolean;
 }>(({ theme, outsideMonth }) => ({
   fontSize: '0.8rem',
@@ -252,7 +259,9 @@ export const DayDotsRow = styled(Box)(({ theme }) => ({
   gap: theme.spacing(0.25),
 }));
 
-export const DayDot = styled('span')<{
+export const DayDot = styled('span', {
+  shouldForwardProp: (prop) => prop !== 'variant',
+})<{
   variant: DayDotVariant;
 }>(({ theme, variant }) => {
   const mapColor: Record<DayDotVariant, string> = {
@@ -304,7 +313,9 @@ export const DayDetailChipsRow = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1),
 }));
 
-export const DayDetailChip = styled(Box)<{
+export const DayDetailChip = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'variant',
+})<{
   variant: 'critical' | 'important' | 'scheduled';
 }>(({ theme, variant }) => {
   const mapBg: Record<typeof variant, string> = {
@@ -368,7 +379,9 @@ export const DayEventHeaderLeft = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1),
 }));
 
-export const DayEventIconWrapper = styled(Box)<{
+export const DayEventIconWrapper = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'variant',
+})<{
   variant: EventPillVariant;
 }>(({ theme, variant }) => {
   const bgMap: Record<EventPillVariant, string> = {
@@ -405,7 +418,9 @@ export const DayEventTime = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-export const DayEventPill = styled(Box)<{
+export const DayEventPill = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'variant',
+})<{
   variant: 'critical' | 'urgent' | 'scheduled' | 'upcoming' | 'normal';
 }>(({ theme, variant }) => {
   const bgMap: Record<typeof variant, string> = {

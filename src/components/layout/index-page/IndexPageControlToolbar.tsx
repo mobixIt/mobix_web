@@ -14,6 +14,11 @@ import {
   FiltersBadge,
   ActiveFiltersChip,
   TotalText,
+  ToolbarSkeletonRow,
+  ToolbarSkeletonPill,
+  ToolbarSkeletonChip,
+  ToolbarSkeletonText,
+  ToolbarSkeletonSeparator,
 } from './IndexPageControlToolbar.styled';
 
 import type { IndexPageControlToolbarProps } from './IndexPageControlToolbar.types';
@@ -27,60 +32,71 @@ export default function IndexPageControlToolbar({
   totalCountText,
   onToggleStats,
   onToggleFilters,
+  isLoading = false,
 }: IndexPageControlToolbarProps) {
   const hasActiveFilters = activeFiltersCount > 0;
 
   return (
     <Root>
       <Card elevation={0}>
-        <Row>
-          <Left>
-            {showStatsToggle && (
-              <ToggleButton
-                variant="outlined"
-                color={showStats ? 'secondary' : 'accent'}
-                onClick={onToggleStats}
-                active={showStats}
-                startIcon={<BarChartIcon />}
-              >
-                Estadísticas
-              </ToggleButton>
-            )}
-
-            {showFiltersToggle && (
-              <FiltersBadge
-                color="primary"
-                variant="dot"
-                invisible={!hasActiveFilters}
-                overlap="circular"
-              >
+        {isLoading ? (
+          <ToolbarSkeletonRow>
+            <ToolbarSkeletonPill />
+            <ToolbarSkeletonPill />
+            <ToolbarSkeletonChip />
+            <ToolbarSkeletonSeparator />
+            <ToolbarSkeletonText />
+          </ToolbarSkeletonRow>
+        ) : (
+          <Row>
+            <Left>
+              {showStatsToggle && (
                 <ToggleButton
                   variant="outlined"
                   color={showStats ? 'secondary' : 'accent'}
-                  onClick={onToggleFilters}
-                  active={showFilters}
-                  startIcon={<FilterListIcon />}
+                  onClick={onToggleStats}
+                  active={showStats}
+                  startIcon={<BarChartIcon />}
                 >
-                  Filtros
+                  Estadísticas
                 </ToggleButton>
-              </FiltersBadge>
-            )}
+              )}
 
-            {showFiltersToggle && hasActiveFilters && (
-              <ActiveFiltersChip
-                color="primary"
-                variant="outlined"
-                label={`${activeFiltersCount} filtro${activeFiltersCount === 1 ? '' : 's'} activo${
-                  activeFiltersCount === 1 ? '' : 's'
-                }`}
-              />
-            )}
-          </Left>
+              {showFiltersToggle && (
+                <FiltersBadge
+                  color="primary"
+                  variant="dot"
+                  invisible={!hasActiveFilters}
+                  overlap="circular"
+                >
+                  <ToggleButton
+                    variant="outlined"
+                    color={showFilters ? 'secondary' : 'accent'}
+                    onClick={onToggleFilters}
+                    active={showFilters}
+                    startIcon={<FilterListIcon />}
+                  >
+                    Filtros
+                  </ToggleButton>
+                </FiltersBadge>
+              )}
 
-          <Right>
-            {totalCountText ? <TotalText>{totalCountText}</TotalText> : null}
-          </Right>
-        </Row>
+              {showFiltersToggle && hasActiveFilters && (
+                <ActiveFiltersChip
+                  color="primary"
+                  variant="outlined"
+                  label={`${activeFiltersCount} filtro${activeFiltersCount === 1 ? '' : 's'} activo${
+                    activeFiltersCount === 1 ? '' : 's'
+                  }`}
+                />
+              )}
+            </Left>
+
+            <Right>
+              {totalCountText ? <TotalText>{totalCountText}</TotalText> : null}
+            </Right>
+          </Row>
+        )}
       </Card>
     </Root>
   );

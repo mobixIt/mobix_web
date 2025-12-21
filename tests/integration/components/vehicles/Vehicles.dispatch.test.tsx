@@ -1,6 +1,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from '@/theme';
 
 import Vehicles from '@/components/vehicles';
 
@@ -259,6 +261,14 @@ vi.mock('@/components/vehicles/VehiclesFilters', () => ({
   default: () => <div data-testid="vehicles-filters" />,
 }));
 
+function renderVehicles() {
+  return render(
+    <ThemeProvider theme={theme}>
+      <Vehicles />
+    </ThemeProvider>,
+  );
+}
+
 describe('Vehicles component integration between dispatch, pagination and MobixTable props', () => {
   beforeEach(() => {
     dispatchMock.mockClear();
@@ -279,7 +289,7 @@ describe('Vehicles component integration between dispatch, pagination and MobixT
   it('dispatches fetchVehiclesStats on mount when tenantSlug is available and permissions allow stats', () => {
     const statsSliceMock = vi.mocked(vehiclesStatsSliceModule);
 
-    render(<Vehicles />);
+    renderVehicles();
 
     expect(statsSliceMock.fetchVehiclesStats).toHaveBeenCalledTimes(1);
     expect(statsSliceMock.fetchVehiclesStats).toHaveBeenCalledWith({ tenantSlug: 'coolitoral' });
@@ -341,7 +351,7 @@ describe('Vehicles component integration between dispatch, pagination and MobixT
       next: null,
     });
 
-    render(<Vehicles />);
+    renderVehicles();
 
     expect(lastTableProps).not.toBeNull();
     expect((lastTableProps?.rows ?? []).length).toBe(2);
@@ -352,7 +362,7 @@ describe('Vehicles component integration between dispatch, pagination and MobixT
   });
 
   it('maps delete callback ids to strings before invoking the alert action', () => {
-    render(<Vehicles />);
+    renderVehicles();
 
     const ids: DeleteIds = [1, '2', 3];
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
@@ -376,7 +386,7 @@ describe('Vehicles component integration between dispatch, pagination and MobixT
       isReady: false,
     });
 
-    render(<Vehicles />);
+    renderVehicles();
 
     expect(lastTableProps).toBeNull();
   });
@@ -403,7 +413,7 @@ describe('Vehicles component integration between dispatch, pagination and MobixT
       assign: assignMock,
     };
 
-    render(<Vehicles />);
+    renderVehicles();
 
     expect(assignMock).toHaveBeenCalledTimes(1);
     expect(assignMock).toHaveBeenCalledWith('/login');

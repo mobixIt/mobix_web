@@ -123,14 +123,16 @@ describe('MobixTable', () => {
     expect(screen.getByText('Carlos Gómez')).toBeInTheDocument();
   });
 
-  it('shows loading row when loading is true and keepPreviousData does not apply', () => {
+  it('shows skeleton when loading is true and keepPreviousData does not apply', () => {
     renderUserTable({
       rows: [],
       loading: true,
       keepPreviousData: false,
     });
 
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    // Primera carga sin datos usa el esqueleto, no la fila "Loading…"
+    expect(screen.getByTestId('driver-assignments-skeleton')).toBeInTheDocument();
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
   });
 
   it('shows empty state only when not loading and there are no rows on current page', () => {
@@ -439,6 +441,35 @@ describe('MobixTable', () => {
     expect(onRowClick).toHaveBeenCalledTimes(1);
   });
 
+  it('does not trigger onRowClick when expanding row details', async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+
+    renderWithTheme(
+      <MobixTable<UserRow>
+        title="Usuarios"
+        itemNameSingular="usuario"
+        itemNamePlural="usuarios"
+        rows={baseRows}
+        columns={baseColumns}
+        enableSelection
+        renderRowDetails={(row) => <div>{`Detalles de ${row.name}`}</div>}
+        onRowClick={onRowClick}
+      />,
+    );
+
+    const targetRow = screen
+      .getAllByRole('row')
+      .find((row) => within(row).queryByText('Juan Pérez'));
+    if (!targetRow) throw new Error('Target row not found');
+
+    const expandButton = within(targetRow).getAllByRole('button')[0];
+    await user.click(expandButton);
+
+    expect(onRowClick).not.toHaveBeenCalled();
+    expect(screen.getByText('Detalles de Juan Pérez')).toBeInTheDocument();
+  });
+
   it('expands row details without triggering onRowClick and renders the details content', async () => {
     const user = userEvent.setup();
     const onRowClick = vi.fn();
@@ -463,5 +494,111 @@ describe('MobixTable', () => {
 
     expect(onRowClick).not.toHaveBeenCalled();
     expect(screen.getByText('Detalles de Juan Pérez')).toBeInTheDocument();
+  });
+
+  it('does not fire pagination handlers while refreshing with keepPreviousData in server mode', async () => {
+    const user = userEvent.setup();
+    const onPageChange = vi.fn();
+    const onRowsPerPageChange = vi.fn();
+
+    renderWithTheme(
+      <MobixTable<UserRow>
+        title="Usuarios"
+        itemNameSingular="usuario"
+        itemNamePlural="usuarios"
+        rows={baseRows}
+        columns={baseColumns}
+        paginationMode="server"
+        page={0}
+        rowsPerPage={5}
+        totalCount={10}
+        loading
+        keepPreviousData
+        onPageChange={onPageChange}
+        onRowsPerPageChange={onRowsPerPageChange}
+      />,
+    );
+
+    await user.click(screen.getByLabelText('Go to next page'));
+    expect(onPageChange).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: '5' }));
+    expect(onRowsPerPageChange).not.toHaveBeenCalled();
+  });
+
+  it('calls onSortChange in server mode without mutating local order when sort is already set', async () => {
+    const user = userEvent.setup();
+    const onSortChange = vi.fn();
+
+    renderWithTheme(
+      <MobixTable<UserRow>
+        title="Usuarios"
+        itemNameSingular="usuario"
+        itemNamePlural="usuarios"
+        rows={baseRows}
+        columns={baseColumns}
+        sortMode="server"
+        sort={{ field: 'name', direction: 'asc' }}
+        onSortChange={onSortChange}
+      />,
+    );
+
+    const before = getBodyRowTextsByColumnHeader('Nombre');
+    const header = screen.getByRole('columnheader', { name: 'Nombre' });
+    const sortButton = within(header).getByRole('button');
+
+    await user.click(sortButton);
+
+    const after = getBodyRowTextsByColumnHeader('Nombre');
+    expect(onSortChange).toHaveBeenCalledTimes(1);
+    expect(after).toEqual(before);
+  });
+
+  it('persists only valid initialVisibleColumnIds and keeps order when storage key is missing', () => {
+    renderWithTheme(
+      <MobixTable<UserRow>
+        title="Usuarios"
+        itemNameSingular="usuario"
+        itemNamePlural="usuarios"
+        rows={baseRows}
+        columns={baseColumns}
+        enableColumnVisibility
+        enableSelection={false}
+        columnVisibilityStorageKey={undefined}
+        initialVisibleColumnIds={['name', 'status', 'unknown']}
+      />,
+    );
+
+    const headers = screen.getAllByRole('columnheader').map((h) => h.textContent?.trim());
+    expect(headers).toEqual(['Nombre', 'Estado']);
+  });
+
+  it('clears selection and notifies onSelectionChange after delete confirmation', async () => {
+    const user = userEvent.setup();
+    const onSelectionChange = vi.fn();
+    const onDeleteClick = vi.fn();
+
+    renderWithTheme(
+      <MobixTable<UserRow>
+        title="Usuarios"
+        itemNameSingular="usuario"
+        itemNamePlural="usuarios"
+        rows={baseRows}
+        columns={baseColumns}
+        enableSelection
+        enableDelete
+        onSelectionChange={onSelectionChange}
+        onDeleteClick={onDeleteClick}
+      />,
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    await user.click(checkboxes[1]);
+    await user.click(screen.getByLabelText('Delete'));
+    await user.click(screen.getByRole('button', { name: /eliminar/i }));
+
+    expect(onDeleteClick).toHaveBeenCalledWith([1], expect.any(Array));
+    expect(onSelectionChange).toHaveBeenLastCalledWith([], []);
   });
 });

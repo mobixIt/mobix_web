@@ -27,16 +27,19 @@ const dataBurst = keyframes`
   100% { stroke-dasharray: 0 100; stroke-dashoffset: -10; opacity: 0; }
 `;
 
+// CORREGIDO: Se incluye translate(-50%, -50%) para mantener el centrado durante la animación
 const coreHeartbeat = keyframes`
-  0%, 100% { transform: scale(1); background-color: #0B2436; }
-  10% { transform: scale(1.15); background-color: #2D968F; box-shadow: 0 0 0 6px rgba(45, 150, 143, 0.2); }
-  20% { transform: scale(1); }
+  0%, 100% { transform: translate(-50%, -50%) scale(1); background-color: #0B2436; }
+  10% { transform: translate(-50%, -50%) scale(1.15); background-color: #2D968F; box-shadow: 0 0 0 6px rgba(45, 150, 143, 0.2); }
+  20% { transform: translate(-50%, -50%) scale(1); }
 `;
 
+// CORREGIDO: Se incluye translate(-50%, -50%) en todos los pasos que tienen transform
+// Esto asegura que el punto de pivote sea siempre el centro exacto.
 const pingNode = keyframes`
-  0% { box-shadow: 0 0 0 0 rgba(45, 150, 143, 0.7); transform: scale(1); }
-  10% { transform: scale(1.2); background: #2D968F; border-color: #0B2436; }
-  70% { box-shadow: 0 0 0 10px rgba(45, 150, 143, 0); transform: scale(1); }
+  0% { box-shadow: 0 0 0 0 rgba(45, 150, 143, 0.7); transform: translate(-50%, -50%) scale(1); }
+  10% { transform: translate(-50%, -50%) scale(1.2); background: #2D968F; border-color: #0B2436; }
+  70% { box-shadow: 0 0 0 10px rgba(45, 150, 143, 0); transform: translate(-50%, -50%) scale(1); }
   100% { box-shadow: 0 0 0 0 rgba(45, 150, 143, 0); }
 `;
 
@@ -127,8 +130,11 @@ const Core = styled('div')(() => ({
   zIndex: 10,
   boxShadow: '0 0 0 4px rgba(255,255,255,0.5), 0 0 15px rgba(11, 36, 54, 0.3)',
   animation: `${coreHeartbeat} 2s ease-in-out infinite`,
-  top: '70px',
-  left: '70px',
+  // Coordenadas exactas del centro (160/2 = 80)
+  top: '80px',
+  left: '80px',
+  // Centrado inicial antes de que empiece la animación
+  transform: 'translate(-50%, -50%)',
 }));
 
 const Satellite = styled('div')(() => ({
@@ -140,9 +146,19 @@ const Satellite = styled('div')(() => ({
   borderRadius: '50%',
   zIndex: 5,
   boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-  '&.s-1': { top: '22px', left: '72px', animation: `${pingNode} 3s infinite 0.2s` },
-  '&.s-2': { top: '117px', left: '30px', animation: `${pingNode} 3s infinite 0.8s` },
-  '&.s-3': { top: '117px', left: '114px', animation: `${pingNode} 3s infinite 1.4s` },
+  boxSizing: 'border-box',
+  // Centrado inicial. La animación 'pingNode' ahora también incluye este translate.
+  transform: 'translate(-50%, -50%)',
+  
+  // Coordenadas exactas de los puntos finales del SVG (M80,30 etc)
+  // s-1 (Norte): x=80, y=30
+  '&.s-1': { top: '30px', left: '80px', animation: `${pingNode} 3s infinite 0.2s` },
+  
+  // s-2 (Sur-Izq): x=38, y=125
+  '&.s-2': { top: '125px', left: '38px', animation: `${pingNode} 3s infinite 0.8s` },
+  
+  // s-3 (Sur-Der): x=122, y=125
+  '&.s-3': { top: '125px', left: '122px', animation: `${pingNode} 3s infinite 1.4s` },
 }));
 
 const LoadingText = styled(Typography)(() => ({
@@ -170,6 +186,7 @@ export default function MobixLoader() {
         </OrbitRingInner>
 
         <DataNetwork viewBox="0 0 160 160">
+          {/* Línea vertical superior */}
           <path className="connection-line" d="M80,80 L80,30" />
           <path className="data-packet dp-1" d="M80,80 L80,30" pathLength="100" />
 
@@ -181,6 +198,7 @@ export default function MobixLoader() {
         </DataNetwork>
 
         <Core />
+        {/* Satellite s-1 debe estar en 80,30 */}
         <Satellite className="s-1" />
         <Satellite className="s-2" />
         <Satellite className="s-3" />

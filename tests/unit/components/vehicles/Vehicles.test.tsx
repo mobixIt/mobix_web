@@ -1,6 +1,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from '@/theme';
 
 import Vehicles from '@/components/vehicles';
 import * as vehiclesSliceModule from '@/store/slices/vehiclesSlice';
@@ -248,6 +250,14 @@ vi.mock('@/components/vehicles/VehiclesStatsCards', () => ({
   ),
 }));
 
+function renderVehicles() {
+  return render(
+    <ThemeProvider theme={theme}>
+      <Vehicles />
+    </ThemeProvider>,
+  );
+}
+
 describe('Vehicles integration (dispatch + permissions + pagination + layout wiring)', () => {
   let originalLocation: Location;
 
@@ -324,7 +334,7 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
   });
 
   it('wires tenantSlug + page + rowsPerPage into VehiclesFilters (no fetchVehicles dispatch in Vehicles)', () => {
-    render(<Vehicles />);
+    renderVehicles();
 
     expect(lastFiltersProps).not.toBeNull();
     expect(lastFiltersProps?.tenantSlug).toBe('coolitoral');
@@ -351,7 +361,7 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
       next: null,
     });
 
-    render(<Vehicles />);
+    renderVehicles();
 
     expect(lastTableProps).not.toBeNull();
     expect(lastTableProps?.paginationMode).toBe('server');
@@ -363,7 +373,7 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
   });
 
   it('shows loading fallback when permissioned table is not ready', () => {
-    vi.mocked(permissionedTableModule.usePermissionedTable).mockReturnValueOnce({
+    vi.mocked(permissionedTableModule.usePermissionedTable).mockReturnValue({
       columns: [],
       defaultVisibleColumnIds: [],
       columnVisibilityStorageKey: 'vehicles-table-columns',
@@ -371,8 +381,9 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
       isReady: false,
     });
 
-    render(<Vehicles />);
+    const { getByTestId } = renderVehicles();
 
+    expect(getByTestId('driver-assignments-skeleton')).toBeInTheDocument();
     // MobixTable should not render in this branch
     expect(lastTableProps).toBeNull();
   });
@@ -380,7 +391,7 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
   it('shows error alert when vehicles status is failed', () => {
     vi.mocked(vehiclesSliceModule.selectVehiclesStatus).mockReturnValueOnce('failed');
 
-    render(<Vehicles />);
+    renderVehicles();
 
     expect(lastTableProps).toBeNull();
   });
@@ -388,7 +399,7 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
   it('maps delete callback ids to strings before invoking the alert action', () => {
     vi.mocked(vehiclesSliceModule.selectVehiclesStatus).mockReturnValueOnce('succeeded');
 
-    render(<Vehicles />);
+    renderVehicles();
 
     const ids: DeleteIds = [1, '2', 3];
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
@@ -404,7 +415,7 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
   it('resets page to 0 when rowsPerPage changes', () => {
     vi.mocked(vehiclesSliceModule.selectVehiclesStatus).mockReturnValueOnce('succeeded');
 
-    render(<Vehicles />);
+    renderVehicles();
 
     expect(lastTableProps?.page).toBe(0);
     expect(lastTableProps?.rowsPerPage).toBe(10);
@@ -425,7 +436,7 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
   });
 
   it('updates activeFiltersCount in layout when VehiclesFilters reports applied filters', () => {
-    render(<Vehicles />);
+    renderVehicles();
 
     expect(lastLayoutProps?.activeFiltersCount).toBe(0);
 
@@ -444,7 +455,7 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
       return false;
     });
 
-    render(<Vehicles />);
+    renderVehicles();
 
     expect(vehiclesStatsSliceModule.fetchVehiclesStats).toHaveBeenCalledTimes(1);
     expect(dispatchMock).toHaveBeenCalledTimes(1);
@@ -467,7 +478,7 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
       (): { message: string; status?: number } => ({ message: 'Unauthorized', status: 401 }),
     );
 
-    render(<Vehicles />);
+    renderVehicles();
 
     expect((window.location.assign as unknown as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
     expect((window.location.assign as unknown as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(

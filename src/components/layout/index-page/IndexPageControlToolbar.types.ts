@@ -16,6 +16,8 @@ export type IndexPageControlToolbarProps = {
 
   totalCountText?: React.ReactNode;
 
+  isLoading?: boolean;
+
   onToggleStats: () => void;
   onToggleFilters: () => void;
 };

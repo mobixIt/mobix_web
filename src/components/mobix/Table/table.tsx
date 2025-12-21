@@ -38,6 +38,7 @@ import {
   StyledCheckbox,
   TableTopProgress,
 } from './styles';
+import TableSkeleton from './TableSkeleton';
 
 import type { MobixTableProps } from './types';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS } from './constants';
@@ -154,9 +155,16 @@ export function MobixTable<T extends { id: Key }>(
     React.useState<null | HTMLElement>(null);
   const [columnsMenuAnchorEl, setColumnsMenuAnchorEl] =
     React.useState<null | HTMLElement>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false);
 
   const isDownloadMenuOpen = Boolean(downloadAnchorEl);
   const isColumnsMenuOpen = Boolean(columnsMenuAnchorEl);
+
+  React.useEffect(() => {
+    if (!loading) {
+      setHasLoadedOnce(true);
+    }
+  }, [loading]);
 
   /* ---------------------------------------------------------------------- */
   /*                          COLUMN VISIBILITY STATE                        */
@@ -330,7 +338,8 @@ export function MobixTable<T extends { id: Key }>(
 
   const keepPreviousData = props.keepPreviousData ?? false;
   const isRefreshing = Boolean(loading && keepPreviousData && rows.length > 0);
-  const shouldShowLoadingRow = Boolean(loading && !isRefreshing);
+  const shouldShowSkeleton = Boolean(loading && !hasLoadedOnce && rows.length === 0);
+  const shouldShowLoadingRow = Boolean(loading && !isRefreshing && !shouldShowSkeleton);
   const interactionDisabled = isRefreshing;
 
   /* ---------------------------------------------------------------------- */
@@ -615,170 +624,171 @@ export function MobixTable<T extends { id: Key }>(
   return (
     <>
       <Root>
-        <ToolbarRoot hasSelection={hasSelection}>
-          <ToolbarContent>
-            <TableName variant="h1">
-              {hasSelection
-                ? formatSelectedItems(selectedIds.length)
-                : title}
-            </TableName>
+        {!shouldShowSkeleton && (
+          <ToolbarRoot hasSelection={hasSelection}>
+            <ToolbarContent>
+              <TableName variant="h1">
+                {hasSelection
+                  ? formatSelectedItems(selectedIds.length)
+                  : title}
+              </TableName>
 
-            <ToolbarActions>
-              {!hasSelection && renderToolbarActions}
+              <ToolbarActions>
+                {!hasSelection && renderToolbarActions}
 
-              {isDownloadEnabled && !hasSelection && (
-                <>
-                  <Tooltip title="Descargar registros">
-                    <IconButton
-                      aria-label="Download"
-                      onClick={handleDownloadClick}
-                     color="info"
-                    >
-                      <SaveAlt />
-                    </IconButton>
-                  </Tooltip>
-
-                  <Menu
-                    id="mobix-download-menu"
-                    anchorEl={downloadAnchorEl}
-                    open={
-                      isDownloadMenuOpen &&
-                      resolvedDownloadFormats.length > 1
-                    }
-                    onClose={handleCloseDownloadMenu}
-                  >
-                    {resolvedDownloadFormats.map((format) => (
-                      <MenuItem
-                        key={format}
-                        onClick={() =>
-                          handleSelectDownloadFormat(format)
-                        }
+                {isDownloadEnabled && !hasSelection && (
+                  <>
+                    <Tooltip title="Descargar registros">
+                      <IconButton
+                        aria-label="Download"
+                        onClick={handleDownloadClick}
+                      color="info"
                       >
-                        {format === 'pdf' && (
-                          <Icon
-                            path={mdiFilePdfBox}
-                            size={0.9}
-                            style={{ marginRight: 8 }}
-                          />
-                        )}
+                        <SaveAlt />
+                      </IconButton>
+                    </Tooltip>
 
-                        {format === 'xls' && (
-                          <Icon
-                            path={mdiFileExcel}
-                            size={0.9}
-                            style={{ marginRight: 8 }}
-                          />
-                        )}
-
-                        {formatDownloadLabel(format)}
-                      </MenuItem>
-                    ))}
-                  </Menu>
-                </>
-              )}
-
-              {isDeleteEnabled && hasSelection && (
-                <Tooltip title="Eliminar registros seleccionados">
-                  <IconButton
-                    aria-label="Delete"
-                    onClick={handleOpenDeleteDialog}
-                   color="info"
-                  >
-                    <Delete />
-                  </IconButton>
-                </Tooltip>
-              )}
-
-              {enableColumnVisibility && !hasSelection && (
-                <>
-                  <Tooltip title="Mostrar selector de columnas">
-                    <IconButton
-                      aria-label="Mostrar selector de columnas"
-                      onClick={handleOpenColumnsMenu}
-                     color="info"
+                    <Menu
+                      id="mobix-download-menu"
+                      anchorEl={downloadAnchorEl}
+                      open={
+                        isDownloadMenuOpen &&
+                        resolvedDownloadFormats.length > 1
+                      }
+                      onClose={handleCloseDownloadMenu}
                     >
-                      <ViewColumn />
-                    </IconButton>
-                  </Tooltip>
-
-                  <Menu
-                    id="mobix-columns-menu"
-                    anchorEl={columnsMenuAnchorEl}
-                    open={isColumnsMenuOpen}
-                    onClose={handleCloseColumnsMenu}
-                  >
-                    {columns.map((col) => {
-                      const colId = String(col.id);
-                      const checked =
-                        visibleColumnIds.includes(colId);
-                      const hideable =
-                        col.hideable !== false;
-
-                      return (
+                      {resolvedDownloadFormats.map((format) => (
                         <MenuItem
-                          key={col.id}
-                          dense
-                          disabled={!hideable}
+                          key={format}
                           onClick={() =>
-                            hideable &&
-                            handleToggleColumnVisibility(colId)
+                            handleSelectDownloadFormat(format)
                           }
                         >
-                          <StyledCheckbox
-                            checked={checked}
+                          {format === 'pdf' && (
+                            <Icon
+                              path={mdiFilePdfBox}
+                              size={0.9}
+                              style={{ marginRight: 8 }}
+                            />
+                          )}
+
+                          {format === 'xls' && (
+                            <Icon
+                              path={mdiFileExcel}
+                              size={0.9}
+                              style={{ marginRight: 8 }}
+                            />
+                          )}
+
+                          {formatDownloadLabel(format)}
+                        </MenuItem>
+                      ))}
+                    </Menu>
+                  </>
+                )}
+
+                {isDeleteEnabled && hasSelection && (
+                  <Tooltip title="Eliminar registros seleccionados">
+                    <IconButton
+                      aria-label="Delete"
+                      onClick={handleOpenDeleteDialog}
+                    color="info"
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Tooltip>
+                )}
+
+                {enableColumnVisibility && !hasSelection && (
+                  <>
+                    <Tooltip title="Mostrar selector de columnas">
+                      <IconButton
+                        aria-label="Mostrar selector de columnas"
+                        onClick={handleOpenColumnsMenu}
+                      color="info"
+                      >
+                        <ViewColumn />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Menu
+                      id="mobix-columns-menu"
+                      anchorEl={columnsMenuAnchorEl}
+                      open={isColumnsMenuOpen}
+                      onClose={handleCloseColumnsMenu}
+                    >
+                      {columns.map((col) => {
+                        const colId = String(col.id);
+                        const checked =
+                          visibleColumnIds.includes(colId);
+                        const hideable =
+                          col.hideable !== false;
+
+                        return (
+                          <MenuItem
+                            key={col.id}
+                            dense
                             disabled={!hideable}
-                            size="small"
-                            sx={{ mr: 1 }}
-                          />
+                            onClick={() =>
+                              hideable &&
+                              handleToggleColumnVisibility(colId)
+                            }
+                          >
+                            <StyledCheckbox
+                              checked={checked}
+                              disabled={!hideable}
+                              size="small"
+                              sx={{ mr: 1 }}
+                            />
+                            <Typography variant="body2">
+                              {col.label}
+                            </Typography>
+                          </MenuItem>
+                        );
+                      })}
+
+                      <Divider />
+
+                      {onSaveColumnVisibility && (
+                        <MenuItem
+                          dense
+                          onClick={handleSaveColumnsSelection}
+                        >
                           <Typography variant="body2">
-                            {col.label}
+                            Guardar selección
                           </Typography>
                         </MenuItem>
-                      );
-                    })}
+                      )}
 
-                    <Divider />
-
-                    {onSaveColumnVisibility && (
-                      <MenuItem
-                        dense
-                        onClick={handleSaveColumnsSelection}
-                      >
+                      <MenuItem dense onClick={handleShowAllColumns}>
                         <Typography variant="body2">
-                          Guardar selección
+                          Mostrar todas
                         </Typography>
                       </MenuItem>
-                    )}
 
-                    <MenuItem dense onClick={handleShowAllColumns}>
-                      <Typography variant="body2">
-                        Mostrar todas
-                      </Typography>
-                    </MenuItem>
+                      <MenuItem dense onClick={handleResetColumns}>
+                        <Typography variant="body2">
+                          Restablecer
+                        </Typography>
+                      </MenuItem>
+                    </Menu>
+                  </>
+                )}
+              </ToolbarActions>
+            </ToolbarContent>
 
-                    <MenuItem dense onClick={handleResetColumns}>
-                      <Typography variant="body2">
-                        Restablecer
-                      </Typography>
-                    </MenuItem>
-                  </Menu>
-                </>
-              )}
-            </ToolbarActions>
-          </ToolbarContent>
-
-          {renderBatchActions && hasSelection && (
-            <Box sx={{ px: 2, pb: 1 }}>
-              {renderBatchActions(
-                selectedIds,
-                rows.filter((r) =>
-                  selectedIds.includes(r.id),
-                ),
-              )}
-            </Box>
-          )}
-        </ToolbarRoot>
-
+            {renderBatchActions && hasSelection && (
+              <Box sx={{ px: 2, pb: 1 }}>
+                {renderBatchActions(
+                  selectedIds,
+                  rows.filter((r) =>
+                    selectedIds.includes(r.id),
+                  ),
+                )}
+              </Box>
+            )}
+          </ToolbarRoot>
+        )}
         <TablePaper>
           {isRefreshing && <TableTopProgress color="secondary" />}
           <TableContainer
@@ -789,176 +799,180 @@ export function MobixTable<T extends { id: Key }>(
                 theme.transitions.create(['opacity'], { duration: 200 }),
             }}
           >
-            <Table size="medium">
-              <TableHead>
-                <TableRow>
-                  {enableSelection && (
-                    <TableCell padding="checkbox">
-                      <StyledCheckbox
-                        indeterminate={
-                          hasSelection && !isAllPageSelected
-                        }
-                        checked={
-                          paginatedRows.length > 0 &&
-                          isAllPageSelected
-                        }
-                        onClick={(event) =>
-                          event.stopPropagation()
-                        }
-                        onChange={handleSelectAllOnPage}
-                      />
-                    </TableCell>
-                  )}
+            {shouldShowSkeleton ? (
+              <TableSkeleton />
+            ) : (
+              <Table size="medium">
+                <TableHead>
+                  <TableRow>
+                    {enableSelection && (
+                      <TableCell padding="checkbox">
+                        <StyledCheckbox
+                          indeterminate={
+                            hasSelection && !isAllPageSelected
+                          }
+                          checked={
+                            paginatedRows.length > 0 &&
+                            isAllPageSelected
+                          }
+                          onClick={(event) =>
+                            event.stopPropagation()
+                          }
+                          onChange={handleSelectAllOnPage}
+                        />
+                      </TableCell>
+                    )}
 
-                  {hasRowDetails && (
-                    <TableCell padding="checkbox" />
-                  )}
+                    {hasRowDetails && (
+                      <TableCell padding="checkbox" />
+                    )}
 
-                  {visibleColumns.map((col) => {
-                    const colId = String(col.id);
-                    const isSorted =
-                      !!effectiveSort &&
-                      effectiveSort.field === colId;
-                    const sortable =
-                      col.sortable !== false &&
-                      sortMode !== 'none';
+                    {visibleColumns.map((col) => {
+                      const colId = String(col.id);
+                      const isSorted =
+                        !!effectiveSort &&
+                        effectiveSort.field === colId;
+                      const sortable =
+                        col.sortable !== false &&
+                        sortMode !== 'none';
 
-                    return (
+                      return (
+                        <TableCell
+                          key={col.id}
+                          align={col.align ?? 'left'}
+                          sx={{ minWidth: col.minWidth }}
+                          sortDirection={
+                            isSorted
+                              ? effectiveSort?.direction
+                              : false
+                          }
+                        >
+                          {sortable ? (
+                            <TableSortLabel
+                              active={isSorted}
+                              direction={
+                                effectiveSort?.direction || 'asc'
+                              }
+                              onClick={() =>
+                                handleRequestSort(colId)
+                              }
+                            >
+                              {col.label}
+                            </TableSortLabel>
+                          ) : (
+                            col.label
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                </TableHead>
+
+                <TableBody>
+                  {shouldShowLoadingRow && (
+                    <TableRow>
                       <TableCell
-                        key={col.id}
-                        align={col.align ?? 'left'}
-                        sx={{ minWidth: col.minWidth }}
-                        sortDirection={
-                          isSorted
-                            ? effectiveSort?.direction
-                            : false
+                        colSpan={
+                          visibleColumns.length +
+                          (enableSelection ? 1 : 0) +
+                          (hasRowDetails ? 1 : 0)
                         }
                       >
-                        {sortable ? (
-                          <TableSortLabel
-                            active={isSorted}
-                            direction={
-                              effectiveSort?.direction || 'asc'
-                            }
-                            onClick={() =>
-                              handleRequestSort(colId)
-                            }
-                          >
-                            {col.label}
-                          </TableSortLabel>
-                        ) : (
-                          col.label
-                        )}
+                        <Typography variant="body2">Loading…</Typography>
                       </TableCell>
-                    );
-                  })}
-                </TableRow>
-              </TableHead>
+                    </TableRow>
+                  )}
 
-              <TableBody>
-                {shouldShowLoadingRow && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={
-                        visibleColumns.length +
-                        (enableSelection ? 1 : 0) +
-                        (hasRowDetails ? 1 : 0)
-                      }
-                    >
-                      <Typography variant="body2">Loading…</Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
+                  {!shouldShowLoadingRow && paginatedRows.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={
+                          visibleColumns.length +
+                          (enableSelection ? 1 : 0) +
+                          (hasRowDetails ? 1 : 0)
+                        }
+                      >
+                        {emptyStateContent ?? <Typography variant="body2">No data</Typography>}
+                      </TableCell>
+                    </TableRow>
+                  )}
 
-                {!shouldShowLoadingRow && paginatedRows.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={
-                        visibleColumns.length +
-                        (enableSelection ? 1 : 0) +
-                        (hasRowDetails ? 1 : 0)
-                      }
-                    >
-                      {emptyStateContent ?? <Typography variant="body2">No data</Typography>}
-                    </TableCell>
-                  </TableRow>
-                )}
+                  {!shouldShowLoadingRow &&
+                    paginatedRows.map((row) => {
+                      const open = openRowId === row.id;
+                      const isSelected = selectedRowSet.has(row.id);
 
-                {!shouldShowLoadingRow &&
-                  paginatedRows.map((row) => {
-                    const open = openRowId === row.id;
-                    const isSelected = selectedRowSet.has(row.id);
+                      return (
+                        <React.Fragment key={row.id}>
+                          <TableRow
+                            hover
+                            onClick={onRowClick ? () => onRowClick(row) : undefined}
+                            sx={{
+                              cursor: onRowClick ? 'pointer' : 'default',
+                            }}
+                          >
+                            {enableSelection && (
+                              <TableCell padding="checkbox">
+                                <StyledCheckbox
+                                  checked={isSelected}
+                                  onClick={(event) => event.stopPropagation()}
+                                  onChange={() => handleToggleRow(row.id)}
+                                />
+                              </TableCell>
+                            )}
 
-                    return (
-                      <React.Fragment key={row.id}>
-                        <TableRow
-                          hover
-                          onClick={onRowClick ? () => onRowClick(row) : undefined}
-                          sx={{
-                            cursor: onRowClick ? 'pointer' : 'default',
-                          }}
-                        >
-                          {enableSelection && (
-                            <TableCell padding="checkbox">
-                              <StyledCheckbox
-                                checked={isSelected}
-                                onClick={(event) => event.stopPropagation()}
-                                onChange={() => handleToggleRow(row.id)}
-                              />
-                            </TableCell>
-                          )}
+                            {hasRowDetails && (
+                              <TableCell padding="checkbox">
+                                <IconButton
+                                  size="small"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleToggleExpand(row.id);
+                                  }}
+                                >
+                                  {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+                                </IconButton>
+                              </TableCell>
+                            )}
+
+                            {visibleColumns.map((col) => (
+                              <TableCell key={col.id} align={col.align ?? 'left'}>
+                                {col.render
+                                  ? col.render(row)
+                                  : col.field
+                                    ? (row[col.field] as React.ReactNode)
+                                    : null}
+                              </TableCell>
+                            ))}
+                          </TableRow>
 
                           {hasRowDetails && (
-                            <TableCell padding="checkbox">
-                              <IconButton
-                                size="small"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleToggleExpand(row.id);
+                            <TableRow>
+                              <TableCell
+                                style={{
+                                  paddingBottom: 0,
+                                  paddingTop: 0,
                                 }}
+                                colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + 1}
                               >
-                                {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-                              </IconButton>
-                            </TableCell>
+                                <Collapse in={open} timeout="auto" unmountOnExit>
+                                  <Box sx={{ m: 2 }}>
+                                    <Divider sx={{ mb: 2 }} />
+                                    {renderRowDetailsContent(row)}
+                                  </Box>
+                                </Collapse>
+                              </TableCell>
+                            </TableRow>
                           )}
-
-                          {visibleColumns.map((col) => (
-                            <TableCell key={col.id} align={col.align ?? 'left'}>
-                              {col.render
-                                ? col.render(row)
-                                : col.field
-                                  ? (row[col.field] as React.ReactNode)
-                                  : null}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-
-                        {hasRowDetails && (
-                          <TableRow>
-                            <TableCell
-                              style={{
-                                paddingBottom: 0,
-                                paddingTop: 0,
-                              }}
-                              colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + 1}
-                            >
-                              <Collapse in={open} timeout="auto" unmountOnExit>
-                                <Box sx={{ m: 2 }}>
-                                  <Divider sx={{ mb: 2 }} />
-                                  {renderRowDetailsContent(row)}
-                                </Box>
-                              </Collapse>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-              </TableBody>
-            </Table>
+                        </React.Fragment>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            )}
           </TableContainer>
 
-          {enablePagination && (
+          {enablePagination && !shouldShowSkeleton && (
             <TablePagination
               component="div"
               count={effectiveTotalCount}
