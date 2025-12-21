@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useEffect, useRef } from 'react';
-import { Box, CircularProgress } from '@mui/material';
+import { Box } from '@mui/material';
 
 import { useSession } from '@/providers/SessionProvider';
 import { redirectToBaseLogin } from '@/utils/redirectToLogin';
@@ -21,6 +21,7 @@ import {
 } from '@/store/slices/permissionsSlice';
 
 import { ServerErrorPage } from '@/components/error-pages';
+import MobixLoader from '@/components/loaders/MobixLoader';
 
 type SecureContentProps = {
   children: React.ReactNode;
@@ -104,7 +105,7 @@ export function SecureContent({ children }: SecureContentProps) {
           bgcolor: 'background.default',
         }}
       >
-        <CircularProgress />
+       <MobixLoader />
       </Box>
     );
   }

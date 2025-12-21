@@ -1,0 +1,287 @@
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+
+// --- TYPES & INTERFACES ---
+
+type SessionStatus = 'loading' | 'invalid' | 'valid';
+type AuthStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
+
+type Membership = {
+  tenant: { slug: string };
+};
+
+type MembershipState = {
+  memberships: Membership[] | null;
+};
+
+// Definimos la estructura mínima del estado que consume el componente
+type MockRootState = {
+  auth: {
+    status: AuthStatus;
+    errorStatus: number | null;
+  };
+  permissions: {
+    membershipRaw: MembershipState | null;
+  };
+};
+
+// Definición estricta para acciones simuladas de Redux
+type MockAction = {
+  type: string;
+  payload?: unknown;
+};
+
+// --- MOCKS SETUP ---
+
+const dispatchSpy = vi.fn();
+const redirectToBaseLoginSpy = vi.fn();
+
+// Variables de control mutables para los mocks
+let mockSessionStatus: SessionStatus = 'loading';
+let mockTenantSlug: string | null = 'coolitoral';
+let mockState: MockRootState;
+
+// 1. Mock Session Provider
+vi.mock('@/providers/SessionProvider', () => ({
+  useSession: () => ({ status: mockSessionStatus }),
+}));
+
+// 2. Mock Redux (Base y Custom Hooks)
+// CORRECCIÓN CRÍTICA: useSelector ahora ejecuta el selector.
+// Esto evita que devuelva 'undefined' y rompa componentes que esperan datos.
+vi.mock('react-redux', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-redux')>();
+  return {
+    ...actual,
+    useSelector: (selector: (state: MockRootState) => unknown) => selector(mockState),
+    useDispatch: () => dispatchSpy,
+  };
+});
+
+vi.mock('@/store/hooks', () => ({
+  useAppDispatch: () => dispatchSpy,
+  useAppSelector: <T,>(selector: (state: MockRootState) => T) => selector(mockState),
+}));
+
+// 3. Mock Slices (Selectors & Actions)
+const mockFetchMeAction: MockAction = { type: 'auth/fetchMe' };
+const mockLoadPermissionsAction = (slug: string): MockAction => ({ 
+  type: 'permissions/loadTenantPermissions', 
+  payload: slug 
+});
+
+// Mock Auth Slice
+vi.mock('@/store/slices/authSlice', () => ({
+  fetchMe: () => mockFetchMeAction,
+  selectAuthStatus: (state: MockRootState) => state.auth.status,
+  selectAuthErrorStatus: (state: MockRootState) => state.auth.errorStatus,
+  selectCurrentPerson: vi.fn(() => null),
+}));
+
+// Mock Permissions Slice
+vi.mock('@/store/slices/permissionsSlice', () => ({
+  loadTenantPermissions: (slug: string) => mockLoadPermissionsAction(slug),
+  selectMembershipRaw: (state: MockRootState) => state.permissions.membershipRaw,
+  selectEffectiveModules: vi.fn(() => []), // Retorna array vacío para evitar crash en Sidebar
+}));
+
+// 4. Mock Utils & Libs
+vi.mock('@/utils/redirectToLogin', () => ({
+  redirectToBaseLogin: () => redirectToBaseLoginSpy(),
+}));
+
+vi.mock('@/lib/getTenantSlugFromHost', () => ({
+  getTenantSlugFromHost: () => mockTenantSlug,
+}));
+
+// 5. Mock UI Components
+vi.mock('@/components/loaders/MobixLoader', () => ({
+  default: () => <div data-testid="mobix-loader-mock" />,
+}));
+
+vi.mock('@/components/error-pages', () => ({
+  ServerErrorPage: () => <div data-testid="server-error-page-mock" />,
+}));
+
+// CORRECCIÓN CRÍTICA: Usar path absoluto (alias) para mockear SecureLayout.
+// Usar './SecureLayout' fallaba porque es relativo al archivo de test, no al componente.
+// Al no encontrar el mock, usaba el real, que renderizaba el Sidebar y causaba el crash.
+vi.mock('@/components/layout/secure/SecureLayout', () => ({
+  SecureLayout: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="secure-layout-mock">{children}</div>
+  ),
+}));
+
+// Importación del componente a probar
+import { SecureContent } from '@/components/layout/secure/SecureContent';
+
+// --- SUITE DE PRUEBAS ---
+
+describe('SecureContent Logic', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    
+    // Reset Default State
+    mockSessionStatus = 'loading';
+    mockTenantSlug = 'coolitoral';
+    mockState = {
+      auth: { status: 'idle', errorStatus: null },
+      permissions: { membershipRaw: null },
+    };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders the loading state while session is initializing', () => {
+    mockSessionStatus = 'loading';
+    mockState.auth.status = 'idle';
+
+    render(
+      <SecureContent>
+        <div data-testid="protected-child" />
+      </SecureContent>
+    );
+
+    expect(screen.getByTestId('mobix-loader-mock')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-child')).not.toBeInTheDocument();
+    expect(dispatchSpy).not.toHaveBeenCalled();
+  });
+
+  it('redirects to login and renders nothing when session is invalid', async () => {
+    mockSessionStatus = 'invalid';
+    mockState.auth.status = 'failed'; 
+
+    const { container } = render(
+      <SecureContent>
+        <div data-testid="protected-child" />
+      </SecureContent>
+    );
+
+    await waitFor(() => {
+      expect(redirectToBaseLoginSpy).toHaveBeenCalledTimes(1);
+    });
+
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('dispatches fetchMe when session is valid but auth is idle', async () => {
+    mockSessionStatus = 'valid';
+    mockState.auth.status = 'idle';
+
+    render(
+      <SecureContent>
+        <div data-testid="protected-child" />
+      </SecureContent>
+    );
+
+    await waitFor(() => {
+      expect(dispatchSpy).toHaveBeenCalledWith(mockFetchMeAction);
+    });
+    
+    expect(screen.getByTestId('mobix-loader-mock')).toBeInTheDocument();
+  });
+
+  it('dispatches loadTenantPermissions when auth succeeds but tenant membership is missing', async () => {
+    mockSessionStatus = 'valid';
+    mockState.auth.status = 'succeeded';
+    mockTenantSlug = 'coolitoral';
+    
+    mockState.permissions.membershipRaw = { 
+      memberships: [{ tenant: { slug: 'other-tenant' } }] 
+    };
+
+    render(
+      <SecureContent>
+        <div data-testid="protected-child" />
+      </SecureContent>
+    );
+
+    await waitFor(() => {
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ 
+          type: 'permissions/loadTenantPermissions', 
+          payload: 'coolitoral' 
+        })
+      );
+    });
+  });
+
+  it('does not dispatch permissions load if user already has membership for current tenant', async () => {
+    mockSessionStatus = 'valid';
+    mockState.auth.status = 'succeeded';
+    mockTenantSlug = 'coolitoral';
+    
+    mockState.permissions.membershipRaw = { 
+      memberships: [{ tenant: { slug: 'coolitoral' } }] 
+    };
+
+    render(
+      <SecureContent>
+        <div data-testid="protected-child" />
+      </SecureContent>
+    );
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const calls = dispatchSpy.mock.calls.map(call => call[0] as MockAction);
+    const permissionCalls = calls.filter((action) => 
+      action.type === 'permissions/loadTenantPermissions'
+    );
+
+    expect(permissionCalls).toHaveLength(0);
+    expect(screen.getByTestId('secure-layout-mock')).toBeInTheDocument();
+  });
+
+  it('redirects to login on 401 authentication error', async () => {
+    mockSessionStatus = 'valid';
+    mockState.auth.status = 'failed';
+    mockState.auth.errorStatus = 401;
+
+    render(
+      <SecureContent>
+        <div data-testid="protected-child" />
+      </SecureContent>
+    );
+
+    await waitFor(() => {
+      expect(redirectToBaseLoginSpy).toHaveBeenCalled();
+    });
+  });
+
+  it('renders server error page on 500 authentication error', () => {
+    mockSessionStatus = 'valid';
+    mockState.auth.status = 'failed';
+    mockState.auth.errorStatus = 500;
+
+    render(
+      <SecureContent>
+        <div data-testid="protected-child" />
+      </SecureContent>
+    );
+
+    expect(screen.getByTestId('server-error-page-mock')).toBeInTheDocument();
+    expect(screen.queryByTestId('mobix-loader-mock')).not.toBeInTheDocument();
+  });
+
+  it('renders children inside SecureLayout when everything is valid', () => {
+    mockSessionStatus = 'valid';
+    mockState.auth.status = 'succeeded';
+    mockTenantSlug = 'coolitoral';
+    mockState.permissions.membershipRaw = { 
+      memberships: [{ tenant: { slug: 'coolitoral' } }] 
+    };
+
+    render(
+      <SecureContent>
+        <div data-testid="protected-child">Content</div>
+      </SecureContent>
+    );
+
+    expect(screen.getByTestId('secure-layout-mock')).toBeInTheDocument();
+    expect(screen.getByText('Content')).toBeInTheDocument();
+    expect(screen.queryByTestId('mobix-loader-mock')).not.toBeInTheDocument();
+  });
+});
