@@ -24,8 +24,8 @@ export type IndexPageSkeletonProps = {
 };
 
 export function IndexPageSkeleton({
-  showStats = false,
-  showFilters = false,
+  showStats = true,
+  showFilters = true,
   showTable = true,
   showHeaderAction = true,
 }: IndexPageSkeletonProps) {
