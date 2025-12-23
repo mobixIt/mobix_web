@@ -1,16 +1,22 @@
 import * as React from 'react';
 import { Suspense } from 'react';
-import Vehicles from '@/components/vehicles';
+import { StrategyOrchestrator } from '@/components/strategy/StrategyOrchestrator';
 import IndexPageSkeleton from '@/components/layout/index-page/IndexPageSkeleton';
+import { resolveModuleStrategy } from '@/lib/strategy/resolveModuleStrategy';
 
 export const metadata = {
   title: 'Vehículos | Mobix',
 };
 
-export default function VehiclesPage() {
+export default async function VehiclesPage() {
+  const strategy = await resolveModuleStrategy('vehicles');
+
   return (
     <Suspense fallback={<IndexPageSkeleton showStats={false} showFilters={false} />}>
-      <Vehicles />
+      <StrategyOrchestrator
+        module="vehicles"
+        strategy={strategy}
+      />
     </Suspense>
   );
 }
