@@ -339,10 +339,10 @@ describe('Vehicles component integration between dispatch, pagination and MobixT
       },
     ];
 
-    vehiclesSliceMock.selectVehicles.mockReturnValueOnce(testVehicles);
-    vehiclesSliceMock.selectVehiclesStatus.mockReturnValueOnce('succeeded');
+    vehiclesSliceMock.selectVehicles.mockReturnValue(testVehicles);
+    vehiclesSliceMock.selectVehiclesStatus.mockReturnValue('succeeded');
 
-    vehiclesSliceMock.selectVehiclesPagination.mockReturnValueOnce({
+    vehiclesSliceMock.selectVehiclesPagination.mockReturnValue({
       page: 1,
       per_page: 10,
       pages: 1,

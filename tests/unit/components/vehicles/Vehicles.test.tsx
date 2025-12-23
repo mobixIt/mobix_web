@@ -162,14 +162,15 @@ vi.mock('@mui/material', async () => {
   };
 });
 
-interface IndexPageLayoutProps {
+type IndexPageLayoutProps = {
   header: React.ReactNode;
   statsCards?: React.ReactNode;
   filters?: React.ReactNode;
   table?: React.ReactNode;
   activeFiltersCount?: number;
   totalCountText?: React.ReactNode;
-}
+  isLoading?: boolean;
+};
 
 let lastLayoutProps: IndexPageLayoutProps | null = null;
 
@@ -350,15 +351,22 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
       { id: 2, plate: 'BBB222', model_year: '2021', status: 'inactive' },
     ] as unknown as Vehicle[];
 
-    vi.mocked(vehiclesSliceModule.selectVehicles).mockReturnValueOnce(testVehicles);
-    vi.mocked(vehiclesSliceModule.selectVehiclesStatus).mockReturnValueOnce('succeeded');
-    vi.mocked(vehiclesSliceModule.selectVehiclesPagination).mockReturnValueOnce({
+    vi.mocked(vehiclesSliceModule.selectVehicles).mockReturnValue(testVehicles);
+    vi.mocked(vehiclesSliceModule.selectVehiclesStatus).mockReturnValue('succeeded');
+    vi.mocked(vehiclesSliceModule.selectVehiclesPagination).mockReturnValue({
       page: 1,
       per_page: 10,
       pages: 1,
       count: 2,
       prev: null,
       next: null,
+    });
+    vi.mocked(permissionedTableModule.usePermissionedTable).mockReturnValue({
+      columns: [],
+      defaultVisibleColumnIds: [],
+      columnVisibilityStorageKey: 'vehicles-table-columns',
+      permissionsReady: true,
+      isReady: true,
     });
 
     renderVehicles();
@@ -389,7 +397,14 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
   });
 
   it('shows error alert when vehicles status is failed', () => {
-    vi.mocked(vehiclesSliceModule.selectVehiclesStatus).mockReturnValueOnce('failed');
+    vi.mocked(vehiclesSliceModule.selectVehiclesStatus).mockReturnValue('failed');
+    vi.mocked(permissionedTableModule.usePermissionedTable).mockReturnValue({
+      columns: [],
+      defaultVisibleColumnIds: [],
+      columnVisibilityStorageKey: 'vehicles-table-columns',
+      permissionsReady: true,
+      isReady: true,
+    });
 
     renderVehicles();
 
@@ -433,6 +448,42 @@ describe('Vehicles integration (dispatch + permissions + pagination + layout wir
     // Contract: onRowsPerPageChange sets rowsPerPage and resets page to 0
     expect(lastTableProps?.rowsPerPage).toBe(25);
     expect(lastTableProps?.page).toBe(0);
+  });
+
+  it('shows toolbar skeleton only before first load resolves', async () => {
+    vi.mocked(permissionedTableModule.usePermissionedTable).mockReturnValue({
+      columns: [],
+      defaultVisibleColumnIds: [],
+      columnVisibilityStorageKey: 'vehicles-table-columns',
+      permissionsReady: true,
+      isReady: true,
+    });
+
+    vi.mocked(vehiclesSliceModule.selectVehiclesStatus).mockReturnValue('loading');
+
+    const { rerender } = renderVehicles();
+
+    expect(lastLayoutProps?.isLoading).toBe(true);
+
+    vi.mocked(vehiclesSliceModule.selectVehiclesStatus).mockReturnValue('succeeded');
+    await act(async () => {
+      rerender(
+        <ThemeProvider theme={theme}>
+          <Vehicles />
+        </ThemeProvider>,
+      );
+    });
+
+    vi.mocked(vehiclesSliceModule.selectVehiclesStatus).mockReturnValue('loading');
+    await act(async () => {
+      rerender(
+        <ThemeProvider theme={theme}>
+          <Vehicles />
+        </ThemeProvider>,
+      );
+    });
+
+    expect(lastLayoutProps?.isLoading).toBe(false);
   });
 
   it('updates activeFiltersCount in layout when VehiclesFilters reports applied filters', () => {

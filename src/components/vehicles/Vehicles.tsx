@@ -143,7 +143,17 @@ const Vehicles: React.FC = () => {
   let table: React.ReactNode;
 
   const isVehiclesLoading = status === 'loading' || status === 'idle';
-  const shouldShowToolbarSkeleton = !permissionedTableReady || isVehiclesLoading;
+  const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!permissionedTableReady) return;
+    if (status === 'succeeded' || status === 'failed') {
+      setHasLoadedOnce(true);
+    }
+  }, [permissionedTableReady, status]);
+
+  const shouldShowToolbarSkeleton =
+    !permissionedTableReady || (!hasLoadedOnce && isVehiclesLoading);
 
   if (!permissionedTableReady) {
     table = <TableSkeletonContainer><TableSkeleton /></TableSkeletonContainer>;
