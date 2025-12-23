@@ -18,6 +18,7 @@ import {
 import {
   loadTenantPermissions,
   selectMembershipRaw,
+  selectPermissionsReady,
 } from '@/store/slices/permissionsSlice';
 
 import { ServerErrorPage } from '@/components/error-pages';
@@ -34,6 +35,7 @@ export function SecureContent({ children }: SecureContentProps) {
   const authStatus = useAppSelector(selectAuthStatus);
   const authErrorStatus = useAppSelector(selectAuthErrorStatus);
   const membership = useAppSelector(selectMembershipRaw);
+  const permissionsReady = useAppSelector(selectPermissionsReady);
 
   // Prevent double-fetch of /auth/me in dev StrictMode or fast re-renders
   const requestedMeRef = useRef(false);
@@ -92,7 +94,11 @@ export function SecureContent({ children }: SecureContentProps) {
   const isBootstrapping =
     sessionStatus === 'loading' ||
     authStatus === 'idle' ||
-    authStatus === 'loading';
+    authStatus === 'loading' ||
+    (authStatus === 'succeeded' &&
+      Boolean(tenantSlug) &&
+      (!permissionsReady ||
+        !membership?.memberships?.some((m) => m.tenant.slug === tenantSlug)));
 
   if (isBootstrapping) {
     return (

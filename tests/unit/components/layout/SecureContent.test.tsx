@@ -23,6 +23,7 @@ type MockRootState = {
   };
   permissions: {
     membershipRaw: MembershipState | null;
+    permissionsReady: boolean;
   };
 };
 
@@ -83,6 +84,7 @@ vi.mock('@/store/slices/authSlice', () => ({
 vi.mock('@/store/slices/permissionsSlice', () => ({
   loadTenantPermissions: (slug: string) => mockLoadPermissionsAction(slug),
   selectMembershipRaw: (state: MockRootState) => state.permissions.membershipRaw,
+  selectPermissionsReady: (state: MockRootState) => state.permissions.permissionsReady,
   selectEffectiveModules: vi.fn(() => []), // Retorna array vacío para evitar crash en Sidebar
 }));
 
@@ -127,7 +129,7 @@ describe('SecureContent Logic', () => {
     mockTenantSlug = 'coolitoral';
     mockState = {
       auth: { status: 'idle', errorStatus: null },
-      permissions: { membershipRaw: null },
+      permissions: { membershipRaw: null, permissionsReady: false },
     };
   });
 
@@ -192,6 +194,7 @@ describe('SecureContent Logic', () => {
     mockState.permissions.membershipRaw = { 
       memberships: [{ tenant: { slug: 'other-tenant' } }] 
     };
+    mockState.permissions.permissionsReady = false;
 
     render(
       <SecureContent>
@@ -207,6 +210,8 @@ describe('SecureContent Logic', () => {
         })
       );
     });
+
+    expect(screen.getByTestId('mobix-loader-mock')).toBeInTheDocument();
   });
 
   it('does not dispatch permissions load if user already has membership for current tenant', async () => {
@@ -217,6 +222,7 @@ describe('SecureContent Logic', () => {
     mockState.permissions.membershipRaw = { 
       memberships: [{ tenant: { slug: 'coolitoral' } }] 
     };
+    mockState.permissions.permissionsReady = true;
 
     render(
       <SecureContent>
@@ -255,6 +261,7 @@ describe('SecureContent Logic', () => {
     mockSessionStatus = 'valid';
     mockState.auth.status = 'failed';
     mockState.auth.errorStatus = 500;
+    mockState.permissions.permissionsReady = true;
 
     render(
       <SecureContent>
@@ -273,6 +280,7 @@ describe('SecureContent Logic', () => {
     mockState.permissions.membershipRaw = { 
       memberships: [{ tenant: { slug: 'coolitoral' } }] 
     };
+    mockState.permissions.permissionsReady = true;
 
     render(
       <SecureContent>
