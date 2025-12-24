@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
   ListItemButton,
   ListItemButtonProps,
@@ -15,6 +14,7 @@ import {
 import { styled } from '@mui/material/styles';
 import { Add } from '@mui/icons-material';
 import type { NavItem } from './types';
+import { SidebarLink } from './SidebarLink';
 
 interface SidebarItemProps {
   item: NavItem;
@@ -128,6 +128,7 @@ export default function SidebarItem({ item, active, onClick }: SidebarItemProps)
 
   const content = (
     <StyledListItemButton
+      component="span"
       $active={active}
       onClick={handleClick}
       data-testid={item.testId}
@@ -161,9 +162,9 @@ export default function SidebarItem({ item, active, onClick }: SidebarItemProps)
 
   if (!hasChildren && item.href) {
     return (
-      <Link href={item.href}>
+      <SidebarLink href={item.href}>
         {content}
-      </Link>
+      </SidebarLink>
     );
   }
 

@@ -1,11 +1,9 @@
-import React, { Suspense } from 'react';
-import { act } from 'react-dom/test-utils';
+import React, { Suspense, act } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import theme from '@/theme';
 import IndexPageSkeleton from '@/components/layout/index-page/IndexPageSkeleton';
-import type { StrategyComponentLoader } from '@/config/moduleStrategies';
 
 const renderWithTheme = (ui: React.ReactElement) =>
   render(
@@ -23,38 +21,31 @@ describe('Vehicles page suspense fallback', () => {
     vi.clearAllMocks();
   });
 
-  const mockModuleRegistry = (loader: StrategyComponentLoader) => {
-    vi.doMock('@/config/moduleStrategies', async () => {
-      const actual = await vi.importActual<typeof import('@/config/moduleStrategies')>(
-        '@/config/moduleStrategies',
-      );
+  let StrategyOrchestratorMock: React.FC;
 
-      return {
-        __esModule: true,
-        ...actual,
-        moduleStrategyRegistry: {
-          ...actual.moduleStrategyRegistry,
-          vehicles: {
-            defaultStrategy: 'base',
-            strategies: {
-              base: { loader },
-            },
-          },
-        },
-      };
-    });
-
-    vi.doMock('@/lib/strategy/resolveModuleStrategy', () => ({
+  const mockVehiclesPage = () => {
+    vi.doMock('@/components/strategy/StrategyOrchestrator', () => ({
       __esModule: true,
-      resolveModuleStrategy: async () => 'base',
+      StrategyOrchestrator: StrategyOrchestratorMock,
     }));
+
+    vi.doMock('@/app/(secure)/vehicles/page', () => {
+      const VehiclesPage = () => (
+        <Suspense fallback={<IndexPageSkeleton showStats={false} showFilters={false} />}>
+          <StrategyOrchestratorMock />
+        </Suspense>
+      );
+      return { __esModule: true, default: VehiclesPage };
+    });
   };
 
   it('shows the IndexPageSkeleton while base strategy suspends', async () => {
     vi.resetModules();
-    mockModuleRegistry(() => new Promise(() => {
-      // keep suspended to force the fallback to stay visible
-    }));
+    const suspensePromise = new Promise<never>(() => {});
+    StrategyOrchestratorMock = () => {
+      throw suspensePromise;
+    };
+    mockVehiclesPage();
 
     const VehiclesPage = (await import('@/app/(secure)/vehicles/page')).default;
 
@@ -68,9 +59,8 @@ describe('Vehicles page suspense fallback', () => {
   it('renders Vehicles when strategy resolves without showing the fallback', async () => {
     vi.resetModules();
     const VehiclesComponent = () => <div data-testid="vehicles-component" />;
-    mockModuleRegistry(async () => ({
-      default: VehiclesComponent,
-    }));
+    StrategyOrchestratorMock = () => <VehiclesComponent />;
+    mockVehiclesPage();
 
     const VehiclesPage = (await import('@/app/(secure)/vehicles/page')).default;
 

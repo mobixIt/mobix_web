@@ -28,6 +28,10 @@ type SecureContentProps = {
   children: React.ReactNode;
 };
 
+// Persist across component remounts during client-side navigation to avoid refetch loops
+let fetchedMeOnce = false;
+const loadedTenantPermissions = new Set<string>();
+
 export function SecureContent({ children }: SecureContentProps) {
   const { status: sessionStatus } = useSession();
   const dispatch = useAppDispatch();
@@ -57,7 +61,7 @@ export function SecureContent({ children }: SecureContentProps) {
   useEffect(() => {
     if (!sessionReady) return;
 
-    if (authStatus === 'idle' && !requestedMeRef.current) {
+    if (authStatus === 'idle' && !requestedMeRef.current && !fetchedMeOnce) {
       requestedMeRef.current = true;
       void dispatch(fetchMe());
     }
@@ -68,6 +72,11 @@ export function SecureContent({ children }: SecureContentProps) {
   useEffect(() => {
     if (authStatus === 'idle') {
       requestedMeRef.current = false;
+      fetchedMeOnce = false;
+    }
+
+    if (authStatus === 'succeeded') {
+      fetchedMeOnce = true;
     }
   }, [authStatus]);
 
@@ -78,8 +87,9 @@ export function SecureContent({ children }: SecureContentProps) {
       (m) => m.tenant.slug === tenantSlug,
     );
 
-    if (!alreadyHasMembershipForTenant) {
+    if (!alreadyHasMembershipForTenant && !loadedTenantPermissions.has(tenantSlug)) {
       void dispatch(loadTenantPermissions(tenantSlug));
+      loadedTenantPermissions.add(tenantSlug);
     }
   }, [sessionReady, tenantSlug, membership, authStatus, dispatch]);
 
@@ -100,7 +110,15 @@ export function SecureContent({ children }: SecureContentProps) {
       (!permissionsReady ||
         !membership?.memberships?.some((m) => m.tenant.slug === tenantSlug)));
 
-  if (isBootstrapping) {
+  const hasBootstrappedRef = useRef(false);
+
+  if (!isBootstrapping) {
+    hasBootstrappedRef.current = true;
+  }
+
+  const shouldShowBootstrapLoader = isBootstrapping && !hasBootstrappedRef.current;
+
+  if (shouldShowBootstrapLoader) {
     return (
       <Box
         sx={{

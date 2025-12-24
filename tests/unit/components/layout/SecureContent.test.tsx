@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
 
 // --- TYPES & INTERFACES ---
 
@@ -115,14 +115,18 @@ vi.mock('@/components/layout/secure/SecureLayout', () => ({
   ),
 }));
 
-// Importación del componente a probar
-import { SecureContent } from '@/components/layout/secure/SecureContent';
+// Helper para cargar el componente con flags de módulo reseteados
+const loadSecureContent = async () => {
+  const module = await import('@/components/layout/secure/SecureContent');
+  return module.SecureContent;
+};
 
 // --- SUITE DE PRUEBAS ---
 
 describe('SecureContent Logic', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetModules();
     
     // Reset Default State
     mockSessionStatus = 'loading';
@@ -137,9 +141,11 @@ describe('SecureContent Logic', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders the loading state while session is initializing', () => {
+  it('renders the loading state while session is initializing', async () => {
     mockSessionStatus = 'loading';
-    mockState.auth.status = 'idle';
+    mockState.auth.status = 'succeeded';
+
+    const SecureContent = await loadSecureContent();
 
     render(
       <SecureContent>
@@ -155,6 +161,7 @@ describe('SecureContent Logic', () => {
   it('redirects to login and renders nothing when session is invalid', async () => {
     mockSessionStatus = 'invalid';
     mockState.auth.status = 'failed'; 
+    const SecureContent = await loadSecureContent();
 
     const { container } = render(
       <SecureContent>
@@ -172,6 +179,7 @@ describe('SecureContent Logic', () => {
   it('dispatches fetchMe when session is valid but auth is idle', async () => {
     mockSessionStatus = 'valid';
     mockState.auth.status = 'idle';
+    const SecureContent = await loadSecureContent();
 
     render(
       <SecureContent>
@@ -190,6 +198,7 @@ describe('SecureContent Logic', () => {
     mockSessionStatus = 'valid';
     mockState.auth.status = 'succeeded';
     mockTenantSlug = 'coolitoral';
+    const SecureContent = await loadSecureContent();
     
     mockState.permissions.membershipRaw = { 
       memberships: [{ tenant: { slug: 'other-tenant' } }] 
@@ -218,6 +227,7 @@ describe('SecureContent Logic', () => {
     mockSessionStatus = 'valid';
     mockState.auth.status = 'succeeded';
     mockTenantSlug = 'coolitoral';
+    const SecureContent = await loadSecureContent();
     
     mockState.permissions.membershipRaw = { 
       memberships: [{ tenant: { slug: 'coolitoral' } }] 
@@ -245,6 +255,7 @@ describe('SecureContent Logic', () => {
     mockSessionStatus = 'valid';
     mockState.auth.status = 'failed';
     mockState.auth.errorStatus = 401;
+    const SecureContent = await loadSecureContent();
 
     render(
       <SecureContent>
@@ -257,11 +268,12 @@ describe('SecureContent Logic', () => {
     });
   });
 
-  it('renders server error page on 500 authentication error', () => {
+  it('renders server error page on 500 authentication error', async () => {
     mockSessionStatus = 'valid';
     mockState.auth.status = 'failed';
     mockState.auth.errorStatus = 500;
     mockState.permissions.permissionsReady = true;
+    const SecureContent = await loadSecureContent();
 
     render(
       <SecureContent>
@@ -273,10 +285,11 @@ describe('SecureContent Logic', () => {
     expect(screen.queryByTestId('mobix-loader-mock')).not.toBeInTheDocument();
   });
 
-  it('renders children inside SecureLayout when everything is valid', () => {
+  it('renders children inside SecureLayout when everything is valid', async () => {
     mockSessionStatus = 'valid';
     mockState.auth.status = 'succeeded';
     mockTenantSlug = 'coolitoral';
+    const SecureContent = await loadSecureContent();
     mockState.permissions.membershipRaw = { 
       memberships: [{ tenant: { slug: 'coolitoral' } }] 
     };
@@ -291,5 +304,47 @@ describe('SecureContent Logic', () => {
     expect(screen.getByTestId('secure-layout-mock')).toBeInTheDocument();
     expect(screen.getByText('Content')).toBeInTheDocument();
     expect(screen.queryByTestId('mobix-loader-mock')).not.toBeInTheDocument();
+  });
+
+  it('avoids refetching auth once bootstrap completed', async () => {
+    mockSessionStatus = 'valid';
+    mockState.auth.status = 'succeeded';
+    mockTenantSlug = 'coolitoral';
+    mockState.permissions.membershipRaw = { 
+      memberships: [{ tenant: { slug: 'coolitoral' } }] 
+    };
+    mockState.permissions.permissionsReady = true;
+
+    const SecureContent = await loadSecureContent();
+
+    const { unmount } = render(
+      <SecureContent>
+        <div data-testid="protected-child">Content</div>
+      </SecureContent>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('secure-layout-mock')).toBeInTheDocument();
+    });
+
+    // First render may dispatch nothing; ensure counters are captured
+    dispatchSpy.mockClear();
+    // Simulate a navigation by rendering again without tearing down the module flags
+    const { container: secondRender } = render(
+      <SecureContent>
+        <div data-testid="protected-child">Content</div>
+      </SecureContent>
+    );
+
+    await waitFor(() => {
+      expect(secondRender.querySelectorAll('[data-testid="secure-layout-mock"]').length).toBeGreaterThanOrEqual(1);
+    });
+
+    const fetchMeCalls = dispatchSpy.mock.calls.filter(
+      ([action]) => (action as MockAction).type === 'auth/fetchMe',
+    );
+
+    expect(fetchMeCalls).toHaveLength(0);
+    secondRender.parentElement?.remove();
   });
 });

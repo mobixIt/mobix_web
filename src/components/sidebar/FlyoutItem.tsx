@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
   Collapse,
   List,
@@ -12,6 +11,7 @@ import {
 import { styled } from '@mui/material/styles';
 import type { NavChild } from './types';
 import { ExpandMore } from '@mui/icons-material';
+import { SidebarLink } from './SidebarLink';
 
 const NestedRail = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -105,7 +105,7 @@ const StyledListItem = styled(ListItemButton, {
   }),
 }));
 
-const NoUnderlineLink = styled(Link)(() => ({
+const NoUnderlineLink = styled(SidebarLink)(() => ({
   textDecoration: 'none',
 }));
 
@@ -179,6 +179,7 @@ export default function FlyoutItem({
 
   const button = (
     <StyledListItem
+      component="span"
       onClick={handleClick}
       $active={isActive}
       $isNested={isNested}

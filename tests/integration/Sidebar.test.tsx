@@ -18,8 +18,15 @@ vi.mock('react-redux', () => ({
   useDispatch: () => mockUseDispatch,
 }));
 
+const pushSpy = vi.fn();
+const prefetchSpy = vi.fn();
+
 vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
+  useRouter: () => ({
+    push: pushSpy,
+    prefetch: prefetchSpy,
+  }),
 }));
 
 vi.mock('@/components/sidebar/constants', () => ({
@@ -126,6 +133,8 @@ function renderWithTheme(ui: React.ReactElement) {
 
 describe('Sidebar integration', () => {
   it('renders only nav items allowed by effective modules', () => {
+    pushSpy.mockReset();
+    prefetchSpy.mockReset();
     mockSelectors({
       modules: modulesWithMarketsAndReports,
       person: personFixture,
@@ -142,6 +151,8 @@ describe('Sidebar integration', () => {
   });
 
   it('when there are no effective modules, only items without requirements are shown', () => {
+    pushSpy.mockReset();
+    prefetchSpy.mockReset();
     mockSelectors({
       modules: emptyModules,
       person: personFixture,
