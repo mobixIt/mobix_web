@@ -15,6 +15,7 @@ import {
   MobixButtonSecondaryAction,
   MobixButtonProgress,
   MobixIconButton,
+  AiSendButton,
 } from '@/components/mobix/button';
 
 interface ButtonsStoryProps {
@@ -42,6 +43,7 @@ type Story = StoryObj<ButtonsStoryProps>;
 export const AllButtons: Story = {
   render: ({ onClick, onDelete, onSecondaryAction }) => {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [isAiLoading, setIsAiLoading] = React.useState(false);
 
     const handleProgressClick = () => {
       onClick();
@@ -50,6 +52,12 @@ export const AllButtons: Story = {
       setTimeout(() => {
         setIsSubmitting(false);
       }, 1500);
+    };
+
+    const handleAiClick = () => {
+      onClick();
+      setIsAiLoading(true);
+      setTimeout(() => setIsAiLoading(false), 1200);
     };
 
     return (
@@ -203,6 +211,16 @@ export const AllButtons: Story = {
           >
             Acción secundaria
           </MobixButtonSecondaryAction>
+        </section>
+
+        {/* AI SEND BUTTON */}
+        <section>
+          <h3>AiSendButton</h3>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <AiSendButton aria-label="ai send" onClick={handleAiClick} />
+            <AiSendButton aria-label="ai send loading (stateful)" isLoading={isAiLoading} onClick={handleAiClick} />
+            <AiSendButton aria-label="ai send static loading" isLoading />
+          </div>
         </section>
 
         {/* PROGRESS BUTTON */}

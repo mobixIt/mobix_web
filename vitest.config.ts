@@ -26,7 +26,6 @@ export default defineConfig({
       'coverage',
       'playwright-report',
       'test-results',
-      'tests/e2e/**',
       'src/**/*.stories.*',
     ],
   },

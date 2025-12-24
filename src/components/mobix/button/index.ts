@@ -7,4 +7,4 @@ export * from './MobixButtonDelete';
 export * from './MobixButtonSecondaryAction';
 export * from './MobixButtonProgress';
 export * from './MobixIconButton';
-
+export * from './AiSendButton';
