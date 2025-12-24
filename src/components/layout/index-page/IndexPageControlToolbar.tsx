@@ -6,14 +6,12 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 
 import {
   Root,
-  Card,
   Row,
   Left,
   Right,
   ToggleButton,
   FiltersBadge,
   ActiveFiltersChip,
-  TotalText,
   ToolbarSkeletonRow,
   ToolbarSkeletonPill,
   ToolbarSkeletonChip,
@@ -29,7 +27,6 @@ export default function IndexPageControlToolbar({
   showStatsToggle,
   showFiltersToggle,
   activeFiltersCount = 0,
-  totalCountText,
   onToggleStats,
   onToggleFilters,
   isLoading = false,
@@ -38,7 +35,7 @@ export default function IndexPageControlToolbar({
 
   return (
     <Root>
-      <Card elevation={0}>
+      <>
         {isLoading ? (
           <ToolbarSkeletonRow>
             <ToolbarSkeletonPill />
@@ -93,11 +90,10 @@ export default function IndexPageControlToolbar({
             </Left>
 
             <Right>
-              {totalCountText ? <TotalText>{totalCountText}</TotalText> : null}
             </Right>
           </Row>
         )}
-      </Card>
+      </>
     </Root>
   );
 }

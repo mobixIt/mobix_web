@@ -216,11 +216,6 @@ const BaseVehicles: React.FC = () => {
         }
         table={table}
         activeFiltersCount={activeFiltersCount}
-        totalCountText={
-          <>
-            <b>{totalCount}</b> vehículos en total
-          </>
-        }
         isLoading={shouldShowToolbarSkeleton}
       />
     </div>

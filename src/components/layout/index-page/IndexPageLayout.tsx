@@ -24,7 +24,6 @@ export type IndexPageLayoutProps = {
   table?: React.ReactNode;
 
   activeFiltersCount?: number;
-  totalCountText?: React.ReactNode;
   isLoading?: boolean;
 };
 
@@ -34,7 +33,6 @@ export function IndexPageLayout({
   filters,
   table,
   activeFiltersCount = 0,
-  totalCountText,
   isLoading = false,
 }: IndexPageLayoutProps) {
   const hasStats = Boolean(statsCards);
@@ -67,7 +65,6 @@ export function IndexPageLayout({
             onToggleStats={handleToggleStats}
             onToggleFilters={handleToggleFilters}
             activeFiltersCount={activeFiltersCount}
-            totalCountText={totalCountText}
             showStatsToggle={hasStats}
             showFiltersToggle={hasFilters}
             isLoading={isLoading}

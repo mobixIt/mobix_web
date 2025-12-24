@@ -1,7 +1,7 @@
 'use client';
 
 import { styled, Theme, CSSObject } from '@mui/material/styles';
-import { Badge, Box, Chip, Paper, Typography, keyframes } from '@mui/material';
+import { Badge, Box, Chip, keyframes } from '@mui/material';
 
 import { MobixButtonOutlined } from '@/components/mobix/button';
 
@@ -11,12 +11,6 @@ type ToggleButtonProps = {
 
 export const Root = styled('section')(() => ({
   width: '100%',
-}));
-
-export const Card = styled(Paper)(({ theme }) => ({
-  borderRadius: theme.shape.borderRadius,
-  boxShadow: theme.shadows[1],
-  padding: theme.spacing(2),
 }));
 
 export const Row = styled(Box)(({ theme }) => ({
@@ -41,16 +35,6 @@ export const Right = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1.5),
 }));
 
-export const TotalText = styled(Typography)(({ theme }) => ({
-  fontSize: theme.typography.pxToRem(14),
-  color: theme.palette.text.secondary,
-}));
-
-export const TotalNumber = styled('span')(({ theme }) => ({
-  color: theme.palette.text.primary,
-  fontWeight: theme.typography.fontWeightBold,
-}));
-
 export const ActiveFiltersChip = styled(Chip)(({ theme }) => ({
   height: 24,
   borderRadius: 999,
@@ -70,12 +54,12 @@ export const FiltersBadge = styled(Badge)(({ theme }) => ({
 export const ToggleButton = styled(MobixButtonOutlined, {
   shouldForwardProp: (prop) => prop !== 'active',
 })<ToggleButtonProps>(({ theme, active }) => ({
+  background: theme.palette.background.paper,
   borderRadius: Number(theme.shape.borderRadius) * 2,
 
   ...(active && {
     borderColor: theme.palette.secondary.main,
     color: theme.palette.secondary.main,
-    backgroundColor: theme.palette.action.hover,
   }),
 }));
 
