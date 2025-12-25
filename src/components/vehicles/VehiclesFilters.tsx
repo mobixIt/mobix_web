@@ -17,12 +17,19 @@ import { fetchVehicles } from '@/store/slices/vehiclesSlice';
 
 // --- Types ---
 
-type VehiclesFiltersProps = {
+export type VehiclesFiltersProps = {
   tenantSlug: string | null;
   page: number;
   rowsPerPage: number;
   onResetPage: () => void;
   onFiltersAppliedChange?: (count: number) => void;
+  onAppliedFiltersChange?: (applied: FiltersSectionValues) => void;
+  onAppliedFiltersDisplayChange?: (display: Record<string, string>) => void;
+};
+
+export type VehiclesFiltersHandle = {
+  removeFilter: (fieldId: string) => void;
+  clearAllFilters: () => void;
 };
 
 type VehiclesApiFilters = Partial<{
@@ -66,13 +73,15 @@ function filterPeopleOptions(
 
 // --- Main Component ---
 
-export default function VehiclesFilters({
+const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersProps>(({
   tenantSlug,
   page,
   rowsPerPage,
   onResetPage,
   onFiltersAppliedChange,
-}: VehiclesFiltersProps) {
+  onAppliedFiltersChange,
+  onAppliedFiltersDisplayChange,
+}, ref) => {
   const dispatch = useAppDispatch();
   const [isApplying, setIsApplying] = React.useState(false);
 
@@ -246,22 +255,62 @@ export default function VehiclesFilters({
   }, []);
 
   // 6. Action Handlers
-  const handleApplyFilters = () => {
+  const buildAppliedFiltersDisplay = React.useCallback(
+    (vals: FiltersSectionValues): Record<string, string> => {
+      const display: Record<string, string> = {};
+
+      vehicleFilterFields.forEach((field) => {
+        const value = vals[field.id];
+
+        if (field.type === 'async-select') {
+          const option = (value && typeof value === 'object' ? value : null) as AsyncSelectOption | null;
+          if (!option) return;
+          const labelValue = option.code ? `${option.label} (${option.code})` : option.label;
+          display[field.id] = `${field.label}: ${labelValue}`;
+          return;
+        }
+
+        const raw = typeof value === 'string' ? value.trim() : '';
+        if (!raw) return;
+
+        if (field.type === 'select') {
+          const match = field.options.find((opt) => opt.value === raw);
+          const labelValue = match?.label ?? raw;
+          display[field.id] = `${field.label}: ${labelValue}`;
+          return;
+        }
+
+        if (field.type === 'text' || field.type === 'search' || field.type === 'custom') {
+          display[field.id] = `${field.label}: ${raw}`;
+        }
+      });
+
+      return display;
+    },
+    [vehicleFilterFields],
+  );
+
+  const applyFilters = React.useCallback((nextValues: FiltersSectionValues) => {
     if (catalogsStatus === 'failed') return;
 
     setIsApplying(true);
-    setAppliedFilters(filterValues);
+    setFilterValues(nextValues);
+    setAppliedFilters(nextValues);
     onResetPage();
-    
-    const count = Object.keys(buildApiFilters(filterValues)).length;
+
+    const apiFilters = buildApiFilters(nextValues);
+    const count = Object.keys(apiFilters).length;
+    const display = buildAppliedFiltersDisplay(nextValues);
+
     onFiltersAppliedChange?.(count);
-  };
+    onAppliedFiltersChange?.(nextValues);
+    onAppliedFiltersDisplayChange?.(display);
+  }, [buildApiFilters, buildAppliedFiltersDisplay, catalogsStatus, onAppliedFiltersChange, onAppliedFiltersDisplayChange, onFiltersAppliedChange, onResetPage]);
+
+  const handleApplyFilters = () => applyFilters(filterValues);
 
   const handleClearFilters = () => {
-    setFilterValues(initialValues);
-    setAppliedFilters({});
-    onResetPage();
-    onFiltersAppliedChange?.(0);
+    applyFilters({ ...initialValues });
   };
 
   // 7. Effect: Fetch data when applied filters or page changes
@@ -287,6 +336,30 @@ export default function VehiclesFilters({
     // Cleanup not strictly necessary for this thunk unless it supports abortion, 
     // but good practice if needed.
   }, [dispatch, tenantSlug, page, rowsPerPage, appliedFilters, buildApiFilters]);
+
+  const clearValueForField = React.useCallback(
+    (fieldId: string): FiltersSectionValue => {
+      const field = vehicleFilterFields.find((f) => f.id === fieldId);
+      if (!field) return '';
+
+      if (field.type === 'async-select') return null;
+      return '';
+    },
+    [vehicleFilterFields],
+  );
+
+  const handleRemoveFilter = React.useCallback(
+    (fieldId: string) => {
+      const nextValues = { ...filterValues, [fieldId]: clearValueForField(fieldId) };
+      applyFilters(nextValues);
+    },
+    [applyFilters, clearValueForField, filterValues],
+  );
+
+  React.useImperativeHandle(ref, () => ({
+    removeFilter: handleRemoveFilter,
+    clearAllFilters: handleClearFilters,
+  }));
 
   return (
     <>
@@ -322,4 +395,9 @@ export default function VehiclesFilters({
       />
     </>
   );
-}
+
+});
+
+VehiclesFilters.displayName = 'VehiclesFilters';
+
+export default VehiclesFilters;

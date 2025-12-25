@@ -13,9 +13,13 @@ export type IndexPageControlToolbarProps = {
   showFiltersToggle: boolean;
 
   activeFiltersCount?: number;
+  activeFiltersDisplay?: Record<string, string>;
 
   isLoading?: boolean;
 
   onToggleStats: () => void;
   onToggleFilters: () => void;
+  onRemoveFilter?: (id: string) => void;
+  onClearAllFilters?: () => void;
+  activeFiltersLabel?: string;
 };

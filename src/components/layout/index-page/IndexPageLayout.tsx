@@ -24,7 +24,11 @@ export type IndexPageLayoutProps = {
   table?: React.ReactNode;
 
   activeFiltersCount?: number;
+  activeFiltersDisplay?: Record<string, string>;
   isLoading?: boolean;
+  onRemoveFilter?: (id: string) => void;
+  onClearAllFilters?: () => void;
+  activeFiltersLabel?: string;
 };
 
 export function IndexPageLayout({
@@ -33,7 +37,11 @@ export function IndexPageLayout({
   filters,
   table,
   activeFiltersCount = 0,
+  activeFiltersDisplay = {},
   isLoading = false,
+  onRemoveFilter,
+  onClearAllFilters,
+  activeFiltersLabel,
 }: IndexPageLayoutProps) {
   const hasStats = Boolean(statsCards);
   const hasFilters = Boolean(filters);
@@ -65,8 +73,12 @@ export function IndexPageLayout({
             onToggleStats={handleToggleStats}
             onToggleFilters={handleToggleFilters}
             activeFiltersCount={activeFiltersCount}
+            activeFiltersDisplay={activeFiltersDisplay}
             showStatsToggle={hasStats}
             showFiltersToggle={hasFilters}
+            onRemoveFilter={onRemoveFilter}
+            onClearAllFilters={onClearAllFilters}
+            activeFiltersLabel={activeFiltersLabel}
             isLoading={isLoading}
           />
         </ToolbarSection>

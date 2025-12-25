@@ -10,13 +10,12 @@ import {
   Left,
   Right,
   ToggleButton,
-  FiltersBadge,
-  ActiveFiltersChip,
+  ActiveFiltersContainer,
+  ActiveFiltersLabel,
+  ActiveFilterChip,
+  ClearFiltersButton,
   ToolbarSkeletonRow,
   ToolbarSkeletonPill,
-  ToolbarSkeletonChip,
-  ToolbarSkeletonText,
-  ToolbarSkeletonSeparator,
 } from './IndexPageControlToolbar.styled';
 
 import type { IndexPageControlToolbarProps } from './IndexPageControlToolbar.types';
@@ -26,12 +25,15 @@ export default function IndexPageControlToolbar({
   showFilters,
   showStatsToggle,
   showFiltersToggle,
-  activeFiltersCount = 0,
+  activeFiltersDisplay = {},
   onToggleStats,
   onToggleFilters,
+  onRemoveFilter,
+  onClearAllFilters,
+  activeFiltersLabel = 'Filtros activos:',
   isLoading = false,
 }: IndexPageControlToolbarProps) {
-  const hasActiveFilters = activeFiltersCount > 0;
+  const hasFiltersDisplay = Object.keys(activeFiltersDisplay).length > 0;
 
   return (
     <Root>
@@ -40,9 +42,6 @@ export default function IndexPageControlToolbar({
           <ToolbarSkeletonRow>
             <ToolbarSkeletonPill />
             <ToolbarSkeletonPill />
-            <ToolbarSkeletonChip />
-            <ToolbarSkeletonSeparator />
-            <ToolbarSkeletonText />
           </ToolbarSkeletonRow>
         ) : (
           <Row>
@@ -60,32 +59,39 @@ export default function IndexPageControlToolbar({
               )}
 
               {showFiltersToggle && (
-                <FiltersBadge
-                  color="primary"
-                  variant="dot"
-                  invisible={!hasActiveFilters}
-                  overlap="circular"
+                <ToggleButton
+                  variant="outlined"
+                  color={showFilters ? 'secondary' : 'accent'}
+                  onClick={onToggleFilters}
+                  active={showFilters}
+                  startIcon={<FilterListIcon />}
                 >
-                  <ToggleButton
-                    variant="outlined"
-                    color={showFilters ? 'secondary' : 'accent'}
-                    onClick={onToggleFilters}
-                    active={showFilters}
-                    startIcon={<FilterListIcon />}
-                  >
-                    Filtros
-                  </ToggleButton>
-                </FiltersBadge>
+                  Filtros
+                </ToggleButton>
               )}
 
-              {showFiltersToggle && hasActiveFilters && (
-                <ActiveFiltersChip
-                  color="primary"
-                  variant="outlined"
-                  label={`${activeFiltersCount} filtro${activeFiltersCount === 1 ? '' : 's'} activo${
-                    activeFiltersCount === 1 ? '' : 's'
-                  }`}
-                />
+              {showFiltersToggle && hasFiltersDisplay && (
+                <ActiveFiltersContainer data-testid="active-filters-chips">
+                  <ActiveFiltersLabel>{activeFiltersLabel}</ActiveFiltersLabel>
+                  {Object.entries(activeFiltersDisplay).map(([id, label]) => (
+                  <ActiveFilterChip
+                    key={id}
+                    label={label}
+                    onDelete={onRemoveFilter ? () => onRemoveFilter(id) : undefined}
+                    data-testid={`active-filter-chip-${id}`}
+                  />
+                ))}
+              {onClearAllFilters && (
+                <ClearFiltersButton
+                  size="small"
+                  color="secondary"
+                  onClick={onClearAllFilters}
+                  data-testid="clear-all-filters"
+                >
+                  Limpiar filtros
+                </ClearFiltersButton>
+              )}
+            </ActiveFiltersContainer>
               )}
             </Left>
 

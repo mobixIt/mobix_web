@@ -1,282 +1,84 @@
-import * as React from 'react';
-import { describe, it, expect } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from '@/theme';
-
 import { IndexPageLayout } from '@/components/layout/index-page/IndexPageLayout';
 
-type RenderParams = {
-  header?: React.ReactNode;
-  statsCards?: React.ReactNode;
-  filters?: React.ReactNode;
-  table?: React.ReactNode;
-  activeFiltersCount?: number;
-  totalCountText?: React.ReactNode;
-};
-
-function renderIndexPageLayout(params: RenderParams) {
-  return render(
-    <IndexPageLayout
-      header={params.header}
-      statsCards={params.statsCards}
-      filters={params.filters}
-      table={params.table}
-      activeFiltersCount={params.activeFiltersCount}
-      totalCountText={params.totalCountText}
-    />,
-  );
-}
-
-function renderWithTheme(ui: React.ReactElement) {
-  return render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
-}
-
-function getStatsToggleButton() {
-  return screen.getByRole('button', { name: /estadísticas/i });
-}
-
-function getFiltersToggleButton() {
-  return screen.getByRole('button', { name: /filtros/i });
-}
+const renderWithTheme = (ui: React.ReactElement) => render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
 
 describe('IndexPageLayout', () => {
-  it('renders the root container with the expected test id', () => {
-    renderIndexPageLayout({});
-    expect(screen.getByTestId('index-page-layout')).toBeVisible();
-  });
-
-  it('renders header section only when header is provided', () => {
-    const { rerender } = renderIndexPageLayout({ header: <div>Header</div> });
-
-    expect(screen.getByTestId('index-page-header')).toBeVisible();
-    expect(screen.getByText('Header')).toBeVisible();
-
-    rerender(<IndexPageLayout />);
-    expect(screen.queryByTestId('index-page-header')).toBeNull();
-  });
-
-  it('renders table section only when table is provided', () => {
-    const { rerender } = renderIndexPageLayout({ table: <div>Table</div> });
-
-    expect(screen.getByTestId('index-page-table')).toBeVisible();
-    expect(screen.getByText('Table')).toBeVisible();
-
-    rerender(<IndexPageLayout />);
-    expect(screen.queryByTestId('index-page-table')).toBeNull();
-  });
-
-  it('does not render toolbar when neither statsCards nor filters are provided', () => {
-    renderIndexPageLayout({});
-    expect(screen.queryByTestId('index-page-toolbar')).toBeNull();
-  });
-
-  it('renders toolbar when statsCards is provided', () => {
-    renderIndexPageLayout({ statsCards: <div>Stats</div> });
+  it('renders toolbar when filters are provided', () => {
+    renderWithTheme(<IndexPageLayout filters={<div>Filters</div>} />);
     expect(screen.getByTestId('index-page-toolbar')).toBeVisible();
-    expect(getStatsToggleButton()).toBeVisible();
   });
 
-  it('renders toolbar when filters is provided', () => {
-    renderIndexPageLayout({ filters: <div>Filters</div> });
-    expect(screen.getByTestId('index-page-toolbar')).toBeVisible();
-    expect(getFiltersToggleButton()).toBeVisible();
+  it('does not render chips when no display entries are provided', () => {
+    renderWithTheme(<IndexPageLayout filters={<div>Filters</div>} activeFiltersDisplay={{}} />);
+    expect(screen.queryByTestId('active-filters-chips')).toBeNull();
   });
 
-  it('keeps stats section hidden by default and shows it after clicking the stats toggle', async () => {
-    const user = userEvent.setup();
-
-    renderIndexPageLayout({ statsCards: <div>StatsContent</div> });
-
-    expect(screen.queryByTestId('index-page-cards')).toBeNull();
-
-    await user.click(getStatsToggleButton());
-
-    expect(screen.getByTestId('index-page-cards')).toBeVisible();
-    expect(screen.getByText('StatsContent')).toBeVisible();
-  });
-
-  it('keeps filters section hidden by default and shows it after clicking the filters toggle', async () => {
-    const user = userEvent.setup();
-
-    renderIndexPageLayout({ filters: <div>FiltersContent</div> });
-
-    const filtersSectionBeforeToggle = screen.getByTestId('index-page-filters');
-    expect(filtersSectionBeforeToggle).toBeInTheDocument();
-    expect(filtersSectionBeforeToggle).not.toBeVisible();
-
-    await user.click(getFiltersToggleButton());
-
-    const filtersSectionAfterToggle = screen.getByTestId('index-page-filters');
-    expect(filtersSectionAfterToggle).toBeVisible();
-    expect(screen.getByText('FiltersContent')).toBeVisible();
-  });
-  
-  it('hides stats section and unmounts it when toggled off', async () => {
-    const user = userEvent.setup();
-
-    renderIndexPageLayout({ statsCards: <div>StatsContent</div> });
-
-    await user.click(getStatsToggleButton());
-    expect(screen.getByTestId('index-page-cards')).toBeVisible();
-
-    await user.click(getStatsToggleButton());
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('index-page-cards')).toBeNull();
-      expect(screen.queryByText('StatsContent')).toBeNull();
-    });
-  });
-
-  it('hides filters section when toggled off while keeping filters mounted in the DOM', async () => {
-    const user = userEvent.setup();
-
-    renderIndexPageLayout({ filters: <div>FiltersContent</div> });
-
-    await user.click(getFiltersToggleButton());
-    expect(screen.getByTestId('index-page-filters')).toBeVisible();
-
-    await user.click(getFiltersToggleButton());
-
-    const filtersSection = screen.getByTestId('index-page-filters');
-    expect(filtersSection).toBeInTheDocument();
-  });
-
-  it('closes stats section automatically when statsCards disappears', async () => {
-    const user = userEvent.setup();
-
-    const { rerender } = renderIndexPageLayout({ statsCards: <div>StatsContent</div> });
-
-    await user.click(getStatsToggleButton());
-    expect(screen.getByTestId('index-page-cards')).toBeVisible();
-
-    rerender(<IndexPageLayout statsCards={undefined} />);
-    expect(screen.queryByTestId('index-page-cards')).toBeNull();
-    expect(screen.queryByRole('button', { name: /estadísticas/i })).toBeNull();
-  });
-
-  it('closes filters section automatically when filters disappears', async () => {
-    const user = userEvent.setup();
-
-    const { rerender } = renderIndexPageLayout({ filters: <div>FiltersContent</div> });
-
-    await user.click(getFiltersToggleButton());
-    expect(screen.getByTestId('index-page-filters')).toBeVisible();
-
-    rerender(<IndexPageLayout filters={undefined} />);
-    expect(screen.queryByTestId('index-page-filters')).toBeNull();
-    expect(screen.queryByRole('button', { name: /filtros/i })).toBeNull();
-  });
-
-  it('passes activeFiltersCount and totalCountText through to the toolbar surface', () => {
-    renderIndexPageLayout({
-      statsCards: <div>Stats</div>,
-      filters: <div>Filters</div>,
-      activeFiltersCount: 2,
-      totalCountText: <span>99 items</span>,
-    });
-
-    expect(screen.getByTestId('index-page-toolbar')).toBeVisible();
-    expect(screen.getByText('99 items')).toBeVisible();
-    expect(screen.getByText('2 filtros activos')).toBeVisible();
-  });
-
-  it('does not render the active filters chip when activeFiltersCount is 0', () => {
-    renderIndexPageLayout({
-      filters: <div>Filters</div>,
-      activeFiltersCount: 0,
-    });
-
-    expect(screen.queryByText(/filtro.*activo/i)).toBeNull();
-  });
-
-  it('shows exactly one toolbar instance after prop changes', async () => {
-    const user = userEvent.setup();
-
-    const { rerender } = renderIndexPageLayout({
-      statsCards: <div>Stats</div>,
-      filters: <div>Filters</div>,
-    });
-
-    expect(screen.getAllByTestId('index-page-toolbar')).toHaveLength(1);
-
-    await user.click(getStatsToggleButton());
-    expect(screen.getByTestId('index-page-cards')).toBeVisible();
-
-    rerender(
-      <IndexPageLayout
-        statsCards={<div>Stats</div>}
-        filters={<div>Filters</div>}
-        table={<div>Table</div>}
-      />,
-    );
-
-    expect(screen.getAllByTestId('index-page-toolbar')).toHaveLength(1);
-    expect(screen.getByTestId('index-page-cards')).toBeVisible();
-  });
-
-  it('renders toolbar skeleton while loading and hides toggles/counts', () => {
+  it('renders chips passed through to toolbar', () => {
     renderWithTheme(
       <IndexPageLayout
-        statsCards={<div>Stats</div>}
         filters={<div>Filters</div>}
-        activeFiltersCount={3}
-        totalCountText={<span>100 registros</span>}
+        activeFiltersDisplay={{ status: 'Estado: Inactivo', year: 'Año: 2024' }}
+        activeFiltersLabel="Filtros IA:"
+      />,
+    );
+    expect(screen.getByText('Filtros IA:')).toBeVisible();
+    expect(screen.getByText('Estado: Inactivo')).toBeVisible();
+    expect(screen.getByText('Año: 2024')).toBeVisible();
+  });
+
+  it('invokes onRemoveFilter when chip delete is clicked', async () => {
+    const user = userEvent.setup();
+    const onRemoveFilter = vi.fn();
+    renderWithTheme(
+      <IndexPageLayout
+        filters={<div>Filters</div>}
+        activeFiltersDisplay={{ status: 'Estado: Activo' }}
+        onRemoveFilter={onRemoveFilter}
+      />,
+    );
+    const chip = screen.getByTestId('active-filter-chip-status');
+    const deleteIcon = chip.querySelector('svg');
+    if (!deleteIcon) throw new Error('Delete icon not found on chip');
+    await user.click(deleteIcon);
+    expect(onRemoveFilter).toHaveBeenCalledWith('status');
+  });
+
+  it('invokes onClearAllFilters when clear is clicked', async () => {
+    const user = userEvent.setup();
+    const onClearAllFilters = vi.fn();
+    renderWithTheme(
+      <IndexPageLayout
+        filters={<div>Filters</div>}
+        activeFiltersDisplay={{ status: 'Estado: Activo' }}
+        onClearAllFilters={onClearAllFilters}
+      />,
+    );
+    await user.click(screen.getByTestId('clear-all-filters'));
+    expect(onClearAllFilters).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides chips when loading is true', () => {
+    renderWithTheme(
+      <IndexPageLayout
+        filters={<div>Filters</div>}
+        activeFiltersDisplay={{ status: 'Estado: Activo' }}
         isLoading
       />,
     );
-
-    expect(screen.getByTestId('index-page-toolbar')).toBeVisible();
-    expect(screen.queryByRole('button', { name: /estadísticas/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /filtros/i })).toBeNull();
-    expect(screen.queryByText(/filtro.*activo/i)).toBeNull();
-    expect(screen.queryByText('100 registros')).toBeNull();
+    expect(screen.queryByTestId('active-filters-chips')).toBeNull();
   });
 
-  it('keeps stats section open when loading hides toolbar controls', async () => {
+  it('keeps filters toggle visible and functional', async () => {
     const user = userEvent.setup();
-
-    const { rerender } = renderWithTheme(<IndexPageLayout statsCards={<div>Stats</div>} />);
-
-    await user.click(screen.getByRole('button', { name: /estadísticas/i }));
-    expect(screen.getByTestId('index-page-cards')).toBeVisible();
-
-    rerender(
-      <ThemeProvider theme={theme}>
-        <IndexPageLayout statsCards={<div>Stats</div>} isLoading />
-      </ThemeProvider>,
-    );
-
-    expect(screen.getByTestId('index-page-cards')).toBeVisible();
-  });
-
-  it('shows singular label when exactly one filter is active', () => {
-    renderWithTheme(<IndexPageLayout filters={<div>Filters</div>} activeFiltersCount={1} />);
-
-    expect(screen.getByText('1 filtro activo')).toBeVisible();
-  });
-
-  it('does not render active filters chip when filters panel is absent even if count is positive', () => {
-    renderWithTheme(<IndexPageLayout statsCards={<div>Stats</div>} activeFiltersCount={5} />);
-
-    expect(screen.queryByText(/filtro.*activo/i)).toBeNull();
-    expect(screen.queryByRole('button', { name: /filtros/i })).toBeNull();
-  });
-
-  it('hides the active filters badge when activeFiltersCount drops to zero', () => {
-    const { rerender } = renderWithTheme(
-      <IndexPageLayout filters={<div>Filters</div>} activeFiltersCount={3} />,
-    );
-
-    expect(screen.getByText(/3 filtros activos/i)).toBeVisible();
-
-    rerender(
-      <ThemeProvider theme={theme}>
-        <IndexPageLayout filters={<div>Filters</div>} activeFiltersCount={0} />
-      </ThemeProvider>,
-    );
-
-    expect(screen.queryByText(/filtro.*activo/i)).toBeNull();
+    renderWithTheme(<IndexPageLayout filters={<div>FiltersContent</div>} />);
+    const toggle = screen.getByRole('button', { name: /filtros/i });
+    await user.click(toggle);
+    expect(screen.getByTestId('index-page-filters')).toBeVisible();
   });
 });

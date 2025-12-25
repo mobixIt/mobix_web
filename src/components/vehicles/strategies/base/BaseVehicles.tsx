@@ -30,7 +30,7 @@ import {
   type VehicleLike,
 } from '../../Vehicles.tableConfig';
 import VehiclesStatsCards from '../../VehiclesStatsCards';
-import VehiclesFilters from '../../VehiclesFilters';
+import VehiclesFilters, { VehiclesFiltersHandle } from '../../VehiclesFilters';
 
 import { usePermissionedTable } from '@/hooks/usePermissionedTable';
 import { useHasPermission } from '@/hooks/useHasPermission';
@@ -66,6 +66,8 @@ const BaseVehicles: React.FC = () => {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState<number>(DEFAULT_PAGE_SIZE);
   const [activeFiltersCount, setActiveFiltersCount] = React.useState(0);
+  const [activeFiltersDisplay, setActiveFiltersDisplay] = React.useState<Record<string, string>>({});
+  const filtersRef = React.useRef<VehiclesFiltersHandle>(null);
 
   const totalCount =
     paginationMeta?.count != null ? paginationMeta.count : vehicles.length;
@@ -207,15 +209,20 @@ const BaseVehicles: React.FC = () => {
         statsCards={shouldRenderStats ? <VehiclesStatsCards tenantSlug={tenantSlug} /> : null}
         filters={
           <VehiclesFilters
+            ref={filtersRef}
             tenantSlug={tenantSlug}
             page={page}
             rowsPerPage={rowsPerPage}
             onResetPage={() => setPage(0)}
             onFiltersAppliedChange={setActiveFiltersCount}
+            onAppliedFiltersDisplayChange={setActiveFiltersDisplay}
           />
         }
         table={table}
         activeFiltersCount={activeFiltersCount}
+        activeFiltersDisplay={activeFiltersDisplay}
+        onRemoveFilter={(id) => filtersRef.current?.removeFilter(id)}
+        onClearAllFilters={() => filtersRef.current?.clearAllFilters()}
         isLoading={shouldShowToolbarSkeleton}
       />
     </div>
