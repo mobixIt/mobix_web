@@ -68,6 +68,7 @@ const BaseVehicles: React.FC = () => {
   const [activeFiltersCount, setActiveFiltersCount] = React.useState(0);
   const [activeFiltersDisplay, setActiveFiltersDisplay] = React.useState<Record<string, string>>({});
   const filtersRef = React.useRef<VehiclesFiltersHandle>(null);
+  const [aiQuestion, setAiQuestion] = React.useState('');
 
   const totalCount =
     paginationMeta?.count != null ? paginationMeta.count : vehicles.length;
@@ -224,6 +225,13 @@ const BaseVehicles: React.FC = () => {
         onRemoveFilter={(id) => filtersRef.current?.removeFilter(id)}
         onClearAllFilters={() => filtersRef.current?.clearAllFilters()}
         isLoading={shouldShowToolbarSkeleton}
+        aiValue={aiQuestion}
+        onAiChange={setAiQuestion}
+        onSendQuestion={(value) => {
+          // TODO: wire AI query handler when backend is ready
+          console.log('AI question from toolbar:', value);
+        }}
+        showAiAssistant={true}
       />
     </div>
   );

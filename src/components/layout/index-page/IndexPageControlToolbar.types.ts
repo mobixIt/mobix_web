@@ -22,4 +22,22 @@ export type IndexPageControlToolbarProps = {
   onRemoveFilter?: (id: string) => void;
   onClearAllFilters?: () => void;
   activeFiltersLabel?: string;
+
+  aiInputPlaceholder?: string;
+  aiDefaultQuestion?: string;
+  aiValue?: string;
+  onAiChange?: (question: string) => void;
+  onSendQuestion?: (question: string) => void;
+  aiSuggestion?: {
+    title?: string;
+    body?: string;
+    actions?: {
+      primaryLabel?: string;
+      secondaryLabel?: string;
+      onPrimary?: () => void;
+      onSecondary?: () => void;
+      onCloseSuggestion?: () => void;
+    };
+  };
+  showAiAssistant?: boolean;
 };

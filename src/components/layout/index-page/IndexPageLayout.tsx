@@ -4,6 +4,7 @@ import * as React from 'react';
 import Collapse from '@mui/material/Collapse';
 
 import IndexPageControlToolbar from './IndexPageControlToolbar';
+import type { IndexPageControlToolbarProps } from './IndexPageControlToolbar.types';
 
 import {
   IndexPageRoot,
@@ -29,6 +30,13 @@ export type IndexPageLayoutProps = {
   onRemoveFilter?: (id: string) => void;
   onClearAllFilters?: () => void;
   activeFiltersLabel?: string;
+  aiInputPlaceholder?: IndexPageControlToolbarProps['aiInputPlaceholder'];
+  aiDefaultQuestion?: IndexPageControlToolbarProps['aiDefaultQuestion'];
+  aiValue?: IndexPageControlToolbarProps['aiValue'];
+  onAiChange?: IndexPageControlToolbarProps['onAiChange'];
+  onSendQuestion?: IndexPageControlToolbarProps['onSendQuestion'];
+  aiSuggestion?: IndexPageControlToolbarProps['aiSuggestion'];
+  showAiAssistant?: IndexPageControlToolbarProps['showAiAssistant'];
 };
 
 export function IndexPageLayout({
@@ -42,6 +50,13 @@ export function IndexPageLayout({
   onRemoveFilter,
   onClearAllFilters,
   activeFiltersLabel,
+  aiInputPlaceholder,
+  aiDefaultQuestion,
+  aiValue,
+  onAiChange,
+  onSendQuestion,
+  aiSuggestion,
+  showAiAssistant,
 }: IndexPageLayoutProps) {
   const hasStats = Boolean(statsCards);
   const hasFilters = Boolean(filters);
@@ -80,6 +95,13 @@ export function IndexPageLayout({
             onClearAllFilters={onClearAllFilters}
             activeFiltersLabel={activeFiltersLabel}
             isLoading={isLoading}
+            aiInputPlaceholder={aiInputPlaceholder}
+            aiDefaultQuestion={aiDefaultQuestion}
+            aiValue={aiValue}
+            onAiChange={onAiChange}
+            onSendQuestion={onSendQuestion}
+            aiSuggestion={aiSuggestion}
+            showAiAssistant={showAiAssistant}
           />
         </ToolbarSection>
       )}

@@ -24,6 +24,8 @@ const meta: Meta<typeof IndexPageControlToolbar> = {
     },
     activeFiltersLabel: 'Filtros activos:',
     isLoading: false,
+    aiInputPlaceholder: 'Pregúntale a Mobix IA...',
+    aiDefaultQuestion: '',
   },
   decorators: [
     (Story) => (
@@ -58,6 +60,9 @@ type Story = StoryObj<typeof IndexPageControlToolbar>;
 export const ConFiltrosActivos: Story = {
   args: {
     showFilters: true,
+    aiValue: 'Pregunta controlada',
+    onAiChange: (value: string) => console.log('change question', value),
+    onSendQuestion: (question: string) => console.log('send question', question),
     onRemoveFilter: (id: string) => console.log('remove', id),
     onClearAllFilters: () => console.log('clear all'),
   },
@@ -75,5 +80,25 @@ export const Cargando: Story = {
     isLoading: true,
     activeFiltersCount: 0,
     activeFiltersDisplay: {},
+  },
+};
+
+export const ConSugerenciaHistorica: Story = {
+  args: {
+    showFilters: true,
+    aiValue: 'Consulta histórica',
+    onAiChange: (value: string) => console.log('change question', value),
+    onSendQuestion: (question: string) => console.log('send question', question),
+    aiSuggestion: {
+      title: 'Historical query detected: Jan 01, 2024',
+      body: 'Podemos abrir el reporte histórico y graficar tendencias para tu consulta.',
+      actions: {
+        primaryLabel: 'Open Report',
+        secondaryLabel: 'Ver analytics',
+        onPrimary: () => console.log('primary'),
+        onSecondary: () => console.log('secondary'),
+        onCloseSuggestion: () => console.log('close suggestion'),
+      },
+    },
   },
 };

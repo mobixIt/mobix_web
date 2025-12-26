@@ -1,0 +1,1 @@
+- Dashboard dinamico por IA y por usuario

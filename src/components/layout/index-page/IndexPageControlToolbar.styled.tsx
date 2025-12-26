@@ -1,7 +1,7 @@
 'use client';
 
-import { styled, Theme, CSSObject } from '@mui/material/styles';
-import { Box, Chip, keyframes } from '@mui/material';
+import { styled, Theme, CSSObject, alpha } from '@mui/material/styles';
+import { Box, Chip, keyframes, InputBase, Typography, IconButton } from '@mui/material';
 
 import { MobixButtonOutlined, MobixButtonText } from '@/components/mobix/button';
 
@@ -18,6 +18,7 @@ export const Row = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: theme.spacing(2),
+  flexWrap: 'wrap',
 }));
 
 export const Left = styled(Box)(({ theme }) => ({
@@ -27,19 +28,23 @@ export const Left = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1.5),
 }));
 
-export const Right = styled(Box)(({ theme }) => ({
+export const Right = styled(Box)(() => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'flex-end',
-  flexWrap: 'wrap',
-  gap: theme.spacing(1.5),
+  flex: 1,
+  minWidth: 320,
 }));
 
 export const ToggleButton = styled(MobixButtonOutlined, {
   shouldForwardProp: (prop) => prop !== 'active',
 })<ToggleButtonProps>(({ theme, active }) => ({
   background: theme.palette.background.paper,
-  borderRadius: Number(theme.shape.borderRadius) * 2,
+  borderRadius: theme.shape.borderRadius,
+  height: 48,
+  minHeight: 48,
+  paddingTop: theme.spacing(0.75),
+  paddingBottom: theme.spacing(0.75),
 
   ...(active && {
     borderColor: theme.palette.secondary.main,
@@ -53,7 +58,7 @@ export const ActiveFiltersContainer = styled(Box)(({ theme }) => ({
   flexWrap: 'wrap',
   gap: theme.spacing(1),
   flexBasis: '100%',
-  marginTop: theme.spacing(0.5),
+  marginTop: theme.spacing(1),
 }));
 
 export const ActiveFiltersLabel = styled('span')(({ theme }) => ({
@@ -88,6 +93,114 @@ export const ClearFiltersButton = styled(MobixButtonText)(({ theme }) => ({
   textTransform: 'none',
 }));
 
+export const AiInputWrapper = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing(1),
+  width: '100%',
+}));
+
+export const AiInputContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1.25),
+  padding: theme.spacing(0.5, 1.5, 0.5, 0.75),
+  height: 48,
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: theme.palette.grey[50],
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+  boxShadow: `0 6px 14px ${alpha(theme.palette.primary.main, 0.06)}`,
+}));
+
+export const AiSendButtonWrapper = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: 40,
+  width: 40,
+  flexShrink: 0,
+}));
+
+export const AiInputIcon = styled(Box)(({ theme }) => ({
+  width: 40,
+  height: 40,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: theme.palette.secondary.main,
+  flexShrink: 0,
+}));
+
+export const AiQuestionInput = styled(InputBase)(({ theme }) => ({
+  flex: 1,
+  fontSize: theme.typography.pxToRem(14),
+  lineHeight: theme.typography.pxToRem(20),
+  color: theme.palette.text.primary,
+  '& .MuiInputBase-input': {
+    padding: 0,
+  },
+  '&::placeholder': {
+    color: theme.palette.text.secondary,
+  },
+}));
+
+export const SuggestionBanner = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1.5),
+  padding: theme.spacing(1.1, 1.5),
+  marginTop: theme.spacing(1),
+  borderRadius: theme.shape.borderRadius,
+  border: `1px solid ${alpha(theme.palette.info.main, 0.4)}`,
+  background: `linear-gradient(90deg, ${alpha(theme.palette.info.main, 0.12)} 0%, ${alpha(
+    theme.palette.info.main,
+    0.05,
+  )} 100%)`,
+}));
+
+export const SuggestionIcon = styled(Box)(({ theme }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: theme.shape.borderRadius,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: theme.palette.common.white,
+  color: theme.palette.info.main,
+  flexShrink: 0,
+}));
+
+export const SuggestionTexts = styled(Box)(({ theme }) => ({
+  flex: 1,
+  minWidth: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing(0.5),
+}));
+
+export const SuggestionTitle = styled(Typography)(({ theme }) => ({
+  fontWeight: theme.typography.fontWeightBold,
+  color: theme.palette.text.primary,
+  lineHeight: 1.2,
+}));
+
+export const SuggestionBody = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+  fontSize: theme.typography.pxToRem(13.5),
+  lineHeight: 1.35,
+}));
+
+export const SuggestionActions = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: theme.spacing(1),
+  flexShrink: 0,
+}));
+
+export const SuggestionCloseButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.text.secondary,
+}));
+
 const mobixShimmer = keyframes`
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
@@ -113,11 +226,20 @@ export const ToolbarSkeletonRow = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'flex-start',
   gap: theme.spacing(2),
+  width: '100%',
 }));
 
 export const ToolbarSkeletonPill = styled('div')(({ theme }) => ({
-  height: 36,
+  height: 48,
   width: 140,
   borderRadius: Number(theme.shape.borderRadius) * 1.5,
+  ...shimmerBase(theme),
+}));
+
+export const ToolbarSkeletonInput = styled('div')(({ theme }) => ({
+  height: 48,
+  flex: 1,
+  minWidth: 240,
+  borderRadius: theme.shape.borderRadius,
   ...shimmerBase(theme),
 }));
