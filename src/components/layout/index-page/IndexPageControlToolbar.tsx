@@ -58,6 +58,7 @@ export default function IndexPageControlToolbar({
   aiValue,
   onAiChange,
   onSendQuestion,
+  aiIsLoading = false,
   aiSuggestion,
   showAiAssistant = true,
 }: IndexPageControlToolbarProps) {
@@ -134,24 +135,27 @@ export default function IndexPageControlToolbar({
                       </AiInputIcon>
                       <AiQuestionInput
                         value={currentQuestion}
-                        onChange={(event) => {
-                          onAiChange?.(event.target.value);
-                          if (!isControlled) setQuestion(event.target.value);
-                        }}
-                        onKeyDown={handleQuestionKeyDown}
-                        placeholder={aiInputPlaceholder}
-                        inputProps={{ 'aria-label': 'AI question input' }}
+                      onChange={(event) => {
+                        onAiChange?.(event.target.value);
+                        if (!isControlled) setQuestion(event.target.value);
+                      }}
+                      onKeyDown={handleQuestionKeyDown}
+                      placeholder={aiInputPlaceholder}
+                      inputProps={{ 'aria-label': 'AI question input' }}
+                      disabled={aiIsLoading}
+                    />
+                    <AiSendButtonWrapper>
+                      <AiSendButton
+                        aria-label="send question"
+                        onClick={handleSendQuestion}
+                        sx={{ width: 40, height: 40 }}
+                        isLoading={aiIsLoading}
+                        disabled={aiIsLoading}
                       />
-                      <AiSendButtonWrapper>
-                        <AiSendButton
-                          aria-label="send question"
-                          onClick={handleSendQuestion}
-                          sx={{ width: 40, height: 40 }}
-                        />
-                      </AiSendButtonWrapper>
-                    </AiInputContainer>
-                  </AiInputWrapper>
-                </Right>
+                    </AiSendButtonWrapper>
+                  </AiInputContainer>
+                </AiInputWrapper>
+              </Right>
               ) : null}
             </Row>
 

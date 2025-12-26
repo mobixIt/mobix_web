@@ -63,16 +63,18 @@ describe('shouldFetchVehicles', () => {
   });
 
   it('returns true when filters signature differs from cached signature', () => {
-    const state = makeState({ lastFetchedAt: '2025-01-01T00:00:00.000Z', lastPage: 1, lastPageSize: 10, lastFiltersSig: JSON.stringify([['status', 'active']]) });
+    const cachedSig = JSON.stringify({ filters: JSON.stringify([['status', 'active']]), ai: '' });
+    const state = makeState({ lastFetchedAt: '2025-01-01T00:00:00.000Z', lastPage: 1, lastPageSize: 10, lastFiltersSig: cachedSig });
     expect(shouldFetchVehicles({ tenantSlug: 'coolitoral', params: { page: { number: 1, size: 10 }, filters: { status: 'inactive' } } }, state)).toBe(true);
   });
 
   it('returns false when cache is still valid for same page, size and filters', () => {
+    const cachedSig = JSON.stringify({ filters: JSON.stringify([['status', 'active']]), ai: '' });
     const state = makeState({
       lastFetchedAt: '2025-01-01T00:00:00.000Z',
       lastPage: 1,
       lastPageSize: 10,
-      lastFiltersSig: JSON.stringify([['status', 'active']]),
+      lastFiltersSig: cachedSig,
     });
 
     expect(

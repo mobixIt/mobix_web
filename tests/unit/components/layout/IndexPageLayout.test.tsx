@@ -63,6 +63,12 @@ describe('IndexPageLayout', () => {
     expect(onClearAllFilters).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the filters toggle visible when filters content is not rendered but display entries exist', () => {
+    renderWithTheme(<IndexPageLayout activeFiltersDisplay={{ ai: 'IA' }} />);
+    expect(screen.getByRole('button', { name: /filtros/i })).toBeVisible();
+    expect(screen.getByTestId('active-filters-chips')).toBeVisible();
+  });
+
   it('hides chips when loading is true', () => {
     renderWithTheme(
       <IndexPageLayout

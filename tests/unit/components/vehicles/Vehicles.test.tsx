@@ -73,6 +73,13 @@ vi.mock('@/store/slices/vehiclesSlice', () => {
     selectVehicles,
     selectVehiclesStatus,
     selectVehiclesPagination,
+    selectVehiclesAiMeta: vi.fn(() => ({
+      aiActive: false,
+      aiQuestion: null,
+      aiExplanation: null,
+      aiAppliedFilters: null,
+      errorCode: null,
+    })),
   };
 });
 

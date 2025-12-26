@@ -26,6 +26,9 @@ export interface VehiclesIndexResponse {
   data: Vehicle[];
   meta?: {
     pagination?: PaginationMeta;
+    ai?: boolean;
+    ai_explanation?: string | null;
+    applied_filters?: Record<string, string>;
   };
 }
 

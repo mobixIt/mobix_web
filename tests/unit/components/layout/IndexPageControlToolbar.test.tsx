@@ -165,12 +165,14 @@ describe('IndexPageControlToolbar', () => {
   it('keeps the AI send button sized to align with the input', () => {
     const { element } = renderToolbar({
       activeFiltersDisplay: {},
+      aiIsLoading: true,
     });
     render(element);
     const sendButton = screen.getByLabelText(/send question/i);
     const styles = getComputedStyle(sendButton);
     expect(styles.height).toBe('40px');
     expect(styles.width).toBe('40px');
+    expect(sendButton).toBeDisabled();
   });
 
   it('renders suggestion banner with actions and handles clicks', async () => {
