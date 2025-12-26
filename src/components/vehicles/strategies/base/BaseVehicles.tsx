@@ -1,13 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { Alert } from '@mui/material';
+import { Alert, Box } from '@mui/material';
 import { IndexPageLayout } from '@/components/layout/index-page/IndexPageLayout';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   selectVehicles,
   selectVehiclesStatus,
   selectVehiclesPagination,
+  selectVehiclesAiMeta,
+  fetchVehicles,
 } from '@/store/slices/vehiclesSlice';
 import {
   selectAllowedAttributesForSubjectAndAction,
@@ -37,6 +39,85 @@ import { useHasPermission } from '@/hooks/useHasPermission';
 
 const DEFAULT_PAGE_SIZE = 10;
 
+const AI_FILTER_LABELS: Record<string, string> = {
+  status: 'Estado',
+  date: 'Fecha',
+  brand: 'Marca',
+  brand_id: 'Marca',
+  vehicle_class: 'Clase',
+  vehicle_class_id: 'Clase',
+  color: 'Color',
+  capacity_total_gt: 'Capacidad Total (>)',
+  capacity_total_lt: 'Capacidad Total (<)',
+  model_year: 'Año Modelo',
+  owner_id: 'Propietario',
+  driver_id: 'Conductor',
+  q: 'Buscar',
+};
+
+const capitalizeValue = (value: string) => {
+  if (!value) return value;
+  return value
+    .split(' ')
+    .map((word) => (word ? `${word[0].toUpperCase()}${word.slice(1)}` : ''))
+    .join(' ');
+};
+
+const extractFirstNumber = (text?: string | null): string | null => {
+  if (!text) return null;
+  const match = text.match(/(\d+(?:[\\.,]\\d+)?)/);
+  if (!match) return null;
+  return match[1].replace(',', '.');
+};
+
+export const mapAiFiltersDisplay = (
+  appliedFilters: Record<string, unknown> | null | undefined,
+  aiQuestion?: string | null,
+) => {
+  const display: Record<string, string> = {};
+
+  Object.entries(appliedFilters ?? {}).forEach(([key, value]) => {
+    if (value === null || value === undefined) return;
+    const normalized = String(value).trim();
+    if (!normalized) return;
+
+    const fallbackLabel = key.replace(/_/g, ' ');
+    const label =
+      AI_FILTER_LABELS[key] ??
+      `${fallbackLabel.charAt(0).toUpperCase()}${fallbackLabel.slice(1)}`;
+
+    let formattedValue = normalized;
+
+    if ((key === 'capacity_total_gt' || key === 'capacity_total_lt') && normalized === '0') {
+      const fromQuestion = extractFirstNumber(aiQuestion);
+      if (fromQuestion) {
+        formattedValue = fromQuestion;
+      } else {
+        return;
+      }
+    }
+
+    display[key] = `${label}: ${capitalizeValue(formattedValue)}`;
+  });
+
+  return display;
+};
+
+export const buildAiQuestionFromFilters = (filters: Record<string, unknown>) => {
+  const segments = Object.entries(filters)
+    .filter(([, value]) => value !== null && value !== undefined && String(value).trim())
+    .map(([key, value]) => {
+      const fallbackLabel = key.replace(/_/g, ' ');
+      const label =
+        AI_FILTER_LABELS[key] ??
+        `${fallbackLabel.charAt(0).toUpperCase()}${fallbackLabel.slice(1)}`;
+      return `${label.toLowerCase()} ${String(value).trim()}`;
+    });
+
+  if (!segments.length) return '';
+  return `vehículos ${segments.join(' ')}`.trim();
+};
+
 const BaseVehicles: React.FC = () => {
   const dispatch = useAppDispatch();
 
@@ -58,6 +139,9 @@ const BaseVehicles: React.FC = () => {
   const status = useAppSelector((state) =>
     tenantSlug ? selectVehiclesStatus(state, tenantSlug) : 'idle',
   );
+  const aiMeta = useAppSelector((state) =>
+    tenantSlug ? selectVehiclesAiMeta(state, tenantSlug) : null,
+  );
 
   const paginationMeta = useAppSelector((state) =>
     tenantSlug ? selectVehiclesPagination(state, tenantSlug) : null,
@@ -69,6 +153,11 @@ const BaseVehicles: React.FC = () => {
   const [activeFiltersDisplay, setActiveFiltersDisplay] = React.useState<Record<string, string>>({});
   const filtersRef = React.useRef<VehiclesFiltersHandle>(null);
   const [aiQuestion, setAiQuestion] = React.useState('');
+  const [aiError, setAiError] = React.useState<string | null>(null);
+  const [aiLoading, setAiLoading] = React.useState(false);
+  const [aiAppliedFiltersOverride, setAiAppliedFiltersOverride] =
+    React.useState<Record<string, unknown> | null>(null);
+  const lastAiRequestSig = React.useRef<string | null>(null);
 
   const totalCount =
     paginationMeta?.count != null ? paginationMeta.count : vehicles.length;
@@ -80,6 +169,12 @@ const BaseVehicles: React.FC = () => {
   const permissionsReady = useAppSelector(selectPermissionsReady);
   const canCreateVehicle = useHasPermission('vehicle:create');
   const canSeeVehicleStats = useHasPermission('vehicle:stats');
+  const isAiActive = Boolean(aiMeta?.aiActive);
+  const aiAppliedFilters = aiMeta?.aiAppliedFilters ?? {};
+  const effectiveAiAppliedFilters = aiAppliedFiltersOverride ?? aiAppliedFilters;
+  const aiExplanation = aiMeta?.aiExplanation ?? null;
+  const aiQuestionFromStore = aiMeta?.aiQuestion ?? null;
+  const isAiLoading = aiLoading || (isAiActive && status === 'loading');
 
   const rows: VehicleRow[] = mapVehiclesToRows(vehicles);
 
@@ -132,6 +227,19 @@ const BaseVehicles: React.FC = () => {
     window.location.assign('/login');
   }, [statsErrorStatus]);
 
+  const mapAiErrorMessage = React.useCallback((code?: string, fallback?: string) => {
+    const messages: Record<string, string> = {
+      DATE_NOT_ALLOWED: 'La fecha solicitada no está permitida para la búsqueda IA.',
+      NO_IDS: 'La consulta IA no devolvió IDs válidos.',
+      TOO_MANY_IDS: 'La consulta IA devolvió demasiados resultados.',
+      UNSAFE_SQL: 'La consulta fue bloqueada por considerarse insegura.',
+      LLM_ERROR: 'El asistente IA tuvo un problema al procesar tu consulta.',
+      AI_INDEX_ERROR: 'No se pudo consultar el índice IA en este momento.',
+    };
+    if (code && messages[code]) return messages[code];
+    return fallback ?? 'No se pudo completar la búsqueda con IA.';
+  }, []);
+
   const header = (
     <PageHeaderSection
       title="Vehículos"
@@ -155,6 +263,169 @@ const BaseVehicles: React.FC = () => {
     }
   }, [permissionedTableReady, status]);
 
+  const aiFiltersDisplay = React.useMemo(
+    () => mapAiFiltersDisplay(effectiveAiAppliedFilters, aiQuestion),
+    [aiQuestion, effectiveAiAppliedFilters],
+  );
+
+  const activeFiltersLabel = 'Filtros activos:';
+  const displayedFilters = isAiActive ? aiFiltersDisplay : activeFiltersDisplay;
+  const displayedFiltersCount = Object.keys(displayedFilters).length;
+
+  const handleSendAiQuestion = React.useCallback(
+    (value: string) => {
+      if (!tenantSlug) return;
+      const trimmed = value.trim();
+      if (!trimmed) return;
+      setPage(0);
+      setAiQuestion(trimmed);
+      setAiError(null);
+      setAiAppliedFiltersOverride(null);
+      const sig = `${trimmed}|${0}|${rowsPerPage}`;
+      lastAiRequestSig.current = sig;
+      setAiLoading(true);
+      void dispatch(
+        fetchVehicles({
+          tenantSlug,
+          params: {
+            page: { number: 1, size: rowsPerPage },
+            ai_question: trimmed,
+          },
+        }),
+      )
+        .unwrap()
+        .catch((err) => {
+          setAiError(mapAiErrorMessage(err?.code, err?.message));
+        })
+        .finally(() => setAiLoading(false));
+    },
+    [dispatch, mapAiErrorMessage, rowsPerPage, tenantSlug],
+  );
+
+  const handleClearAi = React.useCallback(() => {
+    if (!tenantSlug) return;
+    setAiQuestion('');
+    setAiError(null);
+    setAiAppliedFiltersOverride(null);
+    lastAiRequestSig.current = null;
+    setAiLoading(true);
+    void dispatch(
+      fetchVehicles({
+        tenantSlug,
+        params: {
+          page: { number: page + 1, size: rowsPerPage },
+        },
+      }),
+    )
+      .unwrap()
+      .catch((err) => setAiError(mapAiErrorMessage(err?.code, err?.message)))
+      .finally(() => setAiLoading(false));
+  }, [dispatch, mapAiErrorMessage, page, rowsPerPage, tenantSlug]);
+
+  const handleRemoveAiFilter = React.useCallback(
+    (filterId: string) => {
+      const currentFilters = effectiveAiAppliedFilters ?? {};
+      const nextFilters = Object.entries(currentFilters).reduce<Record<string, unknown>>(
+        (acc, [key, value]) => {
+          if (key === filterId) return acc;
+          acc[key] = value;
+          return acc;
+        },
+        {},
+      );
+
+      const filtered = Object.fromEntries(
+        Object.entries(nextFilters).filter(([, value]) => value !== null && value !== undefined && String(value).trim()),
+      );
+
+      const hasFilters = Object.keys(filtered).length > 0;
+      if (!hasFilters) {
+        handleClearAi();
+        return;
+      }
+
+      const nextQuestion = buildAiQuestionFromFilters(filtered);
+      setAiAppliedFiltersOverride(filtered);
+      setAiQuestion(nextQuestion);
+      setAiError(null);
+      setPage(0);
+
+      const sig = `${nextQuestion}|${0}|${rowsPerPage}`;
+      lastAiRequestSig.current = sig;
+      setAiLoading(true);
+
+      void dispatch(
+        fetchVehicles({
+          tenantSlug,
+          params: {
+            page: { number: 1, size: rowsPerPage },
+            ai_question: nextQuestion,
+          },
+        }),
+      )
+        .unwrap()
+        .catch((err) => {
+          setAiError(mapAiErrorMessage(err?.code, err?.message));
+        })
+        .finally(() => setAiLoading(false));
+    },
+    [
+      dispatch,
+      effectiveAiAppliedFilters,
+      handleClearAi,
+      mapAiErrorMessage,
+      rowsPerPage,
+      tenantSlug,
+    ],
+  );
+
+  React.useEffect(() => {
+    if (!tenantSlug) return;
+    if (!isAiActive || !aiQuestionFromStore) return;
+    if (aiAppliedFiltersOverride) return;
+
+    const sig = `${aiQuestionFromStore}|${page}|${rowsPerPage}`;
+    if (lastAiRequestSig.current === sig) return;
+
+    lastAiRequestSig.current = sig;
+    setAiError(null);
+    setAiLoading(true);
+    void dispatch(
+      fetchVehicles({
+        tenantSlug,
+        params: {
+          page: { number: page + 1, size: rowsPerPage },
+          ai_question: aiQuestionFromStore,
+        },
+      }),
+    )
+      .unwrap()
+      .catch((err) => setAiError(mapAiErrorMessage(err?.code, err?.message)))
+      .finally(() => setAiLoading(false));
+  }, [
+    aiQuestionFromStore,
+    dispatch,
+    isAiActive,
+    mapAiErrorMessage,
+    page,
+    rowsPerPage,
+    tenantSlug,
+  ]);
+
+  React.useEffect(() => {
+    if (!isAiActive) {
+      lastAiRequestSig.current = null;
+    }
+  }, [isAiActive]);
+
+  React.useEffect(() => {
+    if (!isAiActive) {
+      setAiAppliedFiltersOverride(null);
+      return;
+    }
+    setAiAppliedFiltersOverride(null);
+  }, [aiAppliedFilters, isAiActive]);
+
   const shouldShowToolbarSkeleton =
     !permissionedTableReady || (!hasLoadedOnce && isVehiclesLoading);
 
@@ -171,7 +442,7 @@ const BaseVehicles: React.FC = () => {
       <MobixTable<VehicleRow>
         rows={rows}
         columns={vehicleColumns}
-        loading={isVehiclesLoading}
+        loading={isVehiclesLoading || isAiLoading}
         keepPreviousData
         enableSelection
         enablePagination
@@ -205,33 +476,44 @@ const BaseVehicles: React.FC = () => {
 
   return (
     <div data-testid="vehicles-page">
+      {aiError ? (
+        <Box mb={2}>
+          <Alert severity="warning">{aiError}</Alert>
+        </Box>
+      ) : null}
       <IndexPageLayout
         header={header}
         statsCards={shouldRenderStats ? <VehiclesStatsCards tenantSlug={tenantSlug} /> : null}
         filters={
-          <VehiclesFilters
-            ref={filtersRef}
-            tenantSlug={tenantSlug}
-            page={page}
-            rowsPerPage={rowsPerPage}
-            onResetPage={() => setPage(0)}
-            onFiltersAppliedChange={setActiveFiltersCount}
-            onAppliedFiltersDisplayChange={setActiveFiltersDisplay}
-          />
+          !isAiActive && !isAiLoading ? (
+            <VehiclesFilters
+              ref={filtersRef}
+              tenantSlug={tenantSlug}
+              page={page}
+              rowsPerPage={rowsPerPage}
+              onResetPage={() => setPage(0)}
+              onFiltersAppliedChange={setActiveFiltersCount}
+              onAppliedFiltersDisplayChange={setActiveFiltersDisplay}
+            />
+          ) : null
         }
         table={table}
-        activeFiltersCount={activeFiltersCount}
-        activeFiltersDisplay={activeFiltersDisplay}
-        onRemoveFilter={(id) => filtersRef.current?.removeFilter(id)}
-        onClearAllFilters={() => filtersRef.current?.clearAllFilters()}
+        activeFiltersCount={isAiActive ? displayedFiltersCount : activeFiltersCount}
+        activeFiltersDisplay={displayedFilters}
+        onRemoveFilter={
+          isAiActive
+            ? (id) => handleRemoveAiFilter(id)
+            : (id) => filtersRef.current?.removeFilter(id)
+        }
+        onClearAllFilters={isAiActive ? handleClearAi : () => filtersRef.current?.clearAllFilters()}
         isLoading={shouldShowToolbarSkeleton}
         aiValue={aiQuestion}
         onAiChange={setAiQuestion}
-        onSendQuestion={(value) => {
-          // TODO: wire AI query handler when backend is ready
-          console.log('AI question from toolbar:', value);
-        }}
-        showAiAssistant={true}
+        onSendQuestion={handleSendAiQuestion}
+        aiIsLoading={isAiLoading}
+        showAiAssistant
+        activeFiltersLabel={activeFiltersLabel}
+        showFiltersToggle
       />
     </div>
   );

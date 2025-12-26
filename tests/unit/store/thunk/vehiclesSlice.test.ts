@@ -90,7 +90,10 @@ describe('fetchVehicles thunk', () => {
     expect(finalState?.lastFetchedAt).toBe('2025-01-01T00:00:00.000Z');
     expect(finalState?.lastPage).toBe(1);
     expect(finalState?.lastPageSize).toBe(10);
-    expect(finalState?.lastFiltersSig).toBe(JSON.stringify([['status', 'active']]));
+    expect(finalState?.lastFiltersSig).toBe(JSON.stringify({
+      filters: JSON.stringify([['status', 'active']]),
+      ai: '',
+    }));
 
     expect(mockedFetchVehiclesFromApi).toHaveBeenCalledTimes(1);
     expect(mockedFetchVehiclesFromApi).toHaveBeenCalledWith('coolitoral', {

@@ -15,7 +15,7 @@ type MembershipState = {
   memberships: Membership[] | null;
 };
 
-// Definimos la estructura mínima del estado que consume el componente
+// Minimal state structure consumed by the component
 type MockRootState = {
   auth: {
     status: AuthStatus;
@@ -27,7 +27,7 @@ type MockRootState = {
   };
 };
 
-// Definición estricta para acciones simuladas de Redux
+// Strict definition for simulated Redux actions
 type MockAction = {
   type: string;
   payload?: unknown;
@@ -38,7 +38,7 @@ type MockAction = {
 const dispatchSpy = vi.fn();
 const redirectToBaseLoginSpy = vi.fn();
 
-// Variables de control mutables para los mocks
+// Mutable control variables for mocks
 let mockSessionStatus: SessionStatus = 'loading';
 let mockTenantSlug: string | null = 'coolitoral';
 let mockState: MockRootState;
@@ -48,9 +48,9 @@ vi.mock('@/providers/SessionProvider', () => ({
   useSession: () => ({ status: mockSessionStatus }),
 }));
 
-// 2. Mock Redux (Base y Custom Hooks)
-// CORRECCIÓN CRÍTICA: useSelector ahora ejecuta el selector.
-// Esto evita que devuelva 'undefined' y rompa componentes que esperan datos.
+// 2. Mock Redux (Base and Custom Hooks)
+// CRITICAL FIX: useSelector now executes the selector.
+// This prevents returning undefined and breaking components that expect data.
 vi.mock('react-redux', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-redux')>();
   return {
@@ -85,7 +85,7 @@ vi.mock('@/store/slices/permissionsSlice', () => ({
   loadTenantPermissions: (slug: string) => mockLoadPermissionsAction(slug),
   selectMembershipRaw: (state: MockRootState) => state.permissions.membershipRaw,
   selectPermissionsReady: (state: MockRootState) => state.permissions.permissionsReady,
-  selectEffectiveModules: vi.fn(() => []), // Retorna array vacío para evitar crash en Sidebar
+  selectEffectiveModules: vi.fn(() => []), // Returns empty array to avoid Sidebar crash
 }));
 
 // 4. Mock Utils & Libs
@@ -106,16 +106,16 @@ vi.mock('@/components/error-pages', () => ({
   ServerErrorPage: () => <div data-testid="server-error-page-mock" />,
 }));
 
-// CORRECCIÓN CRÍTICA: Usar path absoluto (alias) para mockear SecureLayout.
-// Usar './SecureLayout' fallaba porque es relativo al archivo de test, no al componente.
-// Al no encontrar el mock, usaba el real, que renderizaba el Sidebar y causaba el crash.
+// CRITICAL FIX: Use absolute path (alias) to mock SecureLayout.
+// Using './SecureLayout' failed because it is relative to the test file, not the component.
+// When the mock was missing it rendered the real Sidebar and caused the crash.
 vi.mock('@/components/layout/secure/SecureLayout', () => ({
   SecureLayout: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="secure-layout-mock">{children}</div>
   ),
 }));
 
-// Helper para cargar el componente con flags de módulo reseteados
+// Helper to load the component with reset module flags
 const loadSecureContent = async () => {
   const module = await import('@/components/layout/secure/SecureContent');
   return module.SecureContent;

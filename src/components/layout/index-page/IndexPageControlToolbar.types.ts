@@ -28,6 +28,7 @@ export type IndexPageControlToolbarProps = {
   aiValue?: string;
   onAiChange?: (question: string) => void;
   onSendQuestion?: (question: string) => void;
+  aiIsLoading?: boolean;
   aiSuggestion?: {
     title?: string;
     body?: string;

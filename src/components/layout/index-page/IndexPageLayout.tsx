@@ -21,6 +21,8 @@ export type IndexPageLayoutProps = {
 
   statsCards?: React.ReactNode;
   filters?: React.ReactNode;
+  showStatsToggle?: boolean;
+  showFiltersToggle?: boolean;
 
   table?: React.ReactNode;
 
@@ -35,6 +37,7 @@ export type IndexPageLayoutProps = {
   aiValue?: IndexPageControlToolbarProps['aiValue'];
   onAiChange?: IndexPageControlToolbarProps['onAiChange'];
   onSendQuestion?: IndexPageControlToolbarProps['onSendQuestion'];
+  aiIsLoading?: IndexPageControlToolbarProps['aiIsLoading'];
   aiSuggestion?: IndexPageControlToolbarProps['aiSuggestion'];
   showAiAssistant?: IndexPageControlToolbarProps['showAiAssistant'];
 };
@@ -47,6 +50,8 @@ export function IndexPageLayout({
   activeFiltersCount = 0,
   activeFiltersDisplay = {},
   isLoading = false,
+  showStatsToggle,
+  showFiltersToggle,
   onRemoveFilter,
   onClearAllFilters,
   activeFiltersLabel,
@@ -55,12 +60,16 @@ export function IndexPageLayout({
   aiValue,
   onAiChange,
   onSendQuestion,
+  aiIsLoading,
   aiSuggestion,
   showAiAssistant,
 }: IndexPageLayoutProps) {
   const hasStats = Boolean(statsCards);
   const hasFilters = Boolean(filters);
-  const shouldRenderToolbar = hasStats || hasFilters;
+  const hasFiltersDisplay = activeFiltersCount > 0 || Object.keys(activeFiltersDisplay).length > 0;
+  const shouldShowStatsToggle = showStatsToggle ?? hasStats;
+  const shouldShowFiltersToggle = (showFiltersToggle ?? hasFilters) || hasFiltersDisplay;
+  const shouldRenderToolbar = shouldShowStatsToggle || shouldShowFiltersToggle || Boolean(showAiAssistant);
 
   const [showStats, setShowStats] = React.useState(false);
   const [showFilters, setShowFilters] = React.useState(false);
@@ -89,8 +98,8 @@ export function IndexPageLayout({
             onToggleFilters={handleToggleFilters}
             activeFiltersCount={activeFiltersCount}
             activeFiltersDisplay={activeFiltersDisplay}
-            showStatsToggle={hasStats}
-            showFiltersToggle={hasFilters}
+            showStatsToggle={shouldShowStatsToggle}
+            showFiltersToggle={shouldShowFiltersToggle}
             onRemoveFilter={onRemoveFilter}
             onClearAllFilters={onClearAllFilters}
             activeFiltersLabel={activeFiltersLabel}
@@ -100,6 +109,7 @@ export function IndexPageLayout({
             aiValue={aiValue}
             onAiChange={onAiChange}
             onSendQuestion={onSendQuestion}
+            aiIsLoading={aiIsLoading}
             aiSuggestion={aiSuggestion}
             showAiAssistant={showAiAssistant}
           />

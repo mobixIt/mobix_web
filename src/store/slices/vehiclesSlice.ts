@@ -26,11 +26,16 @@ export interface TenantVehiclesState {
   items: Vehicle[];
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
+  errorCode: string | null;
   lastFetchedAt: string | null;
   pagination: PaginationMeta | null;
   lastPage: number | null;
   lastPageSize: number | null;
   lastFiltersSig: string | null;
+  aiActive: boolean;
+  aiQuestion: string | null;
+  aiExplanation: string | null;
+  aiAppliedFilters: Record<string, string> | null;
 }
 
 /**
@@ -54,11 +59,16 @@ const createEmptyTenantState = (): TenantVehiclesState => ({
   items: [],
   status: 'idle',
   error: null,
+  errorCode: null,
   lastFetchedAt: null,
   pagination: null,
   lastPage: null,
   lastPageSize: null,
   lastFiltersSig: null,
+  aiActive: false,
+  aiQuestion: null,
+  aiExplanation: null,
+  aiAppliedFilters: null,
 });
 
 const initialState: VehiclesState = {
@@ -73,6 +83,12 @@ function stableFiltersSig(filters: unknown): string {
     .sort(([a], [b]) => a.localeCompare(b));
 
   return JSON.stringify(entries);
+}
+
+function stableQuerySig(params?: VehiclesIndexParams): string {
+  const filtersSig = stableFiltersSig(params?.filters);
+  const aiSig = params?.ai_question ? params.ai_question.trim() : '';
+  return JSON.stringify({ filters: filtersSig, ai: aiSig });
 }
 
 /**
@@ -104,6 +120,10 @@ export interface FetchVehiclesArgs {
 interface FetchVehiclesPayload {
   items: Vehicle[];
   pagination: PaginationMeta | null;
+  aiActive: boolean;
+  aiQuestion: string | null;
+  aiExplanation: string | null;
+  aiAppliedFilters: Record<string, string> | null;
 }
 
 /**
@@ -137,8 +157,8 @@ export function shouldFetchVehicles(args: FetchVehiclesArgs, state: RootState): 
   const requestedPage = args.params?.page?.number ?? 1;
   const requestedSize = args.params?.page?.size ?? tenantState.lastPageSize ?? 10;
 
-  const requestedFiltersSig = stableFiltersSig(args.params?.filters);
-  const lastFiltersSig = tenantState.lastFiltersSig ?? stableFiltersSig(undefined);
+  const requestedFiltersSig = stableQuerySig(args.params);
+  const lastFiltersSig = tenantState.lastFiltersSig ?? stableQuerySig(undefined);
 
   if (!lastFetchedAt) return true;
 
@@ -166,7 +186,7 @@ export function shouldFetchVehicles(args: FetchVehiclesArgs, state: RootState): 
 export const fetchVehicles = createAsyncThunk<
   FetchVehiclesPayload,
   FetchVehiclesArgs,
-  { state: RootState; rejectValue: { message: string; status?: number } }
+  { state: RootState; rejectValue: { message: string; status?: number; code?: string } }
 >(
   'vehicles/fetchVehicles',
   async (args, { rejectWithValue }) => {
@@ -178,7 +198,14 @@ export const fetchVehicles = createAsyncThunk<
       const pagination =
         (response.meta?.pagination as PaginationMeta | undefined) ?? null;
 
-      return { items, pagination };
+      return {
+        items,
+        pagination,
+        aiActive: Boolean(response.meta?.ai),
+        aiQuestion: response.meta?.ai ? params?.ai_question ?? null : null,
+        aiExplanation: response.meta?.ai_explanation ?? null,
+        aiAppliedFilters: response.meta?.applied_filters ?? null,
+      };
     } catch (err) {
       const normalized = normalizeApiError(err, {
         defaultMessage: 'Failed to load vehicles list',
@@ -186,6 +213,7 @@ export const fetchVehicles = createAsyncThunk<
 
       return rejectWithValue({
         message: normalized.message,
+        code: normalized.code,
         status: normalized.status,
       });
 
@@ -263,6 +291,13 @@ const vehiclesSlice = createSlice({
 
         tenantState.status = 'loading';
         tenantState.error = null;
+        tenantState.errorCode = null;
+        tenantState.aiExplanation = null;
+        tenantState.aiAppliedFilters = null;
+
+        if (action.meta.arg.params?.ai_question) {
+          tenantState.aiQuestion = action.meta.arg.params.ai_question;
+        }
 
         state.byTenant[tenantSlug] = tenantState;
       })
@@ -284,7 +319,12 @@ const vehiclesSlice = createSlice({
         tenantState.lastFetchedAt = new Date().toISOString();
         tenantState.pagination = action.payload.pagination;
 
-        tenantState.lastFiltersSig = stableFiltersSig(action.meta.arg.params?.filters);
+        tenantState.lastFiltersSig = stableQuerySig(action.meta.arg.params);
+
+        tenantState.aiActive = action.payload.aiActive;
+        tenantState.aiQuestion = action.payload.aiQuestion;
+        tenantState.aiExplanation = action.payload.aiExplanation;
+        tenantState.aiAppliedFilters = action.payload.aiAppliedFilters;
 
         const requestedPage =
           action.meta.arg.params?.page?.number ??
@@ -316,6 +356,11 @@ const vehiclesSlice = createSlice({
 
         tenantState.status = 'failed';
         tenantState.error = action.payload.message;
+        tenantState.errorCode = action.payload.code ?? null;
+        tenantState.aiActive = false;
+        tenantState.aiQuestion = null;
+        tenantState.aiExplanation = null;
+        tenantState.aiAppliedFilters = null;
 
         state.byTenant[tenantSlug] = tenantState;
       });
@@ -345,6 +390,26 @@ export const selectVehiclesStatus = (state: RootState, tenantSlug: string) =>
  */
 export const selectVehiclesError = (state: RootState, tenantSlug: string) =>
   state.vehicles.byTenant[tenantSlug]?.error ?? null;
+
+export const selectVehiclesAiMeta = (state: RootState, tenantSlug: string) => {
+  const tenant = state.vehicles.byTenant[tenantSlug];
+  if (!tenant) {
+    return {
+      aiActive: false,
+      aiQuestion: null,
+      aiExplanation: null,
+      aiAppliedFilters: null,
+      errorCode: null,
+    };
+  }
+  return {
+    aiActive: tenant.aiActive,
+    aiQuestion: tenant.aiQuestion,
+    aiExplanation: tenant.aiExplanation,
+    aiAppliedFilters: tenant.aiAppliedFilters,
+    errorCode: tenant.errorCode,
+  };
+};
 
 /**
  * Returns pagination metadata for a tenant.

@@ -8,6 +8,7 @@ export interface VehiclesIndexParams {
   };
   filters?: Record<string, string | number | boolean | null | undefined>;
   sort?: string;
+  ai_question?: string;
 }
 
 export async function fetchVehiclesFromApi(
@@ -23,5 +24,4 @@ export async function fetchVehiclesFromApi(
 
   return response.data;
 }
-
 
