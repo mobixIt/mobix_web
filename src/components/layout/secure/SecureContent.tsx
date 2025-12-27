@@ -101,20 +101,25 @@ export function SecureContent({ children }: SecureContentProps) {
     }
   }, [sessionReady, authStatus, authErrorStatus]);
 
-  const isBootstrapping =
-    sessionStatus === 'loading' ||
-    authStatus === 'idle' ||
-    authStatus === 'loading' ||
-    (authStatus === 'succeeded' &&
-      Boolean(tenantSlug) &&
-      (!permissionsReady ||
-        !membership?.memberships?.some((m) => m.tenant.slug === tenantSlug)));
+  const isBootstrapping = React.useMemo(
+    () =>
+      sessionStatus === 'loading' ||
+      authStatus === 'idle' ||
+      authStatus === 'loading' ||
+      (authStatus === 'succeeded' &&
+        Boolean(tenantSlug) &&
+        (!permissionsReady ||
+          !membership?.memberships?.some((m) => m.tenant.slug === tenantSlug))),
+    [sessionStatus, authStatus, tenantSlug, permissionsReady, membership],
+  );
 
   const hasBootstrappedRef = useRef(false);
 
-  if (!isBootstrapping) {
-    hasBootstrappedRef.current = true;
-  }
+  React.useEffect(() => {
+    if (!isBootstrapping) {
+      hasBootstrappedRef.current = true;
+    }
+  }, [isBootstrapping]);
 
   const shouldShowBootstrapLoader = isBootstrapping && !hasBootstrappedRef.current;
 

@@ -199,11 +199,20 @@ export const MobixTextField: React.FC<MobixTextFieldProps> = ({
   /**
    * Base input slot object with adornments applied.
    */
+  const DEFAULT_INPUT_HEIGHT = 48;
   const inputSlot: InputSlotObject = {
     ...existingInputSlot,
     startAdornment: adornmentStart,
     endAdornment: adornmentEnd,
   };
+
+  const baseHeightSx = { minHeight: DEFAULT_INPUT_HEIGHT, height: DEFAULT_INPUT_HEIGHT };
+  const existingSx = existingInputSlot.sx;
+  inputSlot.sx = Array.isArray(existingSx)
+    ? [baseHeightSx, ...existingSx]
+    : existingSx
+    ? [baseHeightSx, existingSx]
+    : baseHeightSx;
 
   /**
    * Numeric variants use react-number-format as the inputComponent.

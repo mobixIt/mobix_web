@@ -46,13 +46,30 @@ const AI_FILTER_LABELS: Record<string, string> = {
   brand_id: 'Marca',
   vehicle_class: 'Clase',
   vehicle_class_id: 'Clase',
+  body_type: 'Carrocería',
+  body_type_id: 'Carrocería',
   color: 'Color',
   capacity_total_gt: 'Capacidad Total (>)',
   capacity_total_lt: 'Capacidad Total (<)',
+  seated_capacity_gt: 'Capacidad Sentados (>)',
+  seated_capacity_lt: 'Capacidad Sentados (<)',
+  standing_capacity_gt: 'Capacidad De pie (>)',
+  standing_capacity_lt: 'Capacidad De pie (<)',
   model_year: 'Año Modelo',
   owner_id: 'Propietario',
   driver_id: 'Conductor',
   q: 'Buscar',
+};
+
+const AI_STATUS_VALUE_LABELS: Record<string, string> = {
+  draft: 'Borrador',
+  active: 'Activo',
+  inactive: 'Inactivo',
+  maintenance: 'Mantenimiento',
+  activas: 'Activas',
+  activos: 'Activos',
+  inactiva: 'Inactiva',
+  inactivas: 'Inactivas',
 };
 
 const capitalizeValue = (value: string) => {
@@ -76,43 +93,85 @@ export const mapAiFiltersDisplay = (
 ) => {
   const display: Record<string, string> = {};
 
+  const dropNestedValues = (values: string[]) => {
+    const seen = new Set<string>();
+    return values.filter((val) => {
+      const low = val.toLowerCase();
+      if (seen.has(low)) return false;
+      seen.add(low);
+      return true;
+    });
+  };
+
   Object.entries(appliedFilters ?? {}).forEach(([key, value]) => {
-    if (value === null || value === undefined) return;
-    const normalized = String(value).trim();
-    if (!normalized) return;
+    const values = dropNestedValues(toValueArray(value));
+    if (!values.length) return;
 
     const fallbackLabel = key.replace(/_/g, ' ');
     const label =
       AI_FILTER_LABELS[key] ??
       `${fallbackLabel.charAt(0).toUpperCase()}${fallbackLabel.slice(1)}`;
 
-    let formattedValue = normalized;
+    values.forEach((raw, idx) => {
+      let formattedValue = raw;
 
-    if ((key === 'capacity_total_gt' || key === 'capacity_total_lt') && normalized === '0') {
-      const fromQuestion = extractFirstNumber(aiQuestion);
-      if (fromQuestion) {
-        formattedValue = fromQuestion;
-      } else {
-        return;
+      if (key === 'status' && AI_STATUS_VALUE_LABELS[raw]) {
+        formattedValue = AI_STATUS_VALUE_LABELS[raw];
       }
-    }
 
-    display[key] = `${label}: ${capitalizeValue(formattedValue)}`;
+      if (
+        (key === 'capacity_total_gt' || key === 'capacity_total_lt' || key === 'seated_capacity_gt' || key === 'seated_capacity_lt' || key === 'standing_capacity_gt' || key === 'standing_capacity_lt') &&
+        raw === '0'
+      ) {
+        const fromQuestion = extractFirstNumber(aiQuestion);
+        if (fromQuestion) {
+          formattedValue = fromQuestion;
+        } else {
+          return;
+        }
+      }
+
+      const chipKey = values.length > 1 ? `${key}::${idx}` : key;
+      display[chipKey] = `${label}: ${capitalizeValue(formattedValue)}`;
+    });
   });
 
   return display;
 };
 
+function toValueArray(input: unknown): string[] {
+  if (Array.isArray(input)) {
+    return input
+      .map((v) => (v == null ? '' : String(v).trim()))
+      .filter((v) => v.length > 0);
+  }
+  if (input == null) return [];
+  const asString = String(input).trim();
+  if (!asString) return [];
+  return asString
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
 export const buildAiQuestionFromFilters = (filters: Record<string, unknown>) => {
   const segments = Object.entries(filters)
-    .filter(([, value]) => value !== null && value !== undefined && String(value).trim())
     .map(([key, value]) => {
+      const values = toValueArray(value);
+      if (!values.length) return null;
       const fallbackLabel = key.replace(/_/g, ' ');
       const label =
         AI_FILTER_LABELS[key] ??
         `${fallbackLabel.charAt(0).toUpperCase()}${fallbackLabel.slice(1)}`;
-      return `${label.toLowerCase()} ${String(value).trim()}`;
-    });
+      const joined =
+        key === 'status'
+          ? values
+              .map((v) => (AI_STATUS_VALUE_LABELS[v] ?? v).toLowerCase())
+              .join(' o ')
+          : values.join(' o ');
+      return `${label.toLowerCase()} ${joined}`;
+    })
+    .filter(Boolean) as string[];
 
   if (!segments.length) return '';
   return `vehículos ${segments.join(' ')}`.trim();
@@ -277,11 +336,15 @@ const BaseVehicles: React.FC = () => {
       if (!tenantSlug) return;
       const trimmed = value.trim();
       if (!trimmed) return;
+      if (aiLoading) return;
+      const sig = `${trimmed}|${0}|${rowsPerPage}`;
+      if (lastAiRequestSig.current === sig) {
+        return;
+      }
       setPage(0);
       setAiQuestion(trimmed);
       setAiError(null);
       setAiAppliedFiltersOverride(null);
-      const sig = `${trimmed}|${0}|${rowsPerPage}`;
       lastAiRequestSig.current = sig;
       setAiLoading(true);
       void dispatch(
@@ -299,7 +362,7 @@ const BaseVehicles: React.FC = () => {
         })
         .finally(() => setAiLoading(false));
     },
-    [dispatch, mapAiErrorMessage, rowsPerPage, tenantSlug],
+    [aiLoading, dispatch, mapAiErrorMessage, rowsPerPage, tenantSlug],
   );
 
   const handleClearAi = React.useCallback(() => {
@@ -325,9 +388,24 @@ const BaseVehicles: React.FC = () => {
   const handleRemoveAiFilter = React.useCallback(
     (filterId: string) => {
       const currentFilters = effectiveAiAppliedFilters ?? {};
+      const [targetKey, targetIdxRaw] = filterId.includes('::') ? filterId.split('::') : [filterId, null];
+      const targetIdx = targetIdxRaw != null ? Number(targetIdxRaw) : null;
+
       const nextFilters = Object.entries(currentFilters).reduce<Record<string, unknown>>(
         (acc, [key, value]) => {
-          if (key === filterId) return acc;
+          if (!targetIdxRaw && key === filterId) return acc;
+
+          if (targetIdxRaw && key === targetKey) {
+            const values = toValueArray(value);
+            if (Number.isInteger(targetIdx)) {
+              const filteredValues = values.filter((_, i) => i !== targetIdx);
+              if (filteredValues.length) {
+                acc[key] = filteredValues;
+              }
+              return acc;
+            }
+          }
+
           acc[key] = value;
           return acc;
         },
@@ -335,8 +413,14 @@ const BaseVehicles: React.FC = () => {
       );
 
       const filtered = Object.fromEntries(
-        Object.entries(nextFilters).filter(([, value]) => value !== null && value !== undefined && String(value).trim()),
+        Object.entries(nextFilters).filter(([, val]) => {
+          const values = toValueArray(val);
+          return values.length > 0;
+        }),
       );
+
+      const isSame = JSON.stringify(filtered) === JSON.stringify(currentFilters);
+      if (isSame) return;
 
       const hasFilters = Object.keys(filtered).length > 0;
       if (!hasFilters) {

@@ -110,6 +110,7 @@ describe('VehiclesFilters display mapping', () => {
     if (!statusSelect) throw new Error('Status select not found');
     await user.click(statusSelect);
     await user.click(screen.getByRole('option', { name: 'Activo' }));
+    await user.click(screen.getByRole('button', { name: /listo/i }));
     const yearInput = screen.getByPlaceholderText('Ej: 2022');
     await user.type(yearInput, '2024');
     await user.click(screen.getByRole('button', { name: /aplicar/i }));
@@ -128,6 +129,7 @@ describe('VehiclesFilters display mapping', () => {
     if (!statusSelect) throw new Error('Status select not found');
     await user.click(statusSelect);
     await user.click(screen.getByRole('option', { name: 'Inactivo' }));
+    await user.click(screen.getByRole('button', { name: /listo/i }));
     await user.click(screen.getByRole('button', { name: /aplicar/i }));
     await waitFor(() =>
       expect(onAppliedFiltersDisplayChange).toHaveBeenLastCalledWith({
@@ -148,6 +150,7 @@ describe('VehiclesFilters display mapping', () => {
     if (!statusSelect) throw new Error('Status select not found');
     await user.click(statusSelect);
     await user.click(screen.getByRole('option', { name: 'Inactivo' }));
+    await user.click(screen.getByRole('button', { name: /listo/i }));
     await user.click(screen.getByRole('button', { name: /aplicar/i }));
     await waitFor(() =>
       expect(onAppliedFiltersDisplayChange).toHaveBeenLastCalledWith({

@@ -213,13 +213,13 @@ export function MobixTable<T extends { id: Key }>(
     });
 
   React.useEffect(() => {
+    const currentIds = columns.map((c) => String(c.id));
     setVisibleColumnIds((prev) => {
-      const currentIds = columns.map((c) => String(c.id));
-      const next = prev.filter((id) =>
-        currentIds.includes(id),
-      );
+      const next = prev.filter((id) => currentIds.includes(id));
       if (next.length === 0) return currentIds;
-      return next;
+      const sameLength = next.length === prev.length;
+      const sameOrder = sameLength && next.every((id, idx) => id === prev[idx]);
+      return sameOrder ? prev : next;
     });
   }, [columns]);
 

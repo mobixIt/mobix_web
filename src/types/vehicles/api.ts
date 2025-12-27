@@ -28,7 +28,7 @@ export interface VehiclesIndexResponse {
     pagination?: PaginationMeta;
     ai?: boolean;
     ai_explanation?: string | null;
-    applied_filters?: Record<string, string>;
+    applied_filters?: Record<string, string | string[] | number | null>;
   };
 }
 

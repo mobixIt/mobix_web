@@ -34,19 +34,31 @@ export type VehiclesFiltersHandle = {
 
 type VehiclesApiFilters = Partial<{
   q: string;
-  status: string;
+  status: string | string[];
   model_year: string;
   owner_id: string;
   driver_id: string;
-  brand_id: string;
-  vehicle_class_id: string;
-  body_type_id: string;
+  brand_id: string | string[];
+  vehicle_class_id: string | string[];
+  body_type_id: string | string[];
 }>;
 
 // --- Helpers ---
 
 const normalizeStr = (x: unknown): string => String(x ?? '').trim();
 const toLowerSafe = (x: unknown): string => normalizeStr(x).toLowerCase();
+const toArray = (input: unknown): string[] => {
+  if (Array.isArray(input)) {
+    return input.map((v) => String(v).trim()).filter(Boolean);
+  }
+  if (typeof input === 'string') {
+    return input
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
 
 /**
  * Filter options for async select inputs.
@@ -130,21 +142,24 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
     {
       id: 'status',
       label: 'Estado',
-      type: 'select',
+      type: 'multi-select',
       colSpan: 1,
-      placeholder: 'Todos',
+      placeholder: 'Selecciona uno o más',
+      searchable: false,
+      helperText: 'Puedes seleccionar más de uno',
       options: [
         { label: 'Activo', value: 'active' },
         { label: 'Inactivo', value: 'inactive' },
         { label: 'Borrador', value: 'draft' },
+        { label: 'Mantenimiento', value: 'maintenance' },
       ],
     },
     {
       id: 'brand_id',
       label: 'Marca',
-      type: 'select',
+      type: 'multi-select',
       colSpan: 1,
-      placeholder: 'Todas',
+      placeholder: 'Selecciona uno o más',
       options: brandOptions,
       disabled: isCatalogsLoading || !hasCatalogs,
       loading: isCatalogsLoading,
@@ -152,9 +167,9 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
     {
       id: 'vehicle_class_id',
       label: 'Clase',
-      type: 'select',
+      type: 'multi-select',
       colSpan: 1,
-      placeholder: 'Todas',
+      placeholder: 'Selecciona uno o más',
       options: vehicleClassOptions,
       disabled: isCatalogsLoading || !hasCatalogs,
       loading: isCatalogsLoading,
@@ -162,9 +177,9 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
     {
       id: 'body_type_id',
       label: 'Carrocería',
-      type: 'select',
+      type: 'multi-select',
       colSpan: 1,
-      placeholder: 'Todas',
+      placeholder: 'Selecciona uno o más',
       options: bodyTypeOptions,
       disabled: isCatalogsLoading || !hasCatalogs,
       loading: isCatalogsLoading,
@@ -211,10 +226,10 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
   // 4. State Management
   const initialValues: FiltersSectionValues = {
     q: '',
-    status: '',
-    brand_id: '',
-    vehicle_class_id: '',
-    body_type_id: '',
+    status: [],
+    brand_id: [],
+    vehicle_class_id: [],
+    body_type_id: [],
     model_year: '',
     owner_id: null,
     driver_id: null,
@@ -231,25 +246,40 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
   const buildApiFilters = React.useCallback((vals: FiltersSectionValues) => {
     const api: VehiclesApiFilters = {};
 
-    const addIfPresent = (key: keyof VehiclesApiFilters, value: unknown) => {
-      if (typeof value === 'string' && value.trim()) {
-        api[key] = value.trim();
-      }
+    const sanitizeIds = (arr: string[]): string[] =>
+      arr
+        .map((v) => Number.parseInt(v, 10))
+        .filter((n) => Number.isInteger(n))
+        .map(String);
+
+    const addArrayOrString = (
+      key: keyof VehiclesApiFilters,
+      val: unknown,
+      sanitize?: boolean,
+    ) => {
+      const arr = toArray(val);
+      const safeArr = sanitize ? sanitizeIds(arr) : arr;
+      if (!safeArr.length) return;
+      api[key] = safeArr.length === 1 ? safeArr[0] : safeArr;
     };
 
-    addIfPresent('q', vals.q);
-    addIfPresent('status', vals.status);
-    addIfPresent('model_year', vals.model_year);
-    addIfPresent('brand_id', vals.brand_id);
-    addIfPresent('vehicle_class_id', vals.vehicle_class_id);
-    addIfPresent('body_type_id', vals.body_type_id);
+    if (typeof vals.q === 'string' && vals.q.trim()) {
+      api.q = vals.q.trim();
+    }
+    if (typeof vals.model_year === 'string' && vals.model_year.trim()) {
+      api.model_year = vals.model_year.trim();
+    }
 
-    // Handle async-select objects
     const owner = vals.owner_id as AsyncSelectOption | null;
     const driver = vals.driver_id as AsyncSelectOption | null;
 
     if (owner?.value) api.owner_id = owner.value;
     if (driver?.value) api.driver_id = driver.value;
+
+    addArrayOrString('status', vals.status);
+    addArrayOrString('brand_id', vals.brand_id, true);
+    addArrayOrString('vehicle_class_id', vals.vehicle_class_id, true);
+    addArrayOrString('body_type_id', vals.body_type_id, true);
 
     return api;
   }, []);
@@ -267,6 +297,21 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
           if (!option) return;
           const labelValue = option.code ? `${option.label} (${option.code})` : option.label;
           display[field.id] = `${field.label}: ${labelValue}`;
+          return;
+        }
+
+        if (field.type === 'multi-select') {
+          const valuesArray = Array.isArray(value)
+            ? value
+            : typeof value === 'string'
+              ? value.split(',').map((v) => v.trim()).filter(Boolean)
+              : [];
+          valuesArray.forEach((val, idx) => {
+            const match = field.options.find((opt) => opt.value === val);
+            const labelValue = match?.label ?? val;
+            const key = valuesArray.length > 1 ? `${field.id}::${idx}` : field.id;
+            display[key] = `${field.label}: ${labelValue}`;
+          });
           return;
         }
 
@@ -343,6 +388,7 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
       if (!field) return '';
 
       if (field.type === 'async-select') return null;
+      if (field.type === 'multi-select') return [];
       return '';
     },
     [vehicleFilterFields],
@@ -350,6 +396,18 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
 
   const handleRemoveFilter = React.useCallback(
     (fieldId: string) => {
+      const [baseId, idxRaw] = fieldId.split('::');
+      if (idxRaw && Array.isArray(filterValues[baseId])) {
+        const idx = Number(idxRaw);
+        const current = Array.isArray(filterValues[baseId]) ? [...(filterValues[baseId] as string[])] : [];
+        if (!Number.isNaN(idx)) {
+          current.splice(idx, 1);
+          const nextValues = { ...filterValues, [baseId]: current };
+          applyFilters(nextValues);
+          return;
+        }
+      }
+
       const nextValues = { ...filterValues, [fieldId]: clearValueForField(fieldId) };
       applyFilters(nextValues);
     },

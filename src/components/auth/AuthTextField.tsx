@@ -52,6 +52,7 @@ export default function AuthTextField({
           id={inputId}
           type={inputType}
           hasToggle={isPassword}
+          suppressHydrationWarning
           {...rest}
         />
 

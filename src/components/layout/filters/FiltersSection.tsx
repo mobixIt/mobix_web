@@ -31,11 +31,14 @@ import {
 
 import { MobixButtonProgress, MobixButtonText } from '@/components/mobix/button';
 import { MobixTextField } from '@/components/mobix/inputs/MobixTextField';
+import { MobixMultiSelect } from '@/components/mobix/inputs/MobixMultiSelect';
 
 // --- Helpers ---
 
 const normalizeStr = (x: unknown): string => String(x ?? '').trim();
 const toLowerSafe = (x: unknown): string => normalizeStr(x).toLowerCase();
+
+const UNIFIED_INPUT_HEIGHT = 48;
 
 function filterAsyncOptionsByLabelAndCode(
   options: AsyncSelectOption[],
@@ -165,6 +168,7 @@ const AsyncSelectControl = React.memo(({
           size="small"
           placeholder={field.placeholder}
           disabled={isDisabled}
+          sx={{ '& .MuiInputBase-root': { minHeight: UNIFIED_INPUT_HEIGHT, height: UNIFIED_INPUT_HEIGHT } }}
           slotProps={{
             input: {
               ...params.InputProps,
@@ -243,6 +247,7 @@ export default function FiltersSection({
           value={currentValue}
           onChange={(e) => onFieldChange(field.id, e.target.value)}
           disabled={isDisabled}
+          sx={{ '& .MuiInputBase-root': { minHeight: UNIFIED_INPUT_HEIGHT, height: UNIFIED_INPUT_HEIGHT } }}
           slotProps={{
             input: { endAdornment: field.loading ? <CircularProgress size={16} /> : undefined },
           }}
@@ -252,6 +257,25 @@ export default function FiltersSection({
             <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
           ))}
         </MobixTextField>
+      );
+    }
+
+    if (field.type === 'multi-select') {
+      const currentValue = Array.isArray(values[field.id]) ? (values[field.id] as string[]) : [];
+      return (
+        <MobixMultiSelect
+          id={field.id}
+          label={field.label}
+          options={field.options}
+          placeholder={field.placeholder}
+          helperText={field.helperText}
+          searchable={field.searchable}
+          maxChips={field.maxChips}
+          value={currentValue}
+          onChange={(next) => onFieldChange(field.id, next)}
+          loading={Boolean(field.loading)}
+          inputHeight={UNIFIED_INPUT_HEIGHT}
+        />
       );
     }
 
@@ -272,6 +296,7 @@ export default function FiltersSection({
         onChange={(e) => onFieldChange(field.id, e.target.value)}
         type={isSearch ? 'search' : 'text'}
         disabled={isDisabled}
+        sx={{ '& .MuiInputBase-root': { minHeight: UNIFIED_INPUT_HEIGHT, height: UNIFIED_INPUT_HEIGHT } }}
         slotProps={isSearch ? {
           input: {
             startAdornment: (
@@ -388,6 +413,7 @@ export default function FiltersSection({
                 data-testid="filters-section-apply"
                 isSubmitting={isApplying}
                 onClick={onApply}
+                aria-label={applyLabel}
               >
                 {applyLabel}
               </MobixButtonProgress>

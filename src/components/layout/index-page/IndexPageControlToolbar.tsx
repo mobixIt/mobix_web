@@ -67,6 +67,10 @@ export default function IndexPageControlToolbar({
   const isControlled = aiValue !== undefined;
   const currentQuestion = isControlled ? aiValue : question;
   const hasSuggestion = Boolean(aiSuggestion?.title || aiSuggestion?.body || aiSuggestion?.actions);
+  const activeFilterEntries = React.useMemo(
+    () => Object.entries(activeFiltersDisplay),
+    [activeFiltersDisplay],
+  );
 
   React.useEffect(() => {
     if (isControlled) return;
@@ -162,7 +166,7 @@ export default function IndexPageControlToolbar({
             {showFiltersToggle && hasFiltersDisplay && !hasSuggestion && (
               <ActiveFiltersContainer data-testid="active-filters-chips">
                 <ActiveFiltersLabel>{activeFiltersLabel}</ActiveFiltersLabel>
-                {Object.entries(activeFiltersDisplay).map(([id, label]) => (
+                {activeFilterEntries.map(([id, label]) => (
                   <ActiveFilterChip
                     key={id}
                     label={label}

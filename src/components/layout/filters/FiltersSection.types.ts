@@ -25,6 +25,15 @@ export type SelectFilterField = FilterFieldBase & FilterFieldUiState & {
   placeholder?: string;
 };
 
+export type MultiSelectFilterField = FilterFieldBase & FilterFieldUiState & {
+  type: 'multi-select';
+  options: { label: string; value: string; code?: string | null }[];
+  placeholder?: string;
+  helperText?: string;
+  searchable?: boolean;
+  maxChips?: number;
+};
+
 export type AsyncSelectFilterField = FilterFieldBase & FilterFieldUiState & {
   type: 'async-select';
   placeholder?: string;
@@ -45,11 +54,12 @@ export type CustomFilterField = FilterFieldBase & {
 
 export type FiltersSectionField =
   | SelectFilterField
+  | MultiSelectFilterField
   | TextFilterField
   | CustomFilterField
   | AsyncSelectFilterField;
 
-export type FiltersSectionValue = string | AsyncSelectOption | null;
+export type FiltersSectionValue = string | string[] | AsyncSelectOption | null;
 export type FiltersSectionValues = Record<string, FiltersSectionValue>;
 
 export type FiltersSectionProps = {

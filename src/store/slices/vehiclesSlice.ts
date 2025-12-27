@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { RootState } from '@/store/store';
 import type { Vehicle } from '@/types/vehicles/api';
@@ -35,7 +35,7 @@ export interface TenantVehiclesState {
   aiActive: boolean;
   aiQuestion: string | null;
   aiExplanation: string | null;
-  aiAppliedFilters: Record<string, string> | null;
+  aiAppliedFilters: Record<string, string | string[] | number | null> | null;
 }
 
 /**
@@ -123,7 +123,7 @@ interface FetchVehiclesPayload {
   aiActive: boolean;
   aiQuestion: string | null;
   aiExplanation: string | null;
-  aiAppliedFilters: Record<string, string> | null;
+  aiAppliedFilters: Record<string, string | string[] | number | null> | null;
 }
 
 /**
@@ -376,8 +376,19 @@ export const { clearVehicles, invalidateVehiclesCache } = vehiclesSlice.actions;
 /**
  * Returns list of vehicles for a tenant.
  */
-export const selectVehicles = (state: RootState, tenantSlug: string) =>
-  state.vehicles.byTenant[tenantSlug]?.items ?? [];
+const EMPTY_ITEMS: Vehicle[] = [];
+const EMPTY_AI_META = {
+  aiActive: false,
+  aiQuestion: null,
+  aiExplanation: null,
+  aiAppliedFilters: null,
+  errorCode: null as string | null,
+};
+
+export const selectVehicles = createSelector(
+  [(state: RootState, tenantSlug: string) => state.vehicles.byTenant[tenantSlug]?.items],
+  (items) => items ?? EMPTY_ITEMS,
+);
 
 /**
  * Returns fetch status for tenant's vehicles.
@@ -391,25 +402,19 @@ export const selectVehiclesStatus = (state: RootState, tenantSlug: string) =>
 export const selectVehiclesError = (state: RootState, tenantSlug: string) =>
   state.vehicles.byTenant[tenantSlug]?.error ?? null;
 
-export const selectVehiclesAiMeta = (state: RootState, tenantSlug: string) => {
-  const tenant = state.vehicles.byTenant[tenantSlug];
-  if (!tenant) {
+export const selectVehiclesAiMeta = createSelector(
+  [(state: RootState, tenantSlug: string) => state.vehicles.byTenant[tenantSlug]],
+  (tenant) => {
+    if (!tenant) return EMPTY_AI_META;
     return {
-      aiActive: false,
-      aiQuestion: null,
-      aiExplanation: null,
-      aiAppliedFilters: null,
-      errorCode: null,
+      aiActive: tenant.aiActive,
+      aiQuestion: tenant.aiQuestion,
+      aiExplanation: tenant.aiExplanation,
+      aiAppliedFilters: tenant.aiAppliedFilters,
+      errorCode: tenant.errorCode,
     };
-  }
-  return {
-    aiActive: tenant.aiActive,
-    aiQuestion: tenant.aiQuestion,
-    aiExplanation: tenant.aiExplanation,
-    aiAppliedFilters: tenant.aiAppliedFilters,
-    errorCode: tenant.errorCode,
-  };
-};
+  },
+);
 
 /**
  * Returns pagination metadata for a tenant.

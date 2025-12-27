@@ -197,11 +197,20 @@ async function openFiltersPanel(page: Page) {
   await expect(page.getByTestId('index-page-filters')).toBeVisible();
 }
 
+async function closeOpenPopover(page: Page) {
+  const overlay = page.locator('.MuiPopover-root, .MuiModal-root').filter({ has: page.locator('.MuiBackdrop-root') });
+  const hasOverlay = await overlay.first().isVisible({ timeout: 300 }).catch(() => false);
+  if (!hasOverlay) return;
+  await page.keyboard.press('Escape');
+  await overlay.first().waitFor({ state: 'detached', timeout: 2000 }).catch(() => {});
+}
+
 async function openMuiSelectByLabel(container: ReturnType<Page['locator']>, label: RegExp) {
   const selectLabel = container.locator('label').filter({ hasText: label }).first();
   await expect(selectLabel).toBeVisible();
   const controlId = await selectLabel.getAttribute('for');
   const control = controlId ? container.locator(`#${controlId}`) : selectLabel;
+  await closeOpenPopover(control.page());
   await control.click();
 }
 
@@ -212,6 +221,12 @@ async function pickMuiOption(page: Page, name: RegExp | string) {
       : page.getByRole('option', { name });
   await expect(option).toBeVisible();
   await option.click();
+  const listo = page.getByRole('button', { name: /listo/i });
+  if (await listo.isVisible({ timeout: 500 }).catch(() => false)) {
+    await listo.click();
+  } else {
+    await closeOpenPopover(page);
+  }
 }
 
 test('vehicles filters collapse, catalogs, async selects, and filtered request payload', async ({ page }) => {
