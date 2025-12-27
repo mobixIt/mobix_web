@@ -229,9 +229,12 @@ const BaseVehicles: React.FC = () => {
   const canCreateVehicle = useHasPermission('vehicle:create');
   const canSeeVehicleStats = useHasPermission('vehicle:stats');
   const isAiActive = Boolean(aiMeta?.aiActive);
-  const aiAppliedFilters = aiMeta?.aiAppliedFilters ?? {};
+  const aiAppliedFiltersFromStore = aiMeta?.aiAppliedFilters;
+  const aiAppliedFilters = React.useMemo(
+    () => aiAppliedFiltersFromStore ?? {},
+    [aiAppliedFiltersFromStore],
+  );
   const effectiveAiAppliedFilters = aiAppliedFiltersOverride ?? aiAppliedFilters;
-  const aiExplanation = aiMeta?.aiExplanation ?? null;
   const aiQuestionFromStore = aiMeta?.aiQuestion ?? null;
   const isAiLoading = aiLoading || (isAiActive && status === 'loading');
 
@@ -331,6 +334,13 @@ const BaseVehicles: React.FC = () => {
   const displayedFilters = isAiActive ? aiFiltersDisplay : activeFiltersDisplay;
   const displayedFiltersCount = Object.keys(displayedFilters).length;
 
+  const showAiNoResultsBanner =
+    isAiActive &&
+    !isAiLoading &&
+    !aiError &&
+    hasLoadedOnce &&
+    (displayedFiltersCount === 0 || vehicles.length === 0);
+
   const handleSendAiQuestion = React.useCallback(
     (value: string) => {
       if (!tenantSlug) return;
@@ -387,6 +397,7 @@ const BaseVehicles: React.FC = () => {
 
   const handleRemoveAiFilter = React.useCallback(
     (filterId: string) => {
+      if (!tenantSlug) return;
       const currentFilters = effectiveAiAppliedFilters ?? {};
       const [targetKey, targetIdxRaw] = filterId.includes('::') ? filterId.split('::') : [filterId, null];
       const targetIdx = targetIdxRaw != null ? Number(targetIdxRaw) : null;
@@ -522,7 +533,7 @@ const BaseVehicles: React.FC = () => {
   } else if (status === 'failed') {
     table = <Alert severity="error">No se pudo cargar la lista de vehículos.</Alert>;
   } else {
-    table = (
+    const tableContent = (
       <MobixTable<VehicleRow>
         rows={rows}
         columns={vehicleColumns}
@@ -556,6 +567,8 @@ const BaseVehicles: React.FC = () => {
         emptyStateContent={<div>No hay vehículos registrados</div>}
       />
     );
+
+    table = tableContent;
   }
 
   return (
@@ -598,6 +611,26 @@ const BaseVehicles: React.FC = () => {
         showAiAssistant
         activeFiltersLabel={activeFiltersLabel}
         showFiltersToggle
+        aiNoResults={
+          showAiNoResultsBanner
+            ? {
+                show: true,
+                onRetry: () => handleSendAiQuestion(aiQuestion),
+                onClear: handleClearAi,
+              }
+            : undefined
+        }
+        aiErrorState={
+          isAiActive && aiError
+            ? {
+                show: true,
+                message: aiError,
+                hint: 'Revisa la conexión o intenta con otra frase.',
+                onRetry: () => handleSendAiQuestion(aiQuestion),
+                onClear: handleClearAi,
+              }
+            : undefined
+        }
       />
     </div>
   );

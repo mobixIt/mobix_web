@@ -5,6 +5,8 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
 
 import {
   Root,
@@ -61,6 +63,8 @@ export default function IndexPageControlToolbar({
   aiIsLoading = false,
   aiSuggestion,
   showAiAssistant = true,
+  aiNoResults,
+  aiErrorState,
 }: IndexPageControlToolbarProps) {
   const hasFiltersDisplay = Object.keys(activeFiltersDisplay).length > 0;
   const [question, setQuestion] = React.useState(aiDefaultQuestion);
@@ -90,6 +94,132 @@ export default function IndexPageControlToolbar({
       event.preventDefault();
       handleSendQuestion();
     }
+  };
+
+  const renderAiBanner = () => {
+    if (hasSuggestion) {
+      return (
+        <SuggestionBanner>
+          <SuggestionIcon>
+            <FaClockRotateLeftIcon color="primary" fontSize="medium" />
+          </SuggestionIcon>
+          <SuggestionTexts>
+            {aiSuggestion?.title ? (
+              <SuggestionTitle variant="subtitle2">{aiSuggestion.title}</SuggestionTitle>
+            ) : null}
+            {aiSuggestion?.body ? (
+              <SuggestionBody variant="body2">{aiSuggestion.body}</SuggestionBody>
+            ) : null}
+          </SuggestionTexts>
+          {aiSuggestion?.actions ? (
+            <SuggestionActions>
+              {aiSuggestion.actions.onPrimary ? (
+                <MobixButton
+                  variant="contained"
+                  color="primary"
+                  endIcon={<ArrowForwardIosIcon fontSize="small" />}
+                  onClick={aiSuggestion.actions.onPrimary}
+                >
+                  {aiSuggestion.actions.primaryLabel ?? DEFAULT_PRIMARY_ACTION_LABEL}
+                </MobixButton>
+              ) : null}
+              {aiSuggestion.actions.onSecondary ? (
+                <MobixButtonOutlined onClick={aiSuggestion.actions.onSecondary}>
+                  {aiSuggestion.actions.secondaryLabel ?? DEFAULT_SECONDARY_ACTION_LABEL}
+                </MobixButtonOutlined>
+              ) : null}
+              {aiSuggestion.actions.onCloseSuggestion ? (
+                <SuggestionCloseButton
+                  aria-label="close suggestion"
+                  size="small"
+                  onClick={aiSuggestion.actions.onCloseSuggestion}
+                >
+                  <CloseIcon fontSize="small" />
+                </SuggestionCloseButton>
+              ) : null}
+            </SuggestionActions>
+          ) : null}
+        </SuggestionBanner>
+      );
+    }
+
+    if (aiErrorState?.show) {
+      return (
+        <SuggestionBanner>
+          <SuggestionIcon>
+            <ReportProblemOutlinedIcon color="error" fontSize="medium" />
+          </SuggestionIcon>
+          <SuggestionTexts>
+            <SuggestionTitle variant="subtitle2">
+              {aiErrorState.message ?? 'Tuvimos un problema al procesar tu consulta. ¿Probamos de nuevo?'}
+            </SuggestionTitle>
+            <SuggestionBody variant="body2">
+              {aiErrorState.hint ?? 'Revisa tu conexión o intenta con otra frase.'}
+            </SuggestionBody>
+            {aiErrorState.note ? (
+              <SuggestionBody variant="body2">{aiErrorState.note}</SuggestionBody>
+            ) : null}
+          </SuggestionTexts>
+          <SuggestionActions>
+            {aiErrorState.onRetry ? (
+              <MobixButton
+                variant="contained"
+                color="primary"
+                endIcon={<ArrowForwardIosIcon fontSize="small" />}
+                onClick={aiErrorState.onRetry}
+              >
+                Intentar de nuevo
+              </MobixButton>
+            ) : null}
+            {aiErrorState.onClear ? (
+              <MobixButtonOutlined onClick={aiErrorState.onClear}>
+                Ver todos
+              </MobixButtonOutlined>
+            ) : null}
+          </SuggestionActions>
+        </SuggestionBanner>
+      );
+    }
+
+    if (aiNoResults?.show) {
+      return (
+        <SuggestionBanner>
+          <SuggestionIcon>
+            <InfoOutlinedIcon color="primary" fontSize="medium" />
+          </SuggestionIcon>
+          <SuggestionTexts>
+            <SuggestionTitle variant="subtitle2">
+              {aiNoResults.message ?? 'No pude encontrar nada con lo que me diste. ¿Probamos con más detalle?'}
+            </SuggestionTitle>
+            <SuggestionBody variant="body2">
+              {aiNoResults.hint ?? 'Me ayudan detalles como marca, año o color.'}
+            </SuggestionBody>
+            {aiNoResults.note ? (
+              <SuggestionBody variant="body2">{aiNoResults.note}</SuggestionBody>
+            ) : null}
+          </SuggestionTexts>
+          <SuggestionActions>
+            {aiNoResults.onRetry ? (
+              <MobixButton
+                variant="contained"
+                color="primary"
+                endIcon={<ArrowForwardIosIcon fontSize="small" />}
+                onClick={aiNoResults.onRetry}
+              >
+                Intentar de nuevo
+              </MobixButton>
+            ) : null}
+            {aiNoResults.onClear ? (
+              <MobixButtonOutlined onClick={aiNoResults.onClear}>
+                Ver todos
+              </MobixButtonOutlined>
+            ) : null}
+          </SuggestionActions>
+        </SuggestionBanner>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -187,49 +317,7 @@ export default function IndexPageControlToolbar({
               </ActiveFiltersContainer>
             )}
 
-            {hasSuggestion ? (
-              <SuggestionBanner>
-                <SuggestionIcon>
-                  <FaClockRotateLeftIcon color="primary" fontSize="medium" />
-                </SuggestionIcon>
-                <SuggestionTexts>
-                  {aiSuggestion?.title ? (
-                    <SuggestionTitle variant="subtitle2">{aiSuggestion.title}</SuggestionTitle>
-                  ) : null}
-                  {aiSuggestion?.body ? (
-                    <SuggestionBody variant="body2">{aiSuggestion.body}</SuggestionBody>
-                  ) : null}
-                </SuggestionTexts>
-                {aiSuggestion?.actions ? (
-                  <SuggestionActions>
-                    {aiSuggestion.actions.onPrimary ? (
-                      <MobixButton
-                        variant="contained"
-                        color="primary"
-                        endIcon={<ArrowForwardIosIcon fontSize="small" />}
-                        onClick={aiSuggestion.actions.onPrimary}
-                      >
-                        {aiSuggestion.actions.primaryLabel ?? DEFAULT_PRIMARY_ACTION_LABEL}
-                      </MobixButton>
-                    ) : null}
-                    {aiSuggestion.actions.onSecondary ? (
-                      <MobixButtonOutlined onClick={aiSuggestion.actions.onSecondary}>
-                        {aiSuggestion.actions.secondaryLabel ?? DEFAULT_SECONDARY_ACTION_LABEL}
-                      </MobixButtonOutlined>
-                    ) : null}
-                    {aiSuggestion.actions.onCloseSuggestion ? (
-                      <SuggestionCloseButton
-                        aria-label="close suggestion"
-                        size="small"
-                        onClick={aiSuggestion.actions.onCloseSuggestion}
-                      >
-                        <CloseIcon fontSize="small" />
-                      </SuggestionCloseButton>
-                    ) : null}
-                  </SuggestionActions>
-                ) : null}
-              </SuggestionBanner>
-            ) : null}
+            {renderAiBanner()}
           </>
         )}
       </>

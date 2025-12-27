@@ -41,4 +41,20 @@ export type IndexPageControlToolbarProps = {
     };
   };
   showAiAssistant?: boolean;
+  aiNoResults?: {
+    show: boolean;
+    message?: string;
+    hint?: string;
+    note?: string;
+    onRetry?: () => void;
+    onClear?: () => void;
+  };
+  aiErrorState?: {
+    show: boolean;
+    message?: string;
+    hint?: string;
+    note?: string;
+    onRetry?: () => void;
+    onClear?: () => void;
+  };
 };
