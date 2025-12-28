@@ -14,6 +14,12 @@ import { useVehiclesCatalogs } from './Vehicles.hooks';
 
 import { useAppDispatch } from '@/store/hooks';
 import { fetchVehicles } from '@/store/slices/vehiclesSlice';
+import {
+  filtersFromQueryString,
+  filtersToQueryString,
+  replaceUrlQuery,
+  type FilterQuerySpec,
+} from '@/utils/filterQuerySync';
 
 // --- Types ---
 
@@ -44,6 +50,17 @@ type VehiclesApiFilters = Partial<{
 }>;
 
 // --- Helpers ---
+
+const FILTER_QUERY_SPEC: FilterQuerySpec = {
+  q: { type: 'string' },
+  status: { type: 'stringArray' },
+  brand_id: { type: 'stringArray' },
+  vehicle_class_id: { type: 'stringArray' },
+  body_type_id: { type: 'stringArray' },
+  model_year: { type: 'string' },
+  owner_id: { type: 'asyncId' },
+  driver_id: { type: 'asyncId' },
+};
 
 const normalizeStr = (x: unknown): string => String(x ?? '').trim();
 const toLowerSafe = (x: unknown): string => normalizeStr(x).toLowerCase();
@@ -235,8 +252,20 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
     driver_id: null,
   };
 
-  const [filterValues, setFilterValues] = React.useState<FiltersSectionValues>(initialValues);
-  const [appliedFilters, setAppliedFilters] = React.useState<FiltersSectionValues>({});
+  const parsedFromQuery = React.useMemo<FiltersSectionValues>(() => {
+    if (typeof window === 'undefined') return initialValues;
+    const parsed = filtersFromQueryString(window.location.search, FILTER_QUERY_SPEC);
+    return { ...initialValues, ...parsed };
+  }, [tenantSlug]);
+
+  const [filterValues, setFilterValues] = React.useState<FiltersSectionValues>(parsedFromQuery);
+  const [appliedFilters, setAppliedFilters] = React.useState<FiltersSectionValues>(parsedFromQuery);
+  const didHydrateFromQuery = React.useRef(false);
+  const applyFiltersRef = React.useRef<((vals: FiltersSectionValues) => void) | null>(null);
+  const needsLabelHydrationRef = React.useRef(false);
+  const hasAiQuestionParam = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).has('ai_question')
+    : false;
 
   const handleFilterChange = (fieldId: string, value: FiltersSectionValue) => {
     setFilterValues((prev) => ({ ...prev, [fieldId]: value }));
@@ -350,7 +379,18 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
     onFiltersAppliedChange?.(count);
     onAppliedFiltersChange?.(nextValues);
     onAppliedFiltersDisplayChange?.(display);
+    const query = filtersToQueryString(nextValues, FILTER_QUERY_SPEC);
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    Object.keys(FILTER_QUERY_SPEC).forEach((k) => params.delete(k));
+    if (query) {
+      new URLSearchParams(query).forEach((val, key) => params.set(key, val));
+    }
+    replaceUrlQuery(params.toString());
   }, [buildApiFilters, buildAppliedFiltersDisplay, catalogsStatus, onAppliedFiltersChange, onAppliedFiltersDisplayChange, onFiltersAppliedChange, onResetPage]);
+
+  React.useEffect(() => {
+    applyFiltersRef.current = applyFilters;
+  }, [applyFilters]);
 
   const handleApplyFilters = () => applyFilters(filterValues);
 
@@ -361,6 +401,7 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
   // 7. Effect: Fetch data when applied filters or page changes
   React.useEffect(() => {
     if (!tenantSlug) return;
+    if (hasAiQuestionParam) return;
 
     const filters = buildApiFilters(appliedFilters);
     const hasFilters = Object.keys(filters).length > 0;
@@ -380,7 +421,7 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
 
     // Cleanup not strictly necessary for this thunk unless it supports abortion, 
     // but good practice if needed.
-  }, [dispatch, tenantSlug, page, rowsPerPage, appliedFilters, buildApiFilters]);
+  }, [dispatch, tenantSlug, page, rowsPerPage, appliedFilters, buildApiFilters, hasAiQuestionParam]);
 
   const clearValueForField = React.useCallback(
     (fieldId: string): FiltersSectionValue => {
@@ -413,6 +454,37 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
     },
     [applyFilters, clearValueForField, filterValues],
   );
+
+  React.useEffect(() => {
+    applyFiltersRef.current = applyFilters;
+  }, [applyFilters]);
+
+  React.useEffect(() => {
+    if (didHydrateFromQuery.current) return;
+    didHydrateFromQuery.current = true;
+    const hasQueryFilters = filtersToQueryString(parsedFromQuery, FILTER_QUERY_SPEC).length > 0;
+    if (hasQueryFilters) {
+      if (catalogsStatus !== 'succeeded') {
+        needsLabelHydrationRef.current = true;
+      }
+      applyFiltersRef.current?.(parsedFromQuery);
+      return;
+    }
+    setFilterValues(parsedFromQuery);
+    setAppliedFilters(parsedFromQuery);
+  }, [catalogsStatus, parsedFromQuery]);
+
+  React.useEffect(() => {
+    if (!needsLabelHydrationRef.current) return;
+    if (catalogsStatus !== 'succeeded') return;
+    if (!applyFiltersRef.current) return;
+    if (!appliedFilters || Object.keys(appliedFilters).length === 0) {
+      needsLabelHydrationRef.current = false;
+      return;
+    }
+    applyFiltersRef.current(appliedFilters);
+    needsLabelHydrationRef.current = false;
+  }, [appliedFilters, catalogsStatus]);
 
   React.useImperativeHandle(ref, () => ({
     removeFilter: handleRemoveFilter,

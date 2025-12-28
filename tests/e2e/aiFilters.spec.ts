@@ -73,3 +73,65 @@ test('removing an AI chip keeps remaining filters and updates the prompt', async
   await expect(brandChip).toBeVisible();
   await expect(input).toHaveValue(/marca hino/i);
 });
+
+test('removing a filter chip updates URL and persists after reload with ai_question', async ({ page }) => {
+  const tenantSlug = 'coolitoral';
+
+  const vehicleRead: TenantPermission = {
+    id: 100,
+    subject_class: 'vehicle',
+    action: 'read',
+    app_module: { id: 1, name: 'Vehicles', description: 'Vehicles module', active: true },
+  };
+
+  await mockAuthenticatedTenantUser(page, tenantSlug, [vehicleRead]);
+  await mockVehiclesIndexOk(page);
+  await mockVehiclesStats(page, async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          total: 0,
+          active: 0,
+          inactive: 0,
+          new_this_month: 0,
+          total_prev_month: 0,
+          delta_total_vs_prev_month: 0,
+          delta_total_pct_vs_prev_month: 0,
+          active_pct_of_total: 0,
+          inactive_pct_of_total: 0,
+          new_prev_month: 0,
+          delta_new_vs_prev_month: 0,
+        },
+        meta: {
+          as_of: new Date().toISOString(),
+          timezone: 'America/Bogota',
+          computed_at: new Date().toISOString(),
+          warnings: [],
+        },
+      }),
+    });
+  });
+
+  await page.goto(`${baseUrlForTenant(tenantSlug)}/vehicles?ai_question=busetas+activas&status=active&vehicle_class_id=2`);
+  await expect(page.getByTestId('vehicles-page')).toBeVisible({ timeout: 15000 });
+  await expect(page).toHaveURL(/ai_question=busetas\+activas/);
+
+  const statusChip = page.getByTestId('active-filter-chip-status');
+  await expect(statusChip).toBeVisible({ timeout: 10000 });
+
+  const removalResponse = page.waitForResponse((res) => {
+    const reqUrl = res.request().url();
+    return res.url().includes('/v1/vehicles') && !reqUrl.includes('status=active') && reqUrl.includes('ai_question');
+  });
+  await statusChip.locator('svg').first().click();
+  await removalResponse;
+
+  await expect(page).not.toHaveURL(/status=active/);
+
+  await page.reload();
+
+  await expect(page).toHaveURL(/ai_question=veh%C3%ADculos\+marca\+hino\+clase\+buseta/i);
+  await expect(page).not.toHaveURL(/status=active/);
+});

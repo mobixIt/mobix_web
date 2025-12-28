@@ -1,7 +1,6 @@
-- Dashboard dinamico por IA y por usuario
-- Enviar inmediatamente a login cuando se visita al dashboard y no hay cookie de session
 - Mejorar performance con NextJs
+
+- Dashboard dinamico por IA y por usuario
+- Restructurar componentes de StoryBook
+- Enviar inmediatamente a login cuando se visita al dashboard y no hay cookie de session
 - Index de type de conceptos, cambiar nombra, no operaciones
-- Mantener filtro aplicado en URL
-- Mejorar UX para preguntas sin respuesta de la IA
-- Habilitar campos en select para OR

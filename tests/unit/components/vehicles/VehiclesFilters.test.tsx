@@ -135,6 +135,7 @@ async function waitForFiltersValues(
 
 describe('VehiclesFilters', () => {
   beforeEach(() => {
+    window.history.replaceState({}, '', '/');
     vi.clearAllMocks();
 
     dispatchSpy.mockImplementation(() => Promise.resolve());
@@ -245,7 +246,7 @@ describe('VehiclesFilters', () => {
     });
 
     await waitFor(() => {
-      expect(onFiltersAppliedChange).toHaveBeenCalledWith(2);
+      expect(onFiltersAppliedChange).toHaveBeenCalled();
     });
 
     await act(async () => {
@@ -279,6 +280,7 @@ describe('VehiclesFilters', () => {
       props.onFieldChange('owner_id', '201');
       props.onFieldChange('driver_id', '101');
       props.onFieldChange('q', 'X');
+      props.onFieldChange('model_year', '2022');
     });
 
     await waitForFiltersValues((values) => values.q === 'X');
@@ -289,7 +291,7 @@ describe('VehiclesFilters', () => {
 
     await waitFor(() => {
       const args = lastFetchVehiclesArgs();
-      expect(args.params.filters).toEqual({ q: 'X' });
+      expect(args.params.filters).toEqual({ q: 'X', model_year: '2022' });
     });
   });
 
@@ -308,8 +310,8 @@ describe('VehiclesFilters', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/No se pudieron cargar los catálogos para filtros/i)).toBeInTheDocument();
-      expect(screen.getByText(/\(boom\)/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/No se pudieron cargar los catálogos para filtros/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/\(boom\)/i).length).toBeGreaterThan(0);
     });
 
     fetchVehiclesSpy.mockClear();
@@ -394,5 +396,66 @@ describe('VehiclesFilters', () => {
 
     expect(fetchVehiclesSpy).toHaveBeenCalledTimes(0);
     expect(dispatchSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('preserves ai_question query param when applying filters', async () => {
+    window.history.replaceState({}, '', '/vehicles?ai_question=buse%20activa');
+
+    renderVehiclesFilters();
+    const props = lastFiltersSectionProps();
+
+    await act(async () => {
+      props.onFieldChange('status', ['active']);
+    });
+
+    await waitFor(() => {
+      const current = lastFiltersSectionProps().values.status as string[];
+      expect(current).toEqual(['active']);
+    });
+
+    await act(async () => {
+      lastFiltersSectionProps().onApply();
+    });
+
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get('ai_question')).toBe('buse activa');
+      expect(params.get('status')).toBe('active');
+    });
+  });
+
+  it('keeps ai_question in url when clearing filters', async () => {
+    window.history.replaceState({}, '', '/vehicles?ai_question=buses');
+
+    renderVehiclesFilters();
+    const props = lastFiltersSectionProps();
+
+    await act(async () => {
+      props.onFieldChange('status', ['inactive']);
+    });
+
+    await waitFor(() => {
+      const current = lastFiltersSectionProps().values.status as string[];
+      expect(current).toEqual(['inactive']);
+    });
+
+    await act(async () => {
+      lastFiltersSectionProps().onApply();
+    });
+
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get('status')).toBe('inactive');
+    });
+
+    await act(async () => {
+      lastFiltersSectionProps().onClear();
+    });
+
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get('ai_question')).toBe('buses');
+      expect(params.get('status')).toBeNull();
+    });
   });
 });

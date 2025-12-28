@@ -88,6 +88,12 @@ const extractFirstNumber = (text?: string | null): string | null => {
   return match[1].replace(',', '.');
 };
 
+const isAbortError = (err: unknown) => {
+  const anyErr = err as { name?: string; message?: string };
+  const msg = typeof anyErr?.message === 'string' ? anyErr.message : '';
+  return anyErr?.name === 'ConditionError' || msg.includes('condition callback returning false');
+};
+
 export const mapAiFiltersDisplay = (
   appliedFilters: Record<string, unknown> | null | undefined,
   aiQuestion?: string | null,
@@ -181,6 +187,11 @@ export const buildAiQuestionFromFilters = (filters: Record<string, unknown>) => 
 const BaseVehicles: React.FC = () => {
   const dispatch = useAppDispatch();
 
+  const FILTER_QUERY_KEYS = React.useMemo(
+    () => ['q', 'status', 'brand_id', 'vehicle_class_id', 'body_type_id', 'model_year', 'owner_id', 'driver_id'],
+    [],
+  );
+
   const tenantSlug =
     typeof window !== 'undefined'
       ? getTenantSlugFromHost(window.location.hostname)
@@ -218,6 +229,7 @@ const BaseVehicles: React.FC = () => {
   const [aiAppliedFiltersOverride, setAiAppliedFiltersOverride] =
     React.useState<Record<string, unknown> | null>(null);
   const lastAiRequestSig = React.useRef<string | null>(null);
+  const hydratedAiFromQuery = React.useRef(false);
 
   const totalCount =
     paginationMeta?.count != null ? paginationMeta.count : vehicles.length;
@@ -414,6 +426,12 @@ const BaseVehicles: React.FC = () => {
       setAiQuestion(trimmed);
       setAiError(null);
       setAiAppliedFiltersOverride(null);
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        FILTER_QUERY_KEYS.forEach((k) => params.delete(k));
+        params.set('ai_question', trimmed);
+        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+      }
       lastAiRequestSig.current = sig;
       setAiLoading(true);
       void dispatch(
@@ -427,7 +445,9 @@ const BaseVehicles: React.FC = () => {
       )
         .unwrap()
         .catch((err) => {
-          setAiError(mapAiErrorMessage(err?.code, err?.message));
+          if (isAbortError(err)) return;
+          const anyErr = err as { code?: string; message?: string };
+          setAiError(mapAiErrorMessage(anyErr?.code, anyErr?.message));
         })
         .finally(() => setAiLoading(false));
     },
@@ -441,6 +461,12 @@ const BaseVehicles: React.FC = () => {
     setAiAppliedFiltersOverride(null);
     setAiIsPastQuestion(false);
     lastAiRequestSig.current = null;
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.delete('ai_question');
+      FILTER_QUERY_KEYS.forEach((k) => params.delete(k));
+      window.history.replaceState({}, '', params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname);
+    }
     setAiLoading(true);
     void dispatch(
       fetchVehicles({
@@ -505,6 +531,13 @@ const BaseVehicles: React.FC = () => {
       setAiError(null);
       setPage(0);
 
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        FILTER_QUERY_KEYS.forEach((k) => params.delete(k));
+        params.set('ai_question', nextQuestion);
+        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+      }
+
       const sig = `${nextQuestion}|${0}|${rowsPerPage}`;
       lastAiRequestSig.current = sig;
       setAiLoading(true);
@@ -555,7 +588,11 @@ const BaseVehicles: React.FC = () => {
       }),
     )
       .unwrap()
-      .catch((err) => setAiError(mapAiErrorMessage(err?.code, err?.message)))
+      .catch((err) => {
+        if (isAbortError(err)) return;
+        const anyErr = err as { code?: string; message?: string };
+        setAiError(mapAiErrorMessage(anyErr?.code, anyErr?.message));
+      })
       .finally(() => setAiLoading(false));
   }, [
     aiAppliedFiltersOverride,
@@ -581,6 +618,37 @@ const BaseVehicles: React.FC = () => {
     }
     setAiAppliedFiltersOverride(null);
   }, [aiAppliedFilters, isAiActive]);
+
+  React.useEffect(() => {
+    if (hydratedAiFromQuery.current) return;
+    if (!tenantSlug) return;
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const aiQ = params.get('ai_question');
+    if (!aiQ) return;
+    hydratedAiFromQuery.current = true;
+    setAiQuestion(aiQ);
+    setAiError(null);
+    setAiAppliedFiltersOverride(null);
+    lastAiRequestSig.current = `${aiQ}|0|${rowsPerPage}`;
+    setAiLoading(true);
+    void dispatch(
+      fetchVehicles({
+        tenantSlug,
+        params: {
+          page: { number: 1, size: rowsPerPage },
+          ai_question: aiQ,
+        },
+      }),
+    )
+      .unwrap()
+      .catch((err) => {
+        if (isAbortError(err)) return;
+        const anyErr = err as { code?: string; message?: string };
+        setAiError(mapAiErrorMessage(anyErr?.code, anyErr?.message));
+      })
+      .finally(() => setAiLoading(false));
+  }, [dispatch, mapAiErrorMessage, rowsPerPage, tenantSlug]);
 
   const shouldShowToolbarSkeleton =
     !permissionedTableReady || (!hasLoadedOnce && isVehiclesLoading);

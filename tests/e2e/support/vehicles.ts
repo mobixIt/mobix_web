@@ -47,6 +47,7 @@ export async function mockVehiclesIndexOk(page: Page): Promise<void> {
       const q = aiQuestion.toLowerCase();
       const includeCapacity = q.includes('capacidad');
       appliedFilters = {
+        status: 'active',
         brand: 'Hino',
         vehicle_class: 'buseta',
       };

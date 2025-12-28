@@ -144,21 +144,32 @@ export const AiQuestionInput = styled(InputBase)(({ theme }) => ({
   },
 }));
 
-export const SuggestionBanner = styled(Box)(({ theme }) => ({
+const errorGradient = (theme: Theme) =>
+  `linear-gradient(90deg, ${alpha(theme.palette.error.main, 0.12)} 0%, ${alpha(
+    theme.palette.error.main,
+    0.06,
+  )} 100%)`;
+
+const infoGradient = (theme: Theme) =>
+  `linear-gradient(90deg, ${alpha(theme.palette.info.main, 0.12)} 0%, ${alpha(
+    theme.palette.info.main,
+    0.05,
+  )} 100%)`;
+
+export const SuggestionBanner = styled(Box)(({ theme, color }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1.5),
   padding: theme.spacing(1.1, 1.5),
   marginTop: theme.spacing(1),
   borderRadius: theme.shape.borderRadius,
-  border: `1px solid ${alpha(theme.palette.info.main, 0.4)}`,
-  background: `linear-gradient(90deg, ${alpha(theme.palette.info.main, 0.12)} 0%, ${alpha(
-    theme.palette.info.main,
-    0.05,
-  )} 100%)`,
+  border: color === 'error'
+    ? `1px solid ${alpha(theme.palette.error.main, 0.5)}`
+    : `1px solid ${alpha(theme.palette.info.main, 0.4)}`,
+  background: color === 'error' ? errorGradient(theme) : infoGradient(theme),
 }));
 
-export const SuggestionIcon = styled(Box)(({ theme }) => ({
+export const SuggestionIcon = styled(Box)(({ theme, color }) => ({
   width: 36,
   height: 36,
   borderRadius: theme.shape.borderRadius,
@@ -166,7 +177,7 @@ export const SuggestionIcon = styled(Box)(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'center',
   backgroundColor: theme.palette.common.white,
-  color: theme.palette.info.main,
+  color: color === 'error' ? theme.palette.error.main : theme.palette.info.main,
   flexShrink: 0,
 }));
 

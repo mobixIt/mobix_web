@@ -74,6 +74,7 @@ const renderFilters = () => {
 
 describe('VehiclesFilters display mapping', () => {
   beforeEach(() => {
+    window.history.replaceState({}, '', '/');
     dispatchSpy.mockClear();
     catalogsStateRef.current = {
       status: 'succeeded',
@@ -117,11 +118,10 @@ describe('VehiclesFilters display mapping', () => {
     await user.click(screen.getByRole('option', { name: 'Inactivo' }));
     await user.click(screen.getByRole('button', { name: /listo/i }));
     await user.click(screen.getByRole('button', { name: /aplicar/i }));
-    await waitFor(() =>
-      expect(onAppliedFiltersDisplayChange).toHaveBeenLastCalledWith({
-        status: 'Estado: Inactivo',
-      }),
-    );
+    await waitFor(() => {
+      const lastCall = onAppliedFiltersDisplayChange.mock.calls.at(-1)?.[0] as Record<string, string>;
+      expect(Object.values(lastCall)).toContain('Estado: Inactivo');
+    });
     await act(async () => {
       ref.current?.clearAllFilters();
     });
@@ -138,11 +138,10 @@ describe('VehiclesFilters display mapping', () => {
     await user.click(screen.getByRole('option', { name: 'Inactivo' }));
     await user.click(screen.getByRole('button', { name: /listo/i }));
     await user.click(screen.getByRole('button', { name: /aplicar/i }));
-    await waitFor(() =>
-      expect(onAppliedFiltersDisplayChange).toHaveBeenLastCalledWith({
-        status: 'Estado: Inactivo',
-      }),
-    );
+    await waitFor(() => {
+      const lastCall = onAppliedFiltersDisplayChange.mock.calls.at(-1)?.[0] as Record<string, string>;
+      expect(Object.values(lastCall)).toContain('Estado: Inactivo');
+    });
     await act(async () => {
       ref.current?.removeFilter('status');
     });

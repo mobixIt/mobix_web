@@ -126,8 +126,8 @@ export default function IndexPageControlToolbar({
           onSecondary: () => {},
         };
       return (
-        <SuggestionBanner>
-          <SuggestionIcon>
+        <SuggestionBanner color="info">
+          <SuggestionIcon color="info">
             <FaClockRotateLeftIcon color="primary" fontSize="medium" />
           </SuggestionIcon>
           <SuggestionTexts>
@@ -170,8 +170,8 @@ export default function IndexPageControlToolbar({
 
     if (aiErrorState?.show) {
       return (
-        <SuggestionBanner>
-          <SuggestionIcon>
+        <SuggestionBanner color="error">
+          <SuggestionIcon color="error">
             <ReportProblemOutlinedIcon color="error" fontSize="medium" />
           </SuggestionIcon>
           <SuggestionTexts>
