@@ -49,8 +49,8 @@ import {
 } from './helpers';
 import { MobixConfirmDialog } from '@/components/mobix/confirm-dialog';
 import type { DownloadFormat } from './types';
-import Icon from '@mdi/react';
-import { mdiFilePdfBox, mdiFileExcel } from '@mdi/js';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -665,19 +665,11 @@ export function MobixTable<T extends { id: Key }>(
                           }
                         >
                           {format === 'pdf' && (
-                            <Icon
-                              path={mdiFilePdfBox}
-                              size={0.9}
-                              style={{ marginRight: 8 }}
-                            />
+                            <PictureAsPdfIcon fontSize="small" sx={{ mr: 1 }} />
                           )}
 
                           {format === 'xls' && (
-                            <Icon
-                              path={mdiFileExcel}
-                              size={0.9}
-                              style={{ marginRight: 8 }}
-                            />
+                            <FileDownloadOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
                           )}
 
                           {formatDownloadLabel(format)}

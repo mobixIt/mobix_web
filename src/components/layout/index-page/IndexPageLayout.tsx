@@ -42,6 +42,7 @@ export type IndexPageLayoutProps = {
   showAiAssistant?: IndexPageControlToolbarProps['showAiAssistant'];
   aiNoResults?: IndexPageControlToolbarProps['aiNoResults'];
   aiErrorState?: IndexPageControlToolbarProps['aiErrorState'];
+  aiHistoricalSuggestion?: IndexPageControlToolbarProps['aiHistoricalSuggestion'];
 };
 
 export function IndexPageLayout({
@@ -67,6 +68,7 @@ export function IndexPageLayout({
   showAiAssistant,
   aiNoResults,
   aiErrorState,
+  aiHistoricalSuggestion,
 }: IndexPageLayoutProps) {
   const hasStats = Boolean(statsCards);
   const hasFilters = Boolean(filters);
@@ -118,6 +120,7 @@ export function IndexPageLayout({
             showAiAssistant={showAiAssistant}
             aiNoResults={aiNoResults}
             aiErrorState={aiErrorState}
+            aiHistoricalSuggestion={aiHistoricalSuggestion}
           />
         </ToolbarSection>
       )}

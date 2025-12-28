@@ -1,24 +1,31 @@
-import React from 'react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useQuestionAnswering } from '@/hooks/useQuestionAnswering';
 
+const fetchMock = vi.fn();
+
 describe('useQuestionAnswering', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
   });
 
-  it('calls the QA API and returns the answer', async () => {
-    const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ answer: 'sí' }),
-    } as Response);
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('retorna la respuesta al completar exitosamente', async () => {
+    const response = new Response(JSON.stringify({ answer: 'sí' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+    fetchMock.mockResolvedValueOnce(response);
 
     const { result } = renderHook(() => useQuestionAnswering('Texto de prueba'));
 
-    let response: string | null = null;
+    let answer: string | null = null;
     await act(async () => {
-      response = await result.current.ask({ question: '¿Pregunta?' });
+      answer = await result.current.ask({ question: '¿Pregunta?' });
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -28,27 +35,42 @@ describe('useQuestionAnswering', () => {
         headers: { 'Content-Type': 'application/json' },
       }),
     );
-    expect(response).toBe('sí');
+    expect(answer).toBe('sí');
     expect(result.current.answer).toBe('sí');
     expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(false);
   });
 
-  it('sets an error when the API fails', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValueOnce({
-      ok: false,
-      status: 503,
-      json: async () => ({}),
-    } as Response);
+  it('establece error cuando el servicio devuelve 503', async () => {
+    const response = new Response('{}', { status: 503 });
+    fetchMock.mockResolvedValueOnce(response);
 
     const { result } = renderHook(() => useQuestionAnswering('Texto de prueba'));
 
-    let response: string | null = null;
+    let answer: string | null = 'placeholder';
     await act(async () => {
-      response = await result.current.ask({ question: '¿Pregunta?' });
+      answer = await result.current.ask({ question: '¿Pregunta?' });
     });
 
-    expect(response).toBeNull();
+    expect(answer).toBeNull();
     expect(result.current.answer).toBeNull();
     expect(result.current.error).toBe('OpenAI no está configurado');
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('maneja excepciones de red dejando loading en false', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+
+    const { result } = renderHook(() => useQuestionAnswering('Texto de prueba'));
+
+    let answer: string | null = 'placeholder';
+    await act(async () => {
+      answer = await result.current.ask({ question: '¿Pregunta?' });
+    });
+
+    expect(answer).toBeNull();
+    expect(result.current.answer).toBeNull();
+    expect(result.current.error).toBe('network down');
+    expect(result.current.loading).toBe(false);
   });
 });

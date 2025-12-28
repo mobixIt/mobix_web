@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Alert, Box } from '@mui/material';
+import { Alert } from '@mui/material';
 import { IndexPageLayout } from '@/components/layout/index-page/IndexPageLayout';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -36,6 +36,7 @@ import VehiclesFilters, { VehiclesFiltersHandle } from '../../VehiclesFilters';
 
 import { usePermissionedTable } from '@/hooks/usePermissionedTable';
 import { useHasPermission } from '@/hooks/useHasPermission';
+import detectPastQuestion from '@/lib/openai/detectPastQuestion';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -235,6 +236,7 @@ const BaseVehicles: React.FC = () => {
     [aiAppliedFiltersFromStore],
   );
   const effectiveAiAppliedFilters = aiAppliedFiltersOverride ?? aiAppliedFilters;
+  const [aiIsPastQuestion, setAiIsPastQuestion] = React.useState(false);
   const aiQuestionFromStore = aiMeta?.aiQuestion ?? null;
   const isAiLoading = aiLoading || (isAiActive && status === 'loading');
 
@@ -341,12 +343,69 @@ const BaseVehicles: React.FC = () => {
     hasLoadedOnce &&
     (displayedFiltersCount === 0 || vehicles.length === 0);
 
+  const aiHistoricalSuggestion = React.useMemo(() => {
+    if (!isAiActive || !aiQuestion || !aiIsPastQuestion) return undefined;
+    return {
+      title: 'Consulta histórica detectada',
+      body: 'Podemos abrir el reporte histórico y graficar tendencias para tu consulta.',
+      actions: {
+        primaryLabel: 'Abrir reporte',
+        secondaryLabel: 'Ver analytics',
+        onPrimary: () => {},
+        onSecondary: () => {},
+      },
+    };
+  }, [aiIsPastQuestion, aiQuestion, isAiActive]);
+
+  const [fallbackRows, setFallbackRows] = React.useState<VehicleRow[]>([]);
+  const [fallbackTotalCount, setFallbackTotalCount] = React.useState<number | null>(null);
+
+  const isAiActiveRef = React.useRef(isAiActive);
+  const vehiclesLengthRef = React.useRef(vehicles.length);
+  const rowsRef = React.useRef(rows);
+  const totalCountRef = React.useRef(totalCount);
+
+  React.useEffect(() => {
+    isAiActiveRef.current = isAiActive;
+  }, [isAiActive]);
+
+  React.useEffect(() => {
+    vehiclesLengthRef.current = vehicles.length;
+  }, [vehicles.length]);
+
+  React.useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+
+  React.useEffect(() => {
+    totalCountRef.current = totalCount;
+  }, [totalCount]);
+
   const handleSendAiQuestion = React.useCallback(
-    (value: string) => {
+    async (value: string) => {
       if (!tenantSlug) return;
       const trimmed = value.trim();
       if (!trimmed) return;
       if (aiLoading) return;
+
+      const isAiActiveSnapshot = isAiActiveRef.current;
+      const vehiclesLength = vehiclesLengthRef.current;
+
+      if (!isAiActiveSnapshot && vehiclesLength > 0) {
+        setFallbackRows(rowsRef.current);
+        setFallbackTotalCount(totalCountRef.current);
+      }
+
+      const past = await detectPastQuestion(trimmed);
+      if (past.isPast) {
+        setAiIsPastQuestion(true);
+        setAiQuestion(trimmed);
+        setAiError(null);
+        setAiAppliedFiltersOverride(null);
+        return;
+      }
+      setAiIsPastQuestion(false);
+
       const sig = `${trimmed}|${0}|${rowsPerPage}`;
       if (lastAiRequestSig.current === sig) {
         return;
@@ -380,6 +439,7 @@ const BaseVehicles: React.FC = () => {
     setAiQuestion('');
     setAiError(null);
     setAiAppliedFiltersOverride(null);
+    setAiIsPastQuestion(false);
     lastAiRequestSig.current = null;
     setAiLoading(true);
     void dispatch(
@@ -498,6 +558,7 @@ const BaseVehicles: React.FC = () => {
       .catch((err) => setAiError(mapAiErrorMessage(err?.code, err?.message)))
       .finally(() => setAiLoading(false));
   }, [
+    aiAppliedFiltersOverride,
     aiQuestionFromStore,
     dispatch,
     isAiActive,
@@ -524,6 +585,10 @@ const BaseVehicles: React.FC = () => {
   const shouldShowToolbarSkeleton =
     !permissionedTableReady || (!hasLoadedOnce && isVehiclesLoading);
 
+  const effectiveRows = isAiActive && rows.length === 0 && fallbackRows.length > 0 ? fallbackRows : rows;
+  const effectiveTotalCount =
+    isAiActive && rows.length === 0 && fallbackTotalCount !== null ? fallbackTotalCount : totalCount;
+
   if (!permissionedTableReady) {
     table = (
       <TableSkeletonContainer>
@@ -535,7 +600,7 @@ const BaseVehicles: React.FC = () => {
   } else {
     const tableContent = (
       <MobixTable<VehicleRow>
-        rows={rows}
+        rows={effectiveRows}
         columns={vehicleColumns}
         loading={isVehiclesLoading || isAiLoading}
         keepPreviousData
@@ -544,7 +609,7 @@ const BaseVehicles: React.FC = () => {
         paginationMode="server"
         page={page}
         rowsPerPage={rowsPerPage}
-        totalCount={totalCount}
+        totalCount={effectiveTotalCount}
         onPageChange={(newPage: number) => setPage(newPage)}
         onRowsPerPageChange={(value: number) => {
           setRowsPerPage(value);
@@ -573,11 +638,6 @@ const BaseVehicles: React.FC = () => {
 
   return (
     <div data-testid="vehicles-page">
-      {aiError ? (
-        <Box mb={2}>
-          <Alert severity="warning">{aiError}</Alert>
-        </Box>
-      ) : null}
       <IndexPageLayout
         header={header}
         statsCards={shouldRenderStats ? <VehiclesStatsCards tenantSlug={tenantSlug} /> : null}
@@ -611,6 +671,7 @@ const BaseVehicles: React.FC = () => {
         showAiAssistant
         activeFiltersLabel={activeFiltersLabel}
         showFiltersToggle
+        aiHistoricalSuggestion={aiHistoricalSuggestion}
         aiNoResults={
           showAiNoResultsBanner
             ? {
@@ -625,7 +686,8 @@ const BaseVehicles: React.FC = () => {
             ? {
                 show: true,
                 message: aiError,
-                hint: 'Revisa la conexión o intenta con otra frase.',
+                hint: 'Revisa tu conexión o intenta con otra frase.',
+                note: 'Mostrando los últimos resultados mientras reintentas.',
                 onRetry: () => handleSendAiQuestion(aiQuestion),
                 onClear: handleClearAi,
               }

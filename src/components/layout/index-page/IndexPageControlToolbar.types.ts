@@ -57,4 +57,15 @@ export type IndexPageControlToolbarProps = {
     onRetry?: () => void;
     onClear?: () => void;
   };
+  aiHistoricalSuggestion?: {
+    title?: string;
+    body?: string;
+    actions?: {
+      primaryLabel?: string;
+      secondaryLabel?: string;
+      onPrimary?: () => void;
+      onSecondary?: () => void;
+      onCloseSuggestion?: () => void;
+    };
+  };
 };

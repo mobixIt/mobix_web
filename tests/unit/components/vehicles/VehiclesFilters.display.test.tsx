@@ -6,12 +6,13 @@ import { ThemeProvider } from '@mui/material/styles';
 import theme from '@/theme';
 import VehiclesFilters, { VehiclesFiltersHandle } from '@/components/vehicles/VehiclesFilters';
 
-type CatalogsHookState = {
+type CatalogOption = { id: number; label: string; code: string | null };
+type CatalogState = {
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: { message?: string } | null;
   hasCatalogs: boolean;
-  ownersRaw: Array<{ id: number; label: string; code: string | null }>;
-  driversRaw: Array<{ id: number; label: string; code: string | null }>;
+  ownersRaw: CatalogOption[];
+  driversRaw: CatalogOption[];
   brandOptions: Array<{ label: string; value: string }>;
   vehicleClassOptions: Array<{ label: string; value: string }>;
   bodyTypeOptions: Array<{ label: string; value: string }>;
@@ -19,7 +20,7 @@ type CatalogsHookState = {
 };
 
 const dispatchSpy = vi.fn(() => Promise.resolve());
-const catalogsStateRef: { current: CatalogsHookState } = {
+const catalogsStateRef: { current: CatalogState } = {
   current: {
     status: 'succeeded',
     error: null,
@@ -46,21 +47,13 @@ vi.mock('@/components/vehicles/Vehicles.hooks', () => ({
   useVehiclesCatalogs: () => catalogsStateRef.current,
 }));
 
-type RenderResult = {
-  onResetPage: ReturnType<typeof vi.fn>;
-  onFiltersAppliedChange: ReturnType<typeof vi.fn>;
-  onAppliedFiltersChange: ReturnType<typeof vi.fn>;
-  onAppliedFiltersDisplayChange: ReturnType<typeof vi.fn>;
-  ref: { current: VehiclesFiltersHandle | null };
-};
-
-const renderFilters = (): RenderResult => {
+const renderFilters = () => {
   const onResetPage = vi.fn();
   const onFiltersAppliedChange = vi.fn();
   const onAppliedFiltersChange = vi.fn();
   const onAppliedFiltersDisplayChange = vi.fn();
-  const ref = { current: null as VehiclesFiltersHandle | null };
-  const element = (
+  const ref: { current: VehiclesFiltersHandle | null } = { current: null };
+  render(
     <ThemeProvider theme={theme}>
       <VehiclesFilters
         ref={(instance) => {
@@ -74,16 +67,9 @@ const renderFilters = (): RenderResult => {
         onAppliedFiltersChange={onAppliedFiltersChange}
         onAppliedFiltersDisplayChange={onAppliedFiltersDisplayChange}
       />
-    </ThemeProvider>
+    </ThemeProvider>,
   );
-  render(element);
-  return {
-    onResetPage,
-    onFiltersAppliedChange,
-    onAppliedFiltersChange,
-    onAppliedFiltersDisplayChange,
-    ref,
-  };
+  return { onFiltersAppliedChange, onAppliedFiltersDisplayChange, ref };
 };
 
 describe('VehiclesFilters display mapping', () => {
@@ -102,13 +88,13 @@ describe('VehiclesFilters display mapping', () => {
     };
   });
 
-  it('builds display labels and emits callbacks on apply', async () => {
+  it('emite labels descriptivos al aplicar filtros', async () => {
     const user = userEvent.setup();
     const { onFiltersAppliedChange, onAppliedFiltersDisplayChange } = renderFilters();
     await user.click(screen.getByTestId('filters-section-toggle'));
     const statusSelect = document.getElementById('status');
-    if (!statusSelect) throw new Error('Status select not found');
-    await user.click(statusSelect);
+    expect(statusSelect).not.toBeNull();
+    await user.click(statusSelect as HTMLElement);
     await user.click(screen.getByRole('option', { name: 'Activo' }));
     await user.click(screen.getByRole('button', { name: /listo/i }));
     const yearInput = screen.getByPlaceholderText('Ej: 2022');
@@ -121,13 +107,13 @@ describe('VehiclesFilters display mapping', () => {
     });
   });
 
-  it('clears all filters via imperative handle and emits empty display', async () => {
+  it('limpia filtros con el handle imperativo y emite display vacío', async () => {
     const user = userEvent.setup();
     const { ref, onAppliedFiltersDisplayChange } = renderFilters();
     await user.click(screen.getByTestId('filters-section-toggle'));
     const statusSelect = document.getElementById('status');
-    if (!statusSelect) throw new Error('Status select not found');
-    await user.click(statusSelect);
+    expect(statusSelect).not.toBeNull();
+    await user.click(statusSelect as HTMLElement);
     await user.click(screen.getByRole('option', { name: 'Inactivo' }));
     await user.click(screen.getByRole('button', { name: /listo/i }));
     await user.click(screen.getByRole('button', { name: /aplicar/i }));
@@ -142,13 +128,13 @@ describe('VehiclesFilters display mapping', () => {
     await waitFor(() => expect(onAppliedFiltersDisplayChange).toHaveBeenLastCalledWith({}));
   });
 
-  it('removes a single filter via imperative handle', async () => {
+  it('elimina un filtro individual con el handle imperativo', async () => {
     const user = userEvent.setup();
     const { ref, onAppliedFiltersDisplayChange } = renderFilters();
     await user.click(screen.getByTestId('filters-section-toggle'));
     const statusSelect = document.getElementById('status');
-    if (!statusSelect) throw new Error('Status select not found');
-    await user.click(statusSelect);
+    expect(statusSelect).not.toBeNull();
+    await user.click(statusSelect as HTMLElement);
     await user.click(screen.getByRole('option', { name: 'Inactivo' }));
     await user.click(screen.getByRole('button', { name: /listo/i }));
     await user.click(screen.getByRole('button', { name: /aplicar/i }));

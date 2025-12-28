@@ -7,6 +7,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
+import { detectPastQuestion } from '@/lib/openai/detectPastQuestion';
 
 import {
   Root,
@@ -61,84 +62,108 @@ export default function IndexPageControlToolbar({
   onAiChange,
   onSendQuestion,
   aiIsLoading = false,
-  aiSuggestion,
   showAiAssistant = true,
   aiNoResults,
   aiErrorState,
+  aiSuggestion,
+  aiHistoricalSuggestion,
 }: IndexPageControlToolbarProps) {
   const hasFiltersDisplay = Object.keys(activeFiltersDisplay).length > 0;
   const [question, setQuestion] = React.useState(aiDefaultQuestion);
   const isControlled = aiValue !== undefined;
   const currentQuestion = isControlled ? aiValue : question;
   const hasSuggestion = Boolean(aiSuggestion?.title || aiSuggestion?.body || aiSuggestion?.actions);
-  const activeFilterEntries = React.useMemo(
-    () => Object.entries(activeFiltersDisplay),
-    [activeFiltersDisplay],
-  );
+  const activeFilterEntries = React.useMemo(() => Object.entries(activeFiltersDisplay), [activeFiltersDisplay]);
 
   React.useEffect(() => {
     if (isControlled) return;
     setQuestion(aiDefaultQuestion);
   }, [aiDefaultQuestion, isControlled]);
 
-  const handleSendQuestion = React.useCallback(() => {
+  const [localSuggestion, setLocalSuggestion] = React.useState<IndexPageControlToolbarProps['aiSuggestion']>(undefined);
+
+  const handleSendQuestion = React.useCallback(async () => {
     const valueToSend = (currentQuestion ?? '').trim();
     if (!valueToSend) return;
+    const pastResult = await detectPastQuestion(valueToSend);
+    if (pastResult.isPast) {
+      const suggestion = aiHistoricalSuggestion ?? {
+        title: 'Consulta histórica detectada',
+        body: 'Podemos abrir el reporte histórico y graficar tendencias para tu consulta.',
+        actions: {
+          primaryLabel: DEFAULT_PRIMARY_ACTION_LABEL,
+          secondaryLabel: DEFAULT_SECONDARY_ACTION_LABEL,
+          onPrimary: () => {},
+          onSecondary: () => {},
+          onCloseSuggestion: () => setLocalSuggestion(undefined),
+        },
+      };
+      setLocalSuggestion(suggestion);
+      return;
+    }
+    setLocalSuggestion(undefined);
     onSendQuestion?.(valueToSend);
-  }, [currentQuestion, onSendQuestion]);
+  }, [aiHistoricalSuggestion, currentQuestion, onSendQuestion]);
 
   const handleQuestionKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      handleSendQuestion();
+      void handleSendQuestion();
     }
   };
 
   const renderAiBanner = () => {
-    if (hasSuggestion) {
+    const suggestionToShow = aiSuggestion ?? aiHistoricalSuggestion ?? localSuggestion;
+
+    if (suggestionToShow) {
+      const actions =
+        suggestionToShow.actions ?? {
+          primaryLabel: DEFAULT_PRIMARY_ACTION_LABEL,
+          secondaryLabel: DEFAULT_SECONDARY_ACTION_LABEL,
+          onPrimary: () => {},
+          onSecondary: () => {},
+        };
       return (
         <SuggestionBanner>
           <SuggestionIcon>
             <FaClockRotateLeftIcon color="primary" fontSize="medium" />
           </SuggestionIcon>
           <SuggestionTexts>
-            {aiSuggestion?.title ? (
-              <SuggestionTitle variant="subtitle2">{aiSuggestion.title}</SuggestionTitle>
+            {suggestionToShow.title ? (
+              <SuggestionTitle variant="subtitle2">{suggestionToShow.title}</SuggestionTitle>
             ) : null}
-            {aiSuggestion?.body ? (
-              <SuggestionBody variant="body2">{aiSuggestion.body}</SuggestionBody>
+            {suggestionToShow.body ? (
+              <SuggestionBody variant="body2">{suggestionToShow.body}</SuggestionBody>
             ) : null}
           </SuggestionTexts>
-          {aiSuggestion?.actions ? (
-            <SuggestionActions>
-              {aiSuggestion.actions.onPrimary ? (
-                <MobixButton
-                  variant="contained"
-                  color="primary"
-                  endIcon={<ArrowForwardIosIcon fontSize="small" />}
-                  onClick={aiSuggestion.actions.onPrimary}
-                >
-                  {aiSuggestion.actions.primaryLabel ?? DEFAULT_PRIMARY_ACTION_LABEL}
-                </MobixButton>
-              ) : null}
-              {aiSuggestion.actions.onSecondary ? (
-                <MobixButtonOutlined onClick={aiSuggestion.actions.onSecondary}>
-                  {aiSuggestion.actions.secondaryLabel ?? DEFAULT_SECONDARY_ACTION_LABEL}
-                </MobixButtonOutlined>
-              ) : null}
-              {aiSuggestion.actions.onCloseSuggestion ? (
-                <SuggestionCloseButton
-                  aria-label="close suggestion"
-                  size="small"
-                  onClick={aiSuggestion.actions.onCloseSuggestion}
-                >
-                  <CloseIcon fontSize="small" />
-                </SuggestionCloseButton>
-              ) : null}
-            </SuggestionActions>
-          ) : null}
+          <SuggestionActions>
+            {actions.onPrimary ? (
+              <MobixButton
+                variant="contained"
+                color="primary"
+                endIcon={<ArrowForwardIosIcon fontSize="small" />}
+                onClick={actions.onPrimary}
+              >
+                {actions.primaryLabel ?? DEFAULT_PRIMARY_ACTION_LABEL}
+              </MobixButton>
+            ) : null}
+            {actions.onSecondary ? (
+              <MobixButtonOutlined onClick={actions.onSecondary}>
+                {actions.secondaryLabel ?? DEFAULT_SECONDARY_ACTION_LABEL}
+              </MobixButtonOutlined>
+            ) : null}
+            {actions.onCloseSuggestion ? (
+              <SuggestionCloseButton
+                aria-label="close suggestion"
+                size="small"
+                onClick={actions.onCloseSuggestion}
+              >
+                <CloseIcon fontSize="small" />
+              </SuggestionCloseButton>
+            ) : null}
+          </SuggestionActions>
         </SuggestionBanner>
       );
     }
