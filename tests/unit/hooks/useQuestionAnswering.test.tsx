@@ -14,7 +14,7 @@ describe('useQuestionAnswering', () => {
     vi.unstubAllGlobals();
   });
 
-  it('retorna la respuesta al completar exitosamente', async () => {
+  it('returns the answer when completed successfully', async () => {
     const response = new Response(JSON.stringify({ answer: 'sí' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -41,7 +41,7 @@ describe('useQuestionAnswering', () => {
     expect(result.current.loading).toBe(false);
   });
 
-  it('establece error cuando el servicio devuelve 503', async () => {
+  it('sets an error when the service returns 503', async () => {
     const response = new Response('{}', { status: 503 });
     fetchMock.mockResolvedValueOnce(response);
 
@@ -58,7 +58,7 @@ describe('useQuestionAnswering', () => {
     expect(result.current.loading).toBe(false);
   });
 
-  it('maneja excepciones de red dejando loading en false', async () => {
+  it('handles network exceptions leaving loading false', async () => {
     fetchMock.mockRejectedValueOnce(new Error('network down'));
 
     const { result } = renderHook(() => useQuestionAnswering('Texto de prueba'));

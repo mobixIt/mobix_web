@@ -5,7 +5,7 @@ import { buildEffectiveModulesFromMembership } from '@/utils/membershipModules';
 describe('buildEffectiveModulesFromMembership', () => {
   const baseTenant = { id: 1, slug: 'coolitoral' };
 
-  it('devuelve un array vacío cuando el membership no tiene roles', () => {
+  it('returns an empty array when the membership has no roles', () => {
     const membership: Membership = {
       id: 1,
       active: true,
@@ -18,7 +18,7 @@ describe('buildEffectiveModulesFromMembership', () => {
     expect(result).toEqual([]);
   });
 
-  it('agrupa permisos por app_module y deduplica acciones por subject_class', () => {
+  it('groups permissions by app_module and deduplicates actions per subject_class', () => {
     const membership: Membership = {
       id: 1,
       active: true,
@@ -93,7 +93,7 @@ describe('buildEffectiveModulesFromMembership', () => {
     expect(actions.sort()).toEqual(['read', 'update'].sort());
   });
 
-  it('crea módulos separados cuando app_module.id es distinto', () => {
+  it('creates separate modules when app_module.id differs', () => {
     const membership: Membership = {
       id: 2,
       active: true,
@@ -156,7 +156,7 @@ describe('buildEffectiveModulesFromMembership', () => {
     expect(routesMod.actionsBySubject['Route']).toEqual(['read']);
   });
 
-  it('ignora permisos que no tienen app_module (defensa extra)', () => {
+  it('ignores permissions that have no app_module (extra safeguard)', () => {
     const membership: Membership = {
       id: 3,
       active: true,

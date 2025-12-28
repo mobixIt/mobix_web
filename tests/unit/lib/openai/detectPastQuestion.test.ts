@@ -30,21 +30,21 @@ afterEach(() => {
 });
 
 describe('detectPastQuestion', () => {
-  it('detecta pasado por heurística sin llamar a OpenAI', async () => {
+  it('detects past tense via heuristic without calling OpenAI', async () => {
     setWindow(originalWindow);
     const result = await detectPastQuestion('¿Qué pasó ayer con la flota?');
     expect(result).toEqual({ isPast: true, source: 'fallback' });
     expect(openAiCreate).not.toHaveBeenCalled();
   });
 
-  it('omite OpenAI en entorno browser cuando la heurística no detecta pasado', async () => {
+  it('skips OpenAI in the browser when the heuristic does not detect past tense', async () => {
     setWindow(originalWindow);
     const result = await detectPastQuestion('Cuántos vehículos hay activos hoy');
     expect(result).toEqual({ isPast: false, source: 'fallback' });
     expect(openAiCreate).not.toHaveBeenCalled();
   });
 
-  it('usa OpenAI en entorno server y marca PASADO correctamente', async () => {
+  it('uses OpenAI on the server and marks PASADO correctly', async () => {
     setWindow(undefined);
     openAiCreate.mockResolvedValueOnce({
       choices: [{ message: { content: 'PASADO' } }],
@@ -54,7 +54,7 @@ describe('detectPastQuestion', () => {
     expect(result).toEqual({ isPast: true, source: 'openai' });
   });
 
-  it('considera NO_PASADO aunque contenga la palabra PASADO', async () => {
+  it('treats NO_PASADO even when the word PASADO is present', async () => {
     setWindow(undefined);
     openAiCreate.mockResolvedValueOnce({
       choices: [{ message: { content: 'NO_PASADO' } }],
@@ -63,14 +63,14 @@ describe('detectPastQuestion', () => {
     expect(result).toEqual({ isPast: false, source: 'openai' });
   });
 
-  it('devuelve fallback false cuando OpenAI falla', async () => {
+  it('returns fallback false when OpenAI fails', async () => {
     setWindow(undefined);
     openAiCreate.mockRejectedValueOnce(new Error('network'));
     const result = await detectPastQuestion('Cuál es el estado');
     expect(result).toEqual({ isPast: false, source: 'fallback' });
   });
 
-  it('retorna false en cadenas vacías', async () => {
+  it('returns false for empty strings', async () => {
     setWindow(originalWindow);
     const result = await detectPastQuestion('   ');
     expect(result).toEqual({ isPast: false, source: 'fallback' });

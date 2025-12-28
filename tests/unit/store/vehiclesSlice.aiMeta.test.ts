@@ -27,7 +27,7 @@ const baseVehicle: Vehicle = {
 const initialState: VehiclesState = { byTenant: {} };
 
 describe('vehiclesSlice AI metadata', () => {
-  it('setea aiActive y metadatos en fulfilled', () => {
+  it('sets aiActive and metadata on fulfilled', () => {
     const action = fetchVehicles.fulfilled(
       {
         items: [baseVehicle],
@@ -49,7 +49,7 @@ describe('vehiclesSlice AI metadata', () => {
     expect(state.byTenant.t1.status).toBe('succeeded');
   });
 
-  it('limpia metadatos IA en rejected', () => {
+  it('clears AI metadata on rejected', () => {
     const rejected = fetchVehicles.rejected(
       new Error('fail'),
       'request-2',
@@ -65,7 +65,7 @@ describe('vehiclesSlice AI metadata', () => {
     expect(state.byTenant.t1.status).toBe('failed');
   });
 
-  it('selectVehiclesAiMeta devuelve valores seguros sin tenant', () => {
+  it('selectVehiclesAiMeta returns safe values without tenant', () => {
     const meta = selectVehiclesAiMeta({ vehicles: initialState } as RootState, 'unknown');
 
     expect(meta).toEqual({
@@ -77,7 +77,7 @@ describe('vehiclesSlice AI metadata', () => {
     });
   });
 
-  it('clearVehicles elimina el estado del tenant', () => {
+  it('clearVehicles removes the tenant state', () => {
     const fulfilled = fetchVehicles.fulfilled(
       {
         items: [baseVehicle],

@@ -89,7 +89,7 @@ describe('VehiclesFilters display mapping', () => {
     };
   });
 
-  it('emite labels descriptivos al aplicar filtros', async () => {
+  it('emits descriptive labels when applying filters', async () => {
     const user = userEvent.setup();
     const { onFiltersAppliedChange, onAppliedFiltersDisplayChange } = renderFilters();
     await user.click(screen.getByTestId('filters-section-toggle'));
@@ -108,7 +108,7 @@ describe('VehiclesFilters display mapping', () => {
     });
   });
 
-  it('limpia filtros con el handle imperativo y emite display vacío', async () => {
+  it('clears filters with the imperative handle and emits empty display', async () => {
     const user = userEvent.setup();
     const { ref, onAppliedFiltersDisplayChange } = renderFilters();
     await user.click(screen.getByTestId('filters-section-toggle'));
@@ -128,7 +128,7 @@ describe('VehiclesFilters display mapping', () => {
     await waitFor(() => expect(onAppliedFiltersDisplayChange).toHaveBeenLastCalledWith({}));
   });
 
-  it('elimina un filtro individual con el handle imperativo', async () => {
+  it('removes a single filter with the imperative handle', async () => {
     const user = userEvent.setup();
     const { ref, onAppliedFiltersDisplayChange } = renderFilters();
     await user.click(screen.getByTestId('filters-section-toggle'));

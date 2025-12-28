@@ -35,7 +35,7 @@ describe('IndexPageControlToolbar IA flow', () => {
     detectPastQuestionMock.mockReset();
   });
 
-  it('muestra sugerencia histórica y no llama onSendQuestion cuando detecta pasado', async () => {
+  it('shows historical suggestion and does not call onSendQuestion when past is detected', async () => {
     detectPastQuestionMock.mockResolvedValueOnce({ isPast: true, source: 'fallback' });
     const onSendQuestion = vi.fn();
     renderToolbar({
@@ -53,7 +53,7 @@ describe('IndexPageControlToolbar IA flow', () => {
     expect(onSendQuestion).not.toHaveBeenCalled();
   });
 
-  it('envía pregunta cuando no es pasada y limpia sugerencias locales', async () => {
+  it('sends the question when it is not past and clears local suggestions', async () => {
     detectPastQuestionMock.mockResolvedValueOnce({ isPast: false, source: 'fallback' });
     const onSendQuestion = vi.fn();
     renderToolbar({ onSendQuestion });
@@ -64,7 +64,7 @@ describe('IndexPageControlToolbar IA flow', () => {
     expect(screen.queryByText('Consulta histórica detectada')).toBeNull();
   });
 
-  it('renderiza banner de error cuando aiErrorState.show es true', () => {
+  it('renders an error banner when aiErrorState.show is true', () => {
     renderToolbar({
       aiErrorState: {
         show: true,
@@ -80,7 +80,7 @@ describe('IndexPageControlToolbar IA flow', () => {
     expect(screen.getByText('Mostrando últimos resultados')).toBeVisible();
   });
 
-  it('renderiza banner de no resultados con acciones', () => {
+  it('renders a no-results banner with actions', () => {
     renderToolbar({
       aiNoResults: {
         show: true,
