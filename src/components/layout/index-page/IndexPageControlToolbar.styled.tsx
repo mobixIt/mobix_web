@@ -112,7 +112,7 @@ export const AiInputContainer = styled(Box)(({ theme }) => ({
   boxShadow: `0 6px 14px ${alpha(theme.palette.primary.main, 0.06)}`,
 }));
 
-export const AiSendButtonWrapper = styled(Box)(({ theme }) => ({
+export const AiSendButtonWrapper = styled(Box)(() => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
