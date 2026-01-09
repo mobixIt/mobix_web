@@ -1,3 +1,5 @@
+'use client';
+
 import { Typography, Button, Box, Stack } from '@mui/material';
 
 export function ForbiddenPage() {

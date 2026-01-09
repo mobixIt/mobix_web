@@ -5,6 +5,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { StrategyOrchestrator } from '@/components/strategy/StrategyOrchestrator';
 
 type TestRegistryModule = 'testModule';
+type TestAction = 'testAction';
 type TestStrategies = 'one' | 'two';
 
 const FakeOne = () => <div data-testid="strategy-one">One</div>;
@@ -15,15 +16,19 @@ vi.mock('@/config/moduleStrategies', async () => {
     '@/config/moduleStrategies',
   );
 
-  const moduleStrategyRegistry: typeof actual.moduleStrategyRegistry = {
+  const moduleStrategyRegistry = {
     testModule: {
-      defaultStrategy: 'one',
-      strategies: {
-        one: { loader: async () => ({ default: FakeOne }) },
-        two: { loader: async () => ({ default: FakeTwo }) },
+      actions: {
+        testAction: {
+          defaultStrategy: 'one',
+          strategies: {
+            one: { loader: async () => ({ default: FakeOne }) },
+            two: { loader: async () => ({ default: FakeTwo }) },
+          },
+        },
       },
     },
-  } as const;
+  } as unknown as typeof actual.moduleStrategyRegistry; // Force cast for the mock to match type structure
 
   return {
     ...actual,
@@ -39,8 +44,10 @@ describe('StrategyOrchestrator', () => {
   it('renders the requested strategy component when present', async () => {
     render(
       <Suspense fallback={<div data-testid="fallback" />}>
-        <StrategyOrchestrator<TestRegistryModule>
+        {/* @ts-expect-error: Forcing types for testing purposes as we are using mocked literal strings */}
+        <StrategyOrchestrator<TestRegistryModule, TestAction>
           module="testModule"
+          action="testAction" 
           strategy={'two' as TestStrategies}
         />
       </Suspense>,
@@ -55,8 +62,10 @@ describe('StrategyOrchestrator', () => {
   it('renders the default strategy when requesting the default key', async () => {
     render(
       <Suspense fallback={<div data-testid="fallback" />}>
-        <StrategyOrchestrator<TestRegistryModule>
+        {/* @ts-expect-error: Forcing types for testing purposes */}
+        <StrategyOrchestrator<TestRegistryModule, TestAction>
           module="testModule"
+          action="testAction"
           strategy={'one' as TestStrategies}
         />
       </Suspense>,

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { Box } from '@mui/material';
 import { MobixMultiSelect } from '@/components/mobix/inputs/MobixMultiSelect';

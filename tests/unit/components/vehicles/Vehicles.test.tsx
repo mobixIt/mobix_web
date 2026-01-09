@@ -243,7 +243,7 @@ type VehiclesFiltersProps = {
 
 let lastFiltersProps: VehiclesFiltersProps | null = null;
 
-vi.mock('@/components/vehicles/VehiclesFilters', () => ({
+vi.mock('@/components/vehicles/actions/index/strategies/base/components/VehiclesFilters', () => ({
   __esModule: true,
   default: (props: VehiclesFiltersProps) => {
     lastFiltersProps = props;
@@ -251,7 +251,7 @@ vi.mock('@/components/vehicles/VehiclesFilters', () => ({
   },
 }));
 
-vi.mock('@/components/vehicles/VehiclesStatsCards', () => ({
+vi.mock('@/components/vehicles/actions/index/strategies/base/components/VehiclesStatsCards', () => ({
   __esModule: true,
   default: ({ tenantSlug }: { tenantSlug: string }) => (
     <div data-testid="vehicles-stats-cards">{tenantSlug}</div>

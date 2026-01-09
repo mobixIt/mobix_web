@@ -10,7 +10,7 @@ import type {
 } from '@/components/layout/filters/FiltersSection.types';
 
 import { Alert, Box, Button } from '@mui/material';
-import { useVehiclesCatalogs } from './Vehicles.hooks';
+import { useVehiclesCatalogs } from '../../../_shared/hooks/useVehiclesData';
 
 import { useAppDispatch } from '@/store/hooks';
 import { fetchVehicles } from '@/store/slices/vehiclesSlice';
@@ -60,6 +60,17 @@ const FILTER_QUERY_SPEC: FilterQuerySpec = {
   model_year: { type: 'string' },
   owner_id: { type: 'asyncId' },
   driver_id: { type: 'asyncId' },
+};
+
+const INITIAL_VALUES: FiltersSectionValues = {
+  q: '',
+  status: [],
+  brand_id: [],
+  vehicle_class_id: [],
+  body_type_id: [],
+  model_year: '',
+  owner_id: null,
+  driver_id: null,
 };
 
 const normalizeStr = (x: unknown): string => String(x ?? '').trim();
@@ -240,23 +251,11 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
     hasCatalogs
   ]);
 
-  // 4. State Management
-  const initialValues: FiltersSectionValues = {
-    q: '',
-    status: [],
-    brand_id: [],
-    vehicle_class_id: [],
-    body_type_id: [],
-    model_year: '',
-    owner_id: null,
-    driver_id: null,
-  };
-
   const parsedFromQuery = React.useMemo<FiltersSectionValues>(() => {
-    if (typeof window === 'undefined') return initialValues;
+    if (typeof window === 'undefined') return INITIAL_VALUES;
     const parsed = filtersFromQueryString(window.location.search, FILTER_QUERY_SPEC);
-    return { ...initialValues, ...parsed };
-  }, [tenantSlug]);
+    return { ...INITIAL_VALUES, ...parsed };
+  }, []);
 
   const [filterValues, setFilterValues] = React.useState<FiltersSectionValues>(parsedFromQuery);
   const [appliedFilters, setAppliedFilters] = React.useState<FiltersSectionValues>(parsedFromQuery);
@@ -395,7 +394,7 @@ const VehiclesFilters = React.forwardRef<VehiclesFiltersHandle, VehiclesFiltersP
   const handleApplyFilters = () => applyFilters(filterValues);
 
   const handleClearFilters = () => {
-    applyFilters({ ...initialValues });
+    applyFilters({ ...INITIAL_VALUES });
   };
 
   // 7. Effect: Fetch data when applied filters or page changes

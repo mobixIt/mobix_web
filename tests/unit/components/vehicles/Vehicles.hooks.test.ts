@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
-import { useVehiclesCatalogs } from '@/components/vehicles/Vehicles.hooks';
+import { useVehiclesCatalogs } from '@/components/vehicles/actions/index/_shared/hooks/useVehiclesData';
 
 type RootState = Record<string, unknown>;
 

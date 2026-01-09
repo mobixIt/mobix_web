@@ -1,6 +1,6 @@
 'use client';
 
-import React, { forwardRef } from 'react';
+import * as React from 'react';
 import SvgIcon, { type SvgIconProps } from '@mui/material/SvgIcon';
 import type { IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -14,28 +14,44 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 type FAIconProps = Omit<SvgIconProps, 'viewBox'>;
+type SvgIconRef = React.ElementRef<typeof SvgIcon>;
 
-const createFaIcon = (definition: IconDefinition, classNameOverride?: string) =>
-  forwardRef<SVGSVGElement, FAIconProps>(({ className, ...props }, ref) => {
-    const [width, height, , , svgPathData] = definition.icon;
-    const paths = Array.isArray(svgPathData) ? svgPathData : [svgPathData];
-    const mergedClassName = ['svg-inline--fa', `fa-${classNameOverride ?? definition.iconName}`, className]
-      .filter(Boolean)
-      .join(' ');
+const createFaIcon = (definition: IconDefinition, nameOverride?: string) => {
+  const Component = React.forwardRef<SvgIconRef, FAIconProps>(
+    ({ className, ...props }, ref) => {
+      const [width, height, , , svgPathData] = definition.icon;
+      const paths = Array.isArray(svgPathData) ? svgPathData : [svgPathData];
 
-    return (
-      <SvgIcon
-        ref={ref}
-        viewBox={`0 0 ${width} ${height}`}
-        className={mergedClassName}
-        {...props}
-      >
-        {paths.map((d, index) => (
-          <path key={index} d={d} />
-        ))}
-      </SvgIcon>
-    );
-  });
+      const iconName = nameOverride ?? definition.iconName;
+      const mergedClassName = ['svg-inline--fa', `fa-${iconName}`, className]
+        .filter(Boolean)
+        .join(' ');
+
+      return (
+        <SvgIcon
+          ref={ref}
+          viewBox={`0 0 ${width} ${height}`}
+          className={mergedClassName}
+          {...props}
+        >
+          {paths.map((d, i) => (
+            <path key={`${iconName}-${i}`} d={d} />
+          ))}
+        </SvgIcon>
+      );
+    },
+  );
+
+  Component.displayName = `Fa${toPascalCase(nameOverride ?? definition.iconName)}Icon`;
+
+  return Component;
+};
+
+function toPascalCase(value: string) {
+  return value
+    .replace(/(^\w|[-_]\w)/g, (m) => m.replace(/[-_]/, '').toUpperCase())
+    .replace(/\W/g, '');
+}
 
 export const FaBrainIcon = createFaIcon(faBrain, 'brain');
 export const FaLightbulbIcon = createFaIcon(faLightbulb, 'lightbulb');

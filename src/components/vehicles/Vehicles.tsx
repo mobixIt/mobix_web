@@ -1,5 +1,5 @@
 'use client';
 
-import BaseVehicles from './strategies/base/BaseVehicles';
+import BaseVehiclesStrategy from './actions/index/strategies/base/BaseVehiclesStrategy';
 
-export default BaseVehicles;
+export default BaseVehiclesStrategy;

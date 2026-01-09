@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import {
   mapVehiclesToRows,
   type VehicleLike,
-} from '@/components/vehicles/Vehicles.tableConfig';
+} from '@/components/vehicles/actions/index/strategies/base/config/tableConfig';
 
 vi.mock('@/utils/statusHelpers', () => ({
   mapStatusToLabel: (status: unknown) => `label-${String(status)}`,

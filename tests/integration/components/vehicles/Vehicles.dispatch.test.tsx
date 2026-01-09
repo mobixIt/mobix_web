@@ -256,14 +256,14 @@ vi.mock('@/components/mobix/table', () => ({
   },
 }));
 
-vi.mock('@/components/vehicles/VehiclesStatsCards', () => ({
+vi.mock('@/components/vehicles/actions/index/strategies/base/components/VehiclesStatsCards', () => ({
   __esModule: true,
   default: ({ tenantSlug }: { tenantSlug: string }) => (
     <div data-testid="vehicles-stats-cards">{tenantSlug}</div>
   ),
 }));
 
-vi.mock('@/components/vehicles/VehiclesFilters', () => ({
+vi.mock('@/components/vehicles/actions/index/strategies/base/components/VehiclesFilters', () => ({
   __esModule: true,
   default: () => <div data-testid="vehicles-filters" />,
 }));

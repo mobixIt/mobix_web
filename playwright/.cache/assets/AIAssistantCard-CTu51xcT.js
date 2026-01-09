@@ -1,6 +1,6 @@
-import { r as reactExports, j as jsxRuntimeExports } from './index-x13YtkD-.js';
-import { P as Paper, B as Box, a as Button, I as InputBase, T as Typography, S as SvgIcon, c as createSvgIcon, M as MobixButton, b as buttonClasses, d as IconButton } from './MobixButtonProgress-nw2gVcyj.js';
-import { s as styled, a as alpha, k as keyframes } from './index-DxMCD8F6.js';
+import { r as reactExports, j as jsxRuntimeExports } from './index-BZNKgDyg.js';
+import { P as Paper, B as Box, a as Button, I as InputBase, T as Typography, S as SvgIcon, c as createSvgIcon, M as MobixButton, b as buttonClasses, d as IconButton } from './MobixButtonProgress-CvFUXoaQ.js';
+import { s as styled, a as alpha, k as keyframes } from './index-ClSUhzKJ.js';
 
 const aiAssistantDefaults = {
   title: "Asistente IA",
@@ -9741,21 +9741,31 @@ var icons = {
 };
 
 "use client";
-const createFaIcon = (definition, classNameOverride) => reactExports.forwardRef(({ className, ...props }, ref) => {
-  const [width, height, , , svgPathData] = definition.icon;
-  const paths = Array.isArray(svgPathData) ? svgPathData : [svgPathData];
-  const mergedClassName = ["svg-inline--fa", `fa-${classNameOverride ?? definition.iconName}`, className].filter(Boolean).join(" ");
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    SvgIcon,
-    {
-      ref,
-      viewBox: `0 0 ${width} ${height}`,
-      className: mergedClassName,
-      ...props,
-      children: paths.map((d, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d }, index))
+const createFaIcon = (definition, nameOverride) => {
+  const Component = reactExports.forwardRef(
+    ({ className, ...props }, ref) => {
+      const [width, height, , , svgPathData] = definition.icon;
+      const paths = Array.isArray(svgPathData) ? svgPathData : [svgPathData];
+      const iconName = nameOverride ?? definition.iconName;
+      const mergedClassName = ["svg-inline--fa", `fa-${iconName}`, className].filter(Boolean).join(" ");
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SvgIcon,
+        {
+          ref,
+          viewBox: `0 0 ${width} ${height}`,
+          className: mergedClassName,
+          ...props,
+          children: paths.map((d, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d }, `${iconName}-${i}`))
+        }
+      );
     }
   );
-});
+  Component.displayName = `Fa${toPascalCase(nameOverride ?? definition.iconName)}Icon`;
+  return Component;
+};
+function toPascalCase(value) {
+  return value.replace(/(^\w|[-_]\w)/g, (m) => m.replace(/[-_]/, "").toUpperCase()).replace(/\W/g, "");
+}
 const FaBrainIcon = createFaIcon(faBrain, "brain");
 const FaLightbulbIcon = createFaIcon(faLightbulb, "lightbulb");
 const FaSparklesIcon = createFaIcon(faWandSparkles, "sparkles");
@@ -10105,4 +10115,4 @@ function AIAssistantCard({
 }
 
 export { AIAssistantCard, AIAssistantCard as default };
-//# sourceMappingURL=AIAssistantCard-rvvORRSK.js.map
+//# sourceMappingURL=AIAssistantCard-CTu51xcT.js.map

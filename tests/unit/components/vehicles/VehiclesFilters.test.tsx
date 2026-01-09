@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor, act, screen } from '@testing-library/react';
 
-import VehiclesFilters from '@/components/vehicles/VehiclesFilters';
+import VehiclesFilters from '@/components/vehicles/actions/index/strategies/base/components/VehiclesFilters';
 import type {
   FiltersSectionValues,
   FiltersSectionValue,
@@ -77,7 +77,7 @@ vi.mock('@/store/slices/vehiclesSlice', () => ({
   fetchVehicles: (args: FetchVehiclesArgs) => fetchVehiclesSpy(args),
 }));
 
-vi.mock('@/components/vehicles/Vehicles.hooks', () => ({
+vi.mock('@/components/vehicles/actions/index/_shared/hooks/useVehiclesData', () => ({
   useVehiclesCatalogs: () => catalogsStateRef.current,
 }));
 

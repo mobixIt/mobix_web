@@ -246,6 +246,9 @@ test('does not refetch /auth/me or /auth/membership when navigating from /dashbo
         id: 1,
         slug: 'coolitoral',
         client: { name: 'Coolitoral', logo_url: '' },
+        modules: [
+          { id: 2, key: 'vehicles', name: 'Vehicles', active: true, strategies: [] },
+        ],
       },
       roles: [
         {
@@ -260,6 +263,7 @@ test('does not refetch /auth/me or /auth/membership when navigating from /dashbo
               action: 'read',
               app_module: {
                 id: 1,
+                key: 'vehicles',
                 name: 'Vehicles',
                 description: 'Vehicles module',
                 active: true,
@@ -271,6 +275,7 @@ test('does not refetch /auth/me or /auth/membership when navigating from /dashbo
               action: 'update',
               app_module: {
                 id: 1,
+                key: 'vehicles',
                 name: 'Vehicles',
                 description: 'Vehicles module',
                 active: true,
@@ -290,6 +295,7 @@ test('does not refetch /auth/me or /auth/membership when navigating from /dashbo
               action: 'read',
               app_module: {
                 id: 1,
+                key: 'vehicles',
                 name: 'Vehicles',
                 description: 'Vehicles module',
                 active: true,
@@ -377,6 +383,9 @@ test('reload on /vehicles keeps sidebar and permissions', async ({ page }) => {
         id: 1,
         slug: 'coolitoral',
         client: { name: 'Coolitoral', logo_url: '' },
+        modules: [
+          { id: 2, key: 'vehicles', name: 'Vehicles', active: true, strategies: [] },
+        ],
       },
       roles: [
         {
@@ -391,6 +400,7 @@ test('reload on /vehicles keeps sidebar and permissions', async ({ page }) => {
               action: 'read',
               app_module: {
                 id: 1,
+                key: 'vehicles',
                 name: 'Vehicles',
                 description: 'Vehicles module',
                 active: true,
@@ -402,6 +412,7 @@ test('reload on /vehicles keeps sidebar and permissions', async ({ page }) => {
               action: 'update',
               app_module: {
                 id: 1,
+                key: 'vehicles',
                 name: 'Vehicles',
                 description: 'Vehicles module',
                 active: true,
@@ -421,6 +432,7 @@ test('reload on /vehicles keeps sidebar and permissions', async ({ page }) => {
               action: 'read',
               app_module: {
                 id: 1,
+                key: 'vehicles',
                 name: 'Vehicles',
                 description: 'Vehicles module',
                 active: true,

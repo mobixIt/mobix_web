@@ -81,7 +81,7 @@ export interface UsePermissionedTableResult<TRow> {
 USAGE EXAMPLE (Vehicles index):
 
 import { usePermissionedTable } from '@/hooks/usePermissionedTable';
-import { ALL_VEHICLE_COLUMNS } from './Vehicles.tableConfig';
+import { ALL_VEHICLE_COLUMNS } from '@/components/vehicles/actions/index/strategies/base/config/tableConfig';
 
 const {
   columns,

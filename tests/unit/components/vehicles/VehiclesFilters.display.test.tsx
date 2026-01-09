@@ -4,7 +4,9 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from '@/theme';
-import VehiclesFilters, { VehiclesFiltersHandle } from '@/components/vehicles/VehiclesFilters';
+import VehiclesFilters, {
+  VehiclesFiltersHandle,
+} from '@/components/vehicles/actions/index/strategies/base/components/VehiclesFilters';
 
 type CatalogOption = { id: number; label: string; code: string | null };
 type CatalogState = {
@@ -43,7 +45,7 @@ vi.mock('@/store/slices/vehiclesSlice', () => ({
   fetchVehicles: vi.fn(),
 }));
 
-vi.mock('@/components/vehicles/Vehicles.hooks', () => ({
+vi.mock('@/components/vehicles/actions/index/_shared/hooks/useVehiclesData', () => ({
   useVehiclesCatalogs: () => catalogsStateRef.current,
 }));
 

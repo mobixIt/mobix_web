@@ -30,9 +30,9 @@ import {
   mapVehiclesToRows,
   type VehicleRow,
   type VehicleLike,
-} from '../../Vehicles.tableConfig';
-import VehiclesStatsCards from '../../VehiclesStatsCards';
-import VehiclesFilters, { VehiclesFiltersHandle } from '../../VehiclesFilters';
+} from './config/tableConfig';
+import VehiclesStatsCards from './components/VehiclesStatsCards';
+import VehiclesFilters, { VehiclesFiltersHandle } from './components/VehiclesFilters';
 
 import { usePermissionedTable } from '@/hooks/usePermissionedTable';
 import { useHasPermission } from '@/hooks/useHasPermission';
@@ -184,13 +184,10 @@ export const buildAiQuestionFromFilters = (filters: Record<string, unknown>) => 
   return `vehículos ${segments.join(' ')}`.trim();
 };
 
+const FILTER_QUERY_KEYS = ['q', 'status', 'brand_id', 'vehicle_class_id', 'body_type_id', 'model_year', 'owner_id', 'driver_id'] as const;
+
 const BaseVehicles: React.FC = () => {
   const dispatch = useAppDispatch();
-
-  const FILTER_QUERY_KEYS = React.useMemo(
-    () => ['q', 'status', 'brand_id', 'vehicle_class_id', 'body_type_id', 'model_year', 'owner_id', 'driver_id'],
-    [],
-  );
 
   const tenantSlug =
     typeof window !== 'undefined'

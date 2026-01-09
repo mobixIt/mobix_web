@@ -34,7 +34,7 @@ export default function QuickMetricsWidget({
 
       <MetricsGrid>
         {MOCK_METRICS.map((metric) => (
-          // eslint-disable-next-line @typescript-eslint/naming-convention
+           
           // keep PascalCase for component instantiation
           <MetricCard
             key={metric.id}

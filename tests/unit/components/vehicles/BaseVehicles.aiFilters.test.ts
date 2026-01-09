@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   mapAiFiltersDisplay,
   buildAiQuestionFromFilters,
-} from '@/components/vehicles/strategies/base/BaseVehicles';
+} from '@/components/vehicles/actions/index/strategies/base/BaseVehiclesStrategy';
 
 describe('mapAiFiltersDisplay', () => {
   it('translates status values to Spanish and keeps each entry', () => {

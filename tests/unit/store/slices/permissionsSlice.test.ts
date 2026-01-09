@@ -61,6 +61,12 @@ function createInitialPermissionsState(
     membership: null,
     effectiveModules: [],
     flatPermissions: [],
+    tenantModules: {
+      tenantInfo: null,
+      tenantSlugLoaded: null,
+      modulesByKey: {},
+      activeModuleKeys: [],
+    },
     ...partial,
   };
 }
@@ -91,6 +97,12 @@ describe('permissionsSlice reducer', () => {
       membership: null,
       effectiveModules: [],
       flatPermissions: [],
+      tenantModules: {
+        activeModuleKeys: [],
+        modulesByKey: {},
+        tenantInfo: null,
+        tenantSlugLoaded: null,
+      },
     });
   });
 
@@ -109,6 +121,12 @@ describe('permissionsSlice reducer', () => {
       membership: null,
       effectiveModules: [],
       flatPermissions: [],
+      tenantModules: {
+        activeModuleKeys: [],
+        modulesByKey: {},
+        tenantInfo: null,
+        tenantSlugLoaded: null,
+      },
     });
   });
 
@@ -137,7 +155,12 @@ describe('permissionsSlice reducer', () => {
         {
           id: 2,
           active: true,
-          tenant: { id: 20, slug: 'coolitoral', client: { name: 'Coolitoral', logo_url: '' } },
+          tenant: {
+            id: 20,
+            slug: 'coolitoral',
+            client: { name: 'Coolitoral', logo_url: '' },
+            modules: [{ key: 'vehicles', name: 'Vehicles', active: true }],
+          },
           roles: [] as Role[],
           permissions: [],
         } as unknown as Membership,
@@ -769,6 +792,7 @@ describe('flatPermissions derivation', () => {
         id: 1,
         slug: 'coolitoral',
         client: { name: 'Coolitoral', logo_url: '' },
+        modules: [{ key: 'vehicles', name: 'Vehicles', active: true }],
       },
       roles: [
         {
@@ -789,7 +813,6 @@ describe('flatPermissions derivation', () => {
               action: 'stats',
               app_module: { id: 1, name: 'Vehicles', active: true },
             },
-            // duplicate (should be deduped)
             {
               id: 3,
               subject_class: 'VEHICLE',
@@ -871,6 +894,12 @@ describe('flat permissions selectors', () => {
       createInitialPermissionsState({
         loading: false,
         membership: { memberships: [] } as unknown as MembershipResponse,
+        tenantModules: {
+          tenantSlugLoaded: 'coolitoral',
+          tenantInfo: null,
+          activeModuleKeys: [],
+          modulesByKey: {},
+        },
       }),
     );
 
@@ -905,6 +934,12 @@ describe('selectHasPermission', () => {
     const state = buildRootState(
       createInitialPermissionsState({
         membership: { memberships: [] } as unknown as MembershipResponse,
+        tenantModules: {
+          tenantSlugLoaded: 'coolitoral',
+          tenantInfo: null,
+          activeModuleKeys: [],
+          modulesByKey: {},
+        },
         flatPermissions: ['vehicle:read'],
       }),
     );

@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ answer });
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to process question' },
+      { error },
       { status: 500 },
     );
   }
